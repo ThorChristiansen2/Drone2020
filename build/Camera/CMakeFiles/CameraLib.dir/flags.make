@@ -6,5 +6,5 @@ CXX_FLAGS =
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/pi/GitHub/Drone2020/libfiles/src 
+CXX_INCLUDES = -I/usr/local/include/opencv4 -I/home/pi/GitHub/Drone2020/Camera 
 

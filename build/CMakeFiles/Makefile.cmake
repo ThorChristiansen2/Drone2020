@@ -9,6 +9,7 @@ set(CMAKE_MAKEFILE_DEPENDS
   "CMakeCache.txt"
   "../CMakeLists.txt"
   "../Camera/CMakeLists.txt"
+  "../Program/CMakeLists.txt"
   "CMakeFiles/3.7.2/CMakeCCompiler.cmake"
   "CMakeFiles/3.7.2/CMakeCXXCompiler.cmake"
   "CMakeFiles/3.7.2/CMakeSystem.cmake"
@@ -49,10 +50,12 @@ set(CMAKE_MAKEFILE_PRODUCTS
   "CMakeFiles/CMakeDirectoryInformation.cmake"
   "libfiles/CMakeFiles/CMakeDirectoryInformation.cmake"
   "Camera/CMakeFiles/CMakeDirectoryInformation.cmake"
+  "Program/CMakeFiles/CMakeDirectoryInformation.cmake"
   )
 
 # Dependency information for all targets:
 set(CMAKE_DEPEND_INFO_FILES
   "libfiles/CMakeFiles/Mylib.dir/DependInfo.cmake"
-  "Camera/CMakeFiles/CameraFile.dir/DependInfo.cmake"
+  "Camera/CMakeFiles/CameraLib.dir/DependInfo.cmake"
+  "Program/CMakeFiles/mainprogram.dir/DependInfo.cmake"
   )

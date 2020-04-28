@@ -80,14 +80,14 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	cd /home/pi/GitHub/Drone2020/build && $(CMAKE_COMMAND) -E cmake_progress_start /home/pi/GitHub/Drone2020/build/CMakeFiles /home/pi/GitHub/Drone2020/build/Camera/CMakeFiles/progress.marks
-	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Camera/all
+	cd /home/pi/GitHub/Drone2020/build && $(CMAKE_COMMAND) -E cmake_progress_start /home/pi/GitHub/Drone2020/build/CMakeFiles /home/pi/GitHub/Drone2020/build/Program/CMakeFiles/progress.marks
+	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Program/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/GitHub/Drone2020/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Camera/clean
+	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Program/clean
 .PHONY : clean
 
 # The main clean target
@@ -97,12 +97,12 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Camera/preinstall
+	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Program/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Camera/preinstall
+	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Program/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
@@ -111,46 +111,46 @@ depend:
 .PHONY : depend
 
 # Convenience name for target.
-Camera/CMakeFiles/CameraLib.dir/rule:
-	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Camera/CMakeFiles/CameraLib.dir/rule
-.PHONY : Camera/CMakeFiles/CameraLib.dir/rule
+Program/CMakeFiles/mainprogram.dir/rule:
+	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f CMakeFiles/Makefile2 Program/CMakeFiles/mainprogram.dir/rule
+.PHONY : Program/CMakeFiles/mainprogram.dir/rule
 
 # Convenience name for target.
-CameraLib: Camera/CMakeFiles/CameraLib.dir/rule
+mainprogram: Program/CMakeFiles/mainprogram.dir/rule
 
-.PHONY : CameraLib
+.PHONY : mainprogram
 
 # fast build rule for target.
-CameraLib/fast:
-	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f Camera/CMakeFiles/CameraLib.dir/build.make Camera/CMakeFiles/CameraLib.dir/build
-.PHONY : CameraLib/fast
+mainprogram/fast:
+	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f Program/CMakeFiles/mainprogram.dir/build.make Program/CMakeFiles/mainprogram.dir/build
+.PHONY : mainprogram/fast
 
-mainCamera.o: mainCamera.cpp.o
+main.o: main.cpp.o
 
-.PHONY : mainCamera.o
+.PHONY : main.o
 
 # target to build an object file
-mainCamera.cpp.o:
-	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f Camera/CMakeFiles/CameraLib.dir/build.make Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o
-.PHONY : mainCamera.cpp.o
+main.cpp.o:
+	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f Program/CMakeFiles/mainprogram.dir/build.make Program/CMakeFiles/mainprogram.dir/main.cpp.o
+.PHONY : main.cpp.o
 
-mainCamera.i: mainCamera.cpp.i
+main.i: main.cpp.i
 
-.PHONY : mainCamera.i
+.PHONY : main.i
 
 # target to preprocess a source file
-mainCamera.cpp.i:
-	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f Camera/CMakeFiles/CameraLib.dir/build.make Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.i
-.PHONY : mainCamera.cpp.i
+main.cpp.i:
+	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f Program/CMakeFiles/mainprogram.dir/build.make Program/CMakeFiles/mainprogram.dir/main.cpp.i
+.PHONY : main.cpp.i
 
-mainCamera.s: mainCamera.cpp.s
+main.s: main.cpp.s
 
-.PHONY : mainCamera.s
+.PHONY : main.s
 
 # target to generate assembly for a file
-mainCamera.cpp.s:
-	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f Camera/CMakeFiles/CameraLib.dir/build.make Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.s
-.PHONY : mainCamera.cpp.s
+main.cpp.s:
+	cd /home/pi/GitHub/Drone2020/build && $(MAKE) -f Program/CMakeFiles/mainprogram.dir/build.make Program/CMakeFiles/mainprogram.dir/main.cpp.s
+.PHONY : main.cpp.s
 
 # Help Target
 help:
@@ -160,10 +160,10 @@ help:
 	@echo "... depend"
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
-	@echo "... CameraLib"
-	@echo "... mainCamera.o"
-	@echo "... mainCamera.i"
-	@echo "... mainCamera.s"
+	@echo "... mainprogram"
+	@echo "... main.o"
+	@echo "... main.i"
+	@echo "... main.s"
 .PHONY : help
 
 

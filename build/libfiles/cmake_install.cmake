@@ -1,4 +1,4 @@
-# Install script for directory: /home/pi/Drone2020/libfiles
+# Install script for directory: /home/pi/GitHub/Drone2020/libfiles
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

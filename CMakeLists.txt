@@ -5,6 +5,5 @@ project(DroneProject)
 add_subdirectory(libfiles)
 add_subdirectory(Camera)
 
-# Hej med dig
 # This directory contains the main file.
-# add_subdirectory(Program)
+add_subdirectory(Program)

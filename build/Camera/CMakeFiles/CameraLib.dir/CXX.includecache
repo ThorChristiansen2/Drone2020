@@ -6,30 +6,18 @@
 
 #IncludeRegexTransform: 
 
-../libfiles/src/say-hello/hello.hpp
+../Camera/mainCamera.hpp
 
-/home/pi/Drone2020/Camera/main.cpp
+/home/pi/GitHub/Drone2020/Camera/mainCamera.cpp
 iostream
 -
-stdio.h
--
-stdlib.h
--
-pthread.h
--
-signal.h
--
-unistd.h
--
-string.h
+mainCamera.hpp
 -
 opencv2/core/core.hpp
 -
 opencv2/highgui/highgui.hpp
 -
 opencv2/imgproc.hpp
--
-say-hello/hello.hpp
 -
 
 /usr/local/include/opencv4/opencv2/core.hpp

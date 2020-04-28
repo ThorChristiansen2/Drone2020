@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/pi/Drone2020
+CMAKE_SOURCE_DIR = /home/pi/GitHub/Drone2020
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/pi/Drone2020/build
+CMAKE_BINARY_DIR = /home/pi/GitHub/Drone2020/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -80,9 +80,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/Drone2020/build/CMakeFiles /home/pi/Drone2020/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/GitHub/Drone2020/build/CMakeFiles /home/pi/GitHub/Drone2020/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/Drone2020/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/GitHub/Drone2020/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -124,17 +124,30 @@ Mylib/fast:
 .PHONY : Mylib/fast
 
 #=============================================================================
-# Target rules for targets named CameraFile
+# Target rules for targets named CameraLib
 
 # Build rule for target.
-CameraFile: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 CameraFile
-.PHONY : CameraFile
+CameraLib: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 CameraLib
+.PHONY : CameraLib
 
 # fast build rule for target.
-CameraFile/fast:
-	$(MAKE) -f Camera/CMakeFiles/CameraFile.dir/build.make Camera/CMakeFiles/CameraFile.dir/build
-.PHONY : CameraFile/fast
+CameraLib/fast:
+	$(MAKE) -f Camera/CMakeFiles/CameraLib.dir/build.make Camera/CMakeFiles/CameraLib.dir/build
+.PHONY : CameraLib/fast
+
+#=============================================================================
+# Target rules for targets named mainprogram
+
+# Build rule for target.
+mainprogram: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 mainprogram
+.PHONY : mainprogram
+
+# fast build rule for target.
+mainprogram/fast:
+	$(MAKE) -f Program/CMakeFiles/mainprogram.dir/build.make Program/CMakeFiles/mainprogram.dir/build
+.PHONY : mainprogram/fast
 
 # Help Target
 help:
@@ -145,7 +158,8 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... Mylib"
-	@echo "... CameraFile"
+	@echo "... CameraLib"
+	@echo "... mainprogram"
 .PHONY : help
 
 
