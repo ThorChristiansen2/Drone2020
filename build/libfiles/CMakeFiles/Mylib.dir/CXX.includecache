@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/pi/Drone2020/libfiles/src/say-hello/hello.cpp
+hello.hpp
+/home/pi/Drone2020/libfiles/src/say-hello/hello.hpp
+iostream
+-
+
+/home/pi/Drone2020/libfiles/src/say-hello/hello.hpp
+
