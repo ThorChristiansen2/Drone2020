@@ -22,12 +22,13 @@
  * ########################
 */
 
+// Namespace and constants 
 using namespace cv;
 using namespace std;
 const char* source_window = "Source image"; 
-
-
 bool doTestSpeedOnly=false;
+
+
 //parse command line
 //returns the index of a command line param in argv. If not found, return -1
 int findParam ( string param,int argc,char **argv ) {
@@ -47,6 +48,7 @@ float getParamVal ( string param,int argc,char **argv,float defvalue=-1 ) {
     else return atof ( argv[  idx+1] );
 }
 
+// Purpose: To set the camera properties - resolution etc.
 void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
     Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv,1280 ) );
     Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,960 ) );
@@ -61,47 +63,19 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
         doTestSpeedOnly=true;
     if ( findParam ( "-ss",argc,argv ) !=-1 )
         Camera.set ( cv::CAP_PROP_EXPOSURE, getParamVal ( "-ss",argc,argv )  );
-
-
-//     Camera.setSharpness ( getParamVal ( "-sh",argc,argv,0 ) );
-//     if ( findParam ( "-vs",argc,argv ) !=-1 )
-//         Camera.setVideoStabilization ( true );
-//     Camera.setExposureCompensation ( getParamVal ( "-ev",argc,argv ,0 ) );
-
-
 }
 
-void showUsage() {
-    cout<<"Usage: "<<endl;
-    cout<<"[-gr set gray color capture]\n";
-    cout<<"[-test_speed use for test speed and no images will be saved]\n";
-    cout<<"[-w width] [-h height] \n[-br brightness_val(0,100)]\n";
-    cout<<"[-co contrast_val (0 to 100)]\n[-sa saturation_val (0 to 100)]";
-    cout<<"[-g gain_val  (0 to 100)]\n";
-    cout<<"[-ss shutter_speed (0 to 100) 0 auto]\n";
-    cout<<"[-fps frame_rate (0 to 120) 0 auto]\n";
-    cout<<"[-nframes val: number of frames captured (100 default). 0 == Infinite lopp]\n";
-
-    cout<<endl;
+// Initialization part of VO pipeline.
+float initializaiton() {
+	
+	
 }
+
 
 
 int main ( int argc,char **argv ) {
-	/* This just tells you (the programmer) that if you want to get more information
-	 * on getting help, then you should simply just call the executable file with
-	 * ./mainprogram -help 
-	 * This argument "-help" then activates the function showUsage. 
-	*/
-	if ( argc==1 ) {
-		cerr<<"Usage (-help for help)"<<endl;
-	}
-	else {
-		cout<<"This option"<<endl;
-	}
-	if ( findParam ( "-help",argc,argv ) !=-1 ) {
-		showUsage();
-		return -1;
-	}
+	
+	
 	raspicam::RaspiCam_Cv Camera;
 	processCommandLine ( argc,argv,Camera );
 	cout<<"Connecting to camera"<<endl;
@@ -126,27 +100,7 @@ int main ( int argc,char **argv ) {
 	}
 
 	double time_=cv::getTickCount();
-	//Camera.grab();
-	//Camera.retrieve ( image );
-		
-	//imshow("Display image",image);
-	//waitKey(0);
-
-	/*
-	for ( int i=0; i<nCount || nCount==0; i++ ) {
-		Camera.grab();
-		Camera.retrieve ( image );
-		
-		imshow(source_window, image);
-		if ( !doTestSpeedOnly ) {
-			if ( i%5==0 ) 	  cout<<"\r capturing ..."<<i<<"/"<<nCount<<std::flush;
-			if ( i%30==0 && i!=0 )	cv::imwrite ("image"+std::to_string(i)+".jpg",image );
-		}
-	}
-	if ( !doTestSpeedOnly )  cout<<endl<<"Images saved in imagexx.jpg"<<endl;
-	double secondsElapsed= double ( cv::getTickCount()-time_ ) /double ( cv::getTickFrequency() ); //time in second
-	cout<< secondsElapsed<<" seconds for "<< nCount<<"  frames : FPS = "<< ( float ) ( ( float ) ( nCount ) /secondsElapsed ) <<endl;
-	*/
+	
 	Camera.release();
 }
 /*
