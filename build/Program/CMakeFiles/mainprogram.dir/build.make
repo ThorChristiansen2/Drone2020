@@ -79,6 +79,9 @@ mainprogram_EXTERNAL_OBJECTS =
 
 Program/mainprogram: Program/CMakeFiles/mainprogram.dir/main.cpp.o
 Program/mainprogram: Program/CMakeFiles/mainprogram.dir/build.make
+Program/mainprogram: /opt/vc/lib/libmmal_core.so
+Program/mainprogram: /opt/vc/lib/libmmal_util.so
+Program/mainprogram: /opt/vc/lib/libmmal.so
 Program/mainprogram: /usr/local/lib/libopencv_gapi.so.4.3.0
 Program/mainprogram: /usr/local/lib/libopencv_stitching.so.4.3.0
 Program/mainprogram: /usr/local/lib/libopencv_aruco.so.4.3.0

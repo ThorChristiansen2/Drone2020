@@ -1,8 +1,6 @@
 find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
-SET(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_INSTALL_PREFIX}/lib/cmake/ /usr/lib/cmake)
-find_package( raspicam REQUIRED)
-include_directories( ${raspicam_INCLUDE_DIRS} )
+
 
 add_library(
 	CameraLib

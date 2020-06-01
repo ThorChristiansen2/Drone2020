@@ -5,11 +5,10 @@
 
 // Include directories for raspicam
 #include <ctime>
-#include <fstream>
 #include <cstdlib>
+#include <fstream>
 #include <sstream>
 #include <raspicam/raspicam_cv.h>
-#include <unistd.h>
 
 /* ########################
  * Name: mainCamera.cpp
@@ -24,19 +23,12 @@
 
 using namespace cv;
 using namespace std;
+const char* source_window = "Source image"; 
+
 
 bool doTestSpeedOnly=false;
-const char* source_window = "Source image"; 
-//const char* corners_window = "Corners detected";
-
-float getParamVal ( string param,int argc,char **argv,float defvalue=-1 ) {
-    int idx=-1;
-    for ( int i=0; i<argc && idx==-1; i++ )
-        if ( string ( argv[i] ) ==param ) idx=i;
-    if ( idx==-1 ) return defvalue;
-    else return atof ( argv[  idx+1] );
-}
-
+//parse command line
+//returns the index of a command line param in argv. If not found, return -1
 int findParam ( string param,int argc,char **argv ) {
     int idx=-1;
     for ( int i=0; i<argc && idx==-1; i++ )
@@ -44,7 +36,15 @@ int findParam ( string param,int argc,char **argv ) {
     return idx;
 
 }
-
+//parse command line
+//returns the value of a command line param. If not found, defvalue is returned
+float getParamVal ( string param,int argc,char **argv,float defvalue=-1 ) {
+    int idx=-1;
+    for ( int i=0; i<argc && idx==-1; i++ )
+        if ( string ( argv[i] ) ==param ) idx=i;
+    if ( idx==-1 ) return defvalue;
+    else return atof ( argv[  idx+1] );
+}
 
 void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
     Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv,1280 ) );
@@ -70,7 +70,6 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
 
 }
 
-
 void showUsage() {
     cout<<"Usage: "<<endl;
     cout<<"[-gr set gray color capture]\n";
@@ -84,6 +83,61 @@ void showUsage() {
 
     cout<<endl;
 }
+
+
+int main ( int argc,char **argv ) {
+	/* This just tells you (the programmer) that if you want to get more information
+	 * on getting help, then you should simply just call the executable file with
+	 * ./mainprogram -help 
+	 * This argument "-help" then activates the function showUsage. 
+	*/
+	if ( argc==1 ) {
+		cerr<<"Usage (-help for help)"<<endl;
+	}
+	else {
+		cout<<"This option"<<endl;
+	}
+	if ( findParam ( "-help",argc,argv ) !=-1 ) {
+		showUsage();
+		return -1;
+	}
+	raspicam::RaspiCam_Cv Camera;
+	processCommandLine ( argc,argv,Camera );
+	cout<<"Connecting to camera"<<endl;
+	if ( !Camera.open() ) {
+		cerr<<"Error opening camera"<<endl;
+		return -1;
+	}
+	cout<<"Connected to camera ="<<Camera.getId() <<endl;
+	cv::Mat image;
+	int nCount=getParamVal ( "-nframes",argc,argv, 100 );
+	cout<<"Capturing"<<endl;
+
+	double time_=cv::getTickCount();
+	Camera.grab();
+	Camera.retrieve ( image );
+		
+	imshow("Display image",image);
+	waitKey(0);
+
+	for ( int i=0; i<nCount || nCount==0; i++ ) {
+		Camera.grab();
+		Camera.retrieve ( image );
+		
+		imshow(source_window, image);
+		if ( !doTestSpeedOnly ) {
+			if ( i%5==0 ) 	  cout<<"\r capturing ..."<<i<<"/"<<nCount<<std::flush;
+			if ( i%30==0 && i!=0 )	cv::imwrite ("image"+std::to_string(i)+".jpg",image );
+		}
+	}
+	if ( !doTestSpeedOnly )  cout<<endl<<"Images saved in imagexx.jpg"<<endl;
+	double secondsElapsed= double ( cv::getTickCount()-time_ ) /double ( cv::getTickFrequency() ); //time in second
+	cout<< secondsElapsed<<" seconds for "<< nCount<<"  frames : FPS = "<< ( float ) ( ( float ) ( nCount ) /secondsElapsed ) <<endl;
+	Camera.release();
+}
+/*
+const char* source_window = "Source image"; 
+
 
 int main( int argc,char **argv ) {
 	
@@ -121,26 +175,18 @@ int main( int argc,char **argv ) {
 	}
 	cout<<"Connected to camera ="<<Camera.getId() <<endl;
 	
-	/*
-	// Test the Pi-camera
-	int res_width = 640;
-	int res_height = 480;
-	std::cout << "Opening camera with :" << res_width << " x " << res_height << std::endl;
-	
-	piCamera.set(CAP_PROP_FRAME_WIDTH, (float)res_width );
-	piCamera.set(CAP_PROP_FRAME_HEIGHT, (float)res_height );
-	piCamera.set(CAP_PROP_FPS, 30);
-	
-	piCamera.set(CAP_PROP_FORMAT, CV_8UC3); 
-	
-	if(!piCamera.open()) {
-		std::cout << "Did not open\n";
-	}
-	
-	if (piCamera.isOpened()) std::cout << "RaspiCam_CV_open\n";
-	*/
 	
 	waitKey(0);
 	//return 0;
 
 }
+*/
+
+
+
+
+
+
+
+
+

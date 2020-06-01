@@ -6,5 +6,5 @@ CXX_FLAGS =   -std=gnu++11
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/home/pi/GitHub/Drone2020/Camera -I/home/pi/GitHub/Drone2020/libfiles/src -isystem /usr/local/include/opencv4 
+CXX_INCLUDES = -I/usr/local/include -I/home/pi/GitHub/Drone2020/Camera -I/home/pi/GitHub/Drone2020/libfiles/src -isystem /usr/local/include/opencv4 
 
