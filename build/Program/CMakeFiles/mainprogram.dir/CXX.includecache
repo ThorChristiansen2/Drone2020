@@ -1,4 +1,4 @@
-#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
 
 #IncludeRegexScan: ^.*$
 
@@ -23,6 +23,18 @@ say-hello/hello.hpp
 -
 mainCamera.hpp
 /home/pi/GitHub/Drone2020/Program/mainCamera.hpp
+ctime
+-
+fstream
+-
+cstdlib
+-
+sstream
+-
+raspicam/raspicam_cv.h
+-
+unistd.h
+-
 
 /usr/local/include/opencv4/opencv2/core.hpp
 opencv2/core/cvdef.h
