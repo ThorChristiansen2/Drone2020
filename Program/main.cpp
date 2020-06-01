@@ -1,6 +1,7 @@
 #include <iostream>
 #include <say-hello/hello.hpp>
 #include "mainCamera.hpp"
+#include <unistd.h>
 
 
 // Include directories for raspicam
@@ -112,14 +113,26 @@ int main ( int argc,char **argv ) {
 	cv::Mat image;
 	int nCount=getParamVal ( "-nframes",argc,argv, 100 );
 	cout<<"Capturing"<<endl;
+	
+	for (int k = 0; k <= 4; k++) {
+		Camera.grab();
+		Camera.retrieve ( image );
+		namedWindow( source_window);
+		imshow(source_window,image);
+		cout << "New Image displayed" <<endl;
+		waitKey(3000);
+		cout << "New Image terminated" <<endl;
+		destroyWindow(source_window);
+	}
 
 	double time_=cv::getTickCount();
-	Camera.grab();
-	Camera.retrieve ( image );
+	//Camera.grab();
+	//Camera.retrieve ( image );
 		
-	imshow("Display image",image);
-	waitKey(0);
+	//imshow("Display image",image);
+	//waitKey(0);
 
+	/*
 	for ( int i=0; i<nCount || nCount==0; i++ ) {
 		Camera.grab();
 		Camera.retrieve ( image );
@@ -133,6 +146,7 @@ int main ( int argc,char **argv ) {
 	if ( !doTestSpeedOnly )  cout<<endl<<"Images saved in imagexx.jpg"<<endl;
 	double secondsElapsed= double ( cv::getTickCount()-time_ ) /double ( cv::getTickFrequency() ); //time in second
 	cout<< secondsElapsed<<" seconds for "<< nCount<<"  frames : FPS = "<< ( float ) ( ( float ) ( nCount ) /secondsElapsed ) <<endl;
+	*/
 	Camera.release();
 }
 /*
