@@ -14,7 +14,7 @@
 /* ########################
  * Name: mainCamera.cpp
  * Made by: Thor Christiansen - s173949 
- * Date: 1.06.2020
+ * Date: 2.06.2020
  * Objective: The source file mainCamera.cpp contains the functions used
  * by main.cpp to treat the images - find features in the images using 
  * Harris corner etc.
@@ -66,9 +66,14 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
 }
 
 // Initialization part of VO pipeline.
-float initializaiton() {
-	
-	
+float initializaiton(Mat I_i0, Mat I_i1) {
+	cout << "Display I_i0" <<endl;
+	imshow(source_window,I_i0);
+	waitKey(4000);
+	cout << "Display I_i1" << endl;
+	imshow(source_window,I_i1);
+	waitKey(10000);
+	return 0;
 }
 
 
@@ -84,10 +89,23 @@ int main ( int argc,char **argv ) {
 		return -1;
 	}
 	cout<<"Connected to camera ="<<Camera.getId() <<endl;
-	cv::Mat image;
+	cv::Mat I_i0;
+	cv::Mat I_i1;
 	int nCount=getParamVal ( "-nframes",argc,argv, 100 );
 	cout<<"Capturing"<<endl;
 	
+	// Initialization
+	Camera.grab();
+	Camera.retrieve( I_i0 ); // Frame 0
+	cout << "Frame I_i0 captured" <<endl;
+	waitKey(3000); // Wait for 3 seconds
+	Camera.grab();
+	Camera.retrieve ( I_i1 ); // Frame 1 
+	cout << "Frame I_i1 captured" <<endl;
+	namedWindow( source_window);
+	initializaiton(I_i0, I_i1);
+	
+	/*
 	for (int k = 0; k <= 4; k++) {
 		Camera.grab();
 		Camera.retrieve ( image );
@@ -98,6 +116,7 @@ int main ( int argc,char **argv ) {
 		cout << "New Image terminated" <<endl;
 		destroyWindow(source_window);
 	}
+	*/
 
 	double time_=cv::getTickCount();
 	
