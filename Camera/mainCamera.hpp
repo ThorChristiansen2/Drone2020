@@ -22,7 +22,7 @@ namespace draw {
 */ 
 
 namespace Harris {
-	void corner(Mat src, Mat src_gray, bool display);
+	int** corner(Mat src, Mat src_gray, bool display);
 	//void corner(int,void*);
 
 }	// Harris Corner

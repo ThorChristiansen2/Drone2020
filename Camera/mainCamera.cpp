@@ -29,7 +29,7 @@ void draw::circles() {
 */
 
 
-void Harris::corner(Mat src, Mat src_gray, bool display) {
+int** Harris::corner(Mat src, Mat src_gray, bool display) {
 	
 	// Define variables
 	const char* corners_window = "Corners detected";
@@ -77,6 +77,7 @@ void Harris::corner(Mat src, Mat src_gray, bool display) {
 		cout << "Number of corners: " << nr_corners << endl;
 		cout << "Corner end: (" << interest_points[1][nr_corners] << "," << interest_points[2][nr_corners] << ")" << endl;
 		
+		return interest_points;
 	}
 	
 	
@@ -91,9 +92,13 @@ void Harris::corner(Mat src, Mat src_gray, bool display) {
 		}
 		namedWindow( corners_window) ; 
 		imshow( corners_window, src);
+		
+		int emptyArray[1][1];
+		
+		return emptyArray;
 	}
 	
-	return; 
+	//return; 
 }
 
 
