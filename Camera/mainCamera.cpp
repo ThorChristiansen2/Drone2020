@@ -29,7 +29,7 @@ void draw::circles() {
 */
 
 
-void Harris::corner(Mat src, Mat src_gray) {
+void Harris::corner(Mat src, Mat src_gray, bool display) {
 	
 	// Define variables
 	const char* corners_window = "Corners detected";
@@ -48,19 +48,50 @@ void Harris::corner(Mat src, Mat src_gray) {
 	normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
 	convertScaleAbs( dst_norm, dst_norm_scaled );
 
-	for (int i = 0; i < dst_norm.rows; i++) {
-		for (int j = 0; j < dst_norm.cols; j++) {
-			if ( (int) dst_norm.at<float>(i,j) > thres) {
-				//circle (dst_norm_scaled, Point(j,i), 5, Scalar(0), 2,8,0);
-				circle (src, Point(j,i), 5, Scalar(200), 2,8,0);
+	
+	// Find corners and return 
+	if (display == false) {
+		int nr_corners = 0;
+		int index_i[dst_norm.rows]; // In theory there might be more keypoints?
+		int index_j[dst_norm.cols];
+		
+		cout << "Number of rows: " << dst_norm.rows << endl;
+		cout << "Number of columns: " << dst_norm.cols<< endl;
+		for (int i = 0; i < dst_norm.rows; i++) {
+			for (int j = 0; j < dst_norm.cols; j++) {
+				if ( (int) dst_norm.at<float>(i,j) > thres) {
+					cout << "intensity: " << (int) dst_norm.at<float>(i,j) << endl;
+					index_i[nr_corners] = i;
+					index_j[nr_corners] = j;
+					nr_corners ++;
+				}
 			}
-
 		}
-
+		nr_corners--;
+		int interest_points[2][nr_corners];
+		int index_x[nr_corners];
+		for (int k = 0; k <= nr_corners; k++) {
+			interest_points[1][k] = index_i[k];
+			interest_points[2][k] = index_j[k];
+		}
+		cout << "Number of corners: " << nr_corners << endl;
+		cout << "Corner end: (" << interest_points[1][nr_corners] << "," << interest_points[2][nr_corners] << ")" << endl;
+		
 	}
 	
-	namedWindow( corners_window) ; 
-	imshow( corners_window, src);
+	
+	if (display) {
+		for (int i = 0; i < dst_norm.rows; i++) {
+			for (int j = 0; j < dst_norm.cols; j++) {
+				if ( (int) dst_norm.at<float>(i,j) > thres) {
+					//circle (dst_norm_scaled, Point(j,i), 5, Scalar(0), 2,8,0);
+					circle (src, Point(j,i), 5, Scalar(200), 2,8,0);
+				}
+			}
+		}
+		namedWindow( corners_window) ; 
+		imshow( corners_window, src);
+	}
 	
 	return; 
 }

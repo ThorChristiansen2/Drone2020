@@ -67,15 +67,34 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
 
 // Initialization part of VO pipeline.
 float initializaiton(Mat I_i0, Mat I_i1) {
-	cout << "Display I_i0" <<endl;
-	imshow(source_window,I_i0);
-	waitKey(4000);
-	cout << "Display I_i1" << endl;
-	imshow(source_window,I_i1);
-	waitKey(10000);
 	
+	// Transform color images to gray images
+	cv::Mat I_i0_gray, I_i1_gray;
+	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
+	cvtColor(I_i1, I_i1_gray, COLOR_BGR2GRAY );
 	
+	// Get Feature points
+	bool display = false; // Parameter that displays images
+	Harris::corner(I_i0, I_i0_gray, display);
 	
+	 
+	
+	// Display images
+	if (display == true) {
+		cout << "Display I_i0" <<endl;
+		imshow("Image I_i0",I_i0);
+		waitKey(4000);
+		Harris::corner(I_i0, I_i0_gray, display);
+		waitKey(4000);
+		if (display == true) {
+			destroyWindow("Corners detected");
+		}
+		cout << "Display I_i1" << endl;
+		imshow("Image I_i1",I_i1);
+		waitKey(4000);
+		Harris::corner(I_i1, I_i1_gray, display);
+		waitKey(4000);
+	}
 	return 0;
 }
 
@@ -92,9 +111,11 @@ int main ( int argc,char **argv ) {
 		return -1;
 	}
 	cout<<"Connected to camera ="<<Camera.getId() <<endl;
-	cv::Mat I_i0;
-	cv::Mat I_i1;
-	cv::Mat image;
+	
+	cv::Mat I_i0, I_i1, image;
+	//cv::Mat I_i1;
+	//cv::Mat image;
+	
 	int nCount=getParamVal ( "-nframes",argc,argv, 100 );
 	cout<<"Capturing"<<endl;
 	
