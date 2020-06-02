@@ -1,5 +1,6 @@
 #include <iostream>
 #include "mainCamera.hpp"
+#include "Matrix.h"
 
 /* ########################
  * Name: mainCamera.cpp
@@ -29,7 +30,7 @@ void draw::circles() {
 */
 
 
-int** Harris::corner(Mat src, Mat src_gray, bool display) {
+void Harris::corner(Mat src, Mat src_gray, bool display) {
 	
 	// Define variables
 	const char* corners_window = "Corners detected";
@@ -77,7 +78,7 @@ int** Harris::corner(Mat src, Mat src_gray, bool display) {
 		cout << "Number of corners: " << nr_corners << endl;
 		cout << "Corner end: (" << interest_points[1][nr_corners] << "," << interest_points[2][nr_corners] << ")" << endl;
 		
-		return interest_points;
+		//return interest_points;
 	}
 	
 	
@@ -95,7 +96,7 @@ int** Harris::corner(Mat src, Mat src_gray, bool display) {
 		
 		int emptyArray[1][1];
 		
-		return emptyArray;
+		//return emptyArray;
 	}
 	
 	//return; 
