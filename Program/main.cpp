@@ -73,6 +73,9 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	cout << "Display I_i1" << endl;
 	imshow(source_window,I_i1);
 	waitKey(10000);
+	
+	
+	
 	return 0;
 }
 
@@ -91,10 +94,16 @@ int main ( int argc,char **argv ) {
 	cout<<"Connected to camera ="<<Camera.getId() <<endl;
 	cv::Mat I_i0;
 	cv::Mat I_i1;
+	cv::Mat image;
 	int nCount=getParamVal ( "-nframes",argc,argv, 100 );
 	cout<<"Capturing"<<endl;
 	
 	// Initialization
+	Camera.grab(); // You need to take an initial image in order to make the camera work
+	Camera.retrieve( image ); 
+	cout << "Image captured" <<endl;
+	waitKey(3000);
+	
 	Camera.grab();
 	Camera.retrieve( I_i0 ); // Frame 0
 	cout << "Frame I_i0 captured" <<endl;
