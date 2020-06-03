@@ -75,9 +75,25 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	
 	// Get Feature points
 	bool display = false; // Parameter that displays images
-	Harris::corner(I_i0, I_i0_gray, display);
+	cout << "Main script" << endl;
+	Matrix keypoints = Harris::corner(I_i0, I_i0_gray, display);
+	cout << "Main script 2" << endl;
+	cout << "Matrix dimension 1: " << keypoints.dim1() << endl;
+	cout << "Matrix dimension 2: " << keypoints.dim2() << endl;
 	
-	 
+	
+	for (int k = 0; k < keypoints.dim2(); k++) {
+		cout << "Start print" << endl;
+		cout << "x" << endl;
+		double x = keypoints(0,k);
+		cout << "y" << endl;
+		double y = keypoints(1,k);
+		circle (I_i0, Point(x,y), 5, Scalar(200), 2,8,0);
+	}
+	
+	cout << "Print Billede " << endl;
+	imshow( "Detected corners", I_i0);
+	waitKey(0);
 	
 	// Display images
 	if (display == true) {
@@ -130,12 +146,19 @@ int main ( int argc,char **argv ) {
 	Camera.grab();
 	Camera.retrieve( I_i0 ); // Frame 0
 	cout << "Frame I_i0 captured" <<endl;
-	waitKey(3000); // Wait for 3 seconds
+	imshow("Frame I_i0", I_i0);
+	waitKey(0); // Wait for 3 seconds
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
 	namedWindow( source_window);
+	imshow( source_window, I_i1);
+	waitKey(0);
 	initializaiton(I_i0, I_i1);
+	
+	Matrix hej(5,4);
+	hej(0,1) = 2;
+	cout << "Element (0,1): " << hej(0,1) << endl;
 
 	/*
 	for (int k = 0; k <= 4; k++) {

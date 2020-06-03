@@ -8,7 +8,8 @@
 #include "Matrix.h"
 
 using namespace cv;
-using namespace Numeric_lib;
+//using namespace Numeric_lib;
+using Matrix = Numeric_lib::Matrix<double,2>;
 
 /*
 namespace draw {
@@ -24,8 +25,8 @@ namespace draw {
 */ 
 
 namespace Harris {
-	void corner(Mat src, Mat src_gray, bool display);
-	//void corner(int,void*);
+	Matrix corner(Mat src, Mat src_gray, bool display);
+	//void corner(Mat src, Mat src_gray, bool display);
 
 }	// Harris Corner
 

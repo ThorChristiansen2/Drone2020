@@ -31,7 +31,7 @@ void draw::circles() {
 */
 
 
-void Harris::corner(Mat src, Mat src_gray, bool display) {
+Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	
 	// Define variables
 	const char* corners_window = "Corners detected";
@@ -72,8 +72,8 @@ void Harris::corner(Mat src, Mat src_gray, bool display) {
 		}
 		nr_corners--;
 		//int interest_points[2][nr_corners];
-		Matrix<int,2>keypoints(2,nr_corners);
-	
+		//Matrix<double,2>keypoints(2,nr_corners);
+		Matrix keypoints(2,nr_corners);
 		
 		//cout << "Number of corners before loop: " << nr_corners << endl;
 		cout << "Number of matrix rows: " << keypoints.dim1() << endl;
@@ -90,12 +90,13 @@ void Harris::corner(Mat src, Mat src_gray, bool display) {
 		cout << "Number of corners: " << nr_corners << endl;
 		//cout << "Corner end: (" << interest_points[1][nr_corners] << "," << interest_points[2][nr_corners] << ")" << endl;
 		cout << "Corner end matrix: (" << keypoints(0,nr_corners-1) << "," << keypoints(1,nr_corners-1) << ")" << endl;
+		cout << "mainCamera. Dimensioner: (" << keypoints.dim1() << "," << keypoints.dim2() << ")" << endl;
 		
-		//return interest_points;
+		return keypoints;
 	}
 	
 	
-	if (display) {
+	if (display == true) {
 		for (int i = 0; i < dst_norm.rows; i++) {
 			for (int j = 0; j < dst_norm.cols; j++) {
 				if ( (int) dst_norm.at<float>(i,j) > thres) {
@@ -104,15 +105,20 @@ void Harris::corner(Mat src, Mat src_gray, bool display) {
 				}
 			}
 		}
+		cout << "Display function" << endl;
 		namedWindow( corners_window) ; 
 		imshow( corners_window, src);
+		waitKey(0);
+		Matrix emptyArray(1,1);
 		
-		int emptyArray[1][1];
 		
-		//return emptyArray;
+		return emptyArray;
 	}
+	Matrix emptyArray(1,1);
+	cout << "End of Harris " << endl;	
+		
+	return emptyArray;
 	
-	//return; 
 }
 
 
