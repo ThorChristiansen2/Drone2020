@@ -86,6 +86,7 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 		waitKey(4000);
 		Harris::corner(I_i0, I_i0_gray, display);
 		waitKey(4000);
+		/*
 		if (display == true) {
 			destroyWindow("Corners detected");
 		}
@@ -94,6 +95,7 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 		waitKey(4000);
 		Harris::corner(I_i1, I_i1_gray, display);
 		waitKey(4000);
+		*/
 	}
 	return 0;
 }
@@ -134,7 +136,7 @@ int main ( int argc,char **argv ) {
 	cout << "Frame I_i1 captured" <<endl;
 	namedWindow( source_window);
 	initializaiton(I_i0, I_i1);
-	
+
 	/*
 	for (int k = 0; k <= 4; k++) {
 		Camera.grab();

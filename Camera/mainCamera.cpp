@@ -14,6 +14,7 @@
 */
 
 using namespace std;
+using namespace Numeric_lib;
 
 /*
 void draw::circles() {
@@ -50,6 +51,7 @@ void Harris::corner(Mat src, Mat src_gray, bool display) {
 	convertScaleAbs( dst_norm, dst_norm_scaled );
 
 	
+	
 	// Find corners and return 
 	if (display == false) {
 		int nr_corners = 0;
@@ -69,14 +71,25 @@ void Harris::corner(Mat src, Mat src_gray, bool display) {
 			}
 		}
 		nr_corners--;
-		int interest_points[2][nr_corners];
-		int index_x[nr_corners];
-		for (int k = 0; k <= nr_corners; k++) {
-			interest_points[1][k] = index_i[k];
-			interest_points[2][k] = index_j[k];
+		//int interest_points[2][nr_corners];
+		Matrix<int,2>keypoints(2,nr_corners);
+	
+		
+		//cout << "Number of corners before loop: " << nr_corners << endl;
+		cout << "Number of matrix rows: " << keypoints.dim1() << endl;
+		cout << "Number of matrix columns: " << keypoints.dim2() << endl;
+		for (int k = 0; k < nr_corners; k++) {
+			//interest_points[0][k] = index_i[k]; // This should maybe be changed to a zero
+			//interest_points[1][k] = index_j[k];
+			//keypoints(0,k) = 5;
+			cout << "k = " << k << endl;
+			keypoints(0,k) = index_i[k];
+			keypoints(1,k) = index_j[k];
+			cout << "Keypoint updated: " << keypoints(1,k) << endl;
 		}
 		cout << "Number of corners: " << nr_corners << endl;
-		cout << "Corner end: (" << interest_points[1][nr_corners] << "," << interest_points[2][nr_corners] << ")" << endl;
+		//cout << "Corner end: (" << interest_points[1][nr_corners] << "," << interest_points[2][nr_corners] << ")" << endl;
+		cout << "Corner end matrix: (" << keypoints(0,nr_corners-1) << "," << keypoints(1,nr_corners-1) << ")" << endl;
 		
 		//return interest_points;
 	}

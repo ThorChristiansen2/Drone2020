@@ -6,6 +6,12 @@
 
 #IncludeRegexTransform: 
 
+/home/pi/GitHub/Drone2020/Camera/Matrix.h
+string
+-
+algorithm
+-
+
 /home/pi/GitHub/Drone2020/Camera/mainCamera.cpp
 iostream
 -
