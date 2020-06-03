@@ -1,6 +1,6 @@
 #include <iostream>
 #include "mainCamera.hpp"
-#include "Matrix.h"
+//#include "Matrix.h"
 
 /* ########################
  * Name: mainCamera.cpp
@@ -14,7 +14,7 @@
 */
 
 using namespace std;
-using namespace Numeric_lib;
+//using namespace Numeric_lib;
 
 /*
 void draw::circles() {
