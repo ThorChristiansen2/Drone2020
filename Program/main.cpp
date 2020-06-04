@@ -75,20 +75,36 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	
 	// Get Feature points
 	bool display = false; // Parameter that displays images
-	cout << "Start finding corners" << endl;
-	Matrix keypoints = Harris::corner(I_i0, I_i0_gray, display);
-	cout << "Plot corners at (x,y)" << endl;
+	//cout << "Start finding corners" << endl;
+	Matrix keypoints_frameI_i0 = Harris::corner(I_i0, I_i0_gray, display);
+	//cout << "Plot corners at (x,y)" << endl;
 	//cout << "Matrix dimension 1: " << keypoints.dim1() << endl;
 	//cout << "Matrix dimension 2: " << keypoints.dim2() << endl;
 	
-	for (int k = 0; k < keypoints.dim1(); k++) {
-		cout << "(y = " << keypoints(k,1) << ",x = " << keypoints(k,2) << ")" << endl;
-		double x = keypoints(k,1);
-		double y = keypoints(k,2);
+	for (int k = 0; k < keypoints_frameI_i0.dim1(); k++) {
+		//cout << "(y = " << keypoints(k,1) << ",x = " << keypoints(k,2) << ")" << endl;
+		double x = keypoints_frameI_i0(k,1);
+		double y = keypoints_frameI_i0(k,2);
 		circle (I_i0, Point(y,x), 5, Scalar(200), 2,8,0);
 	}
 	imshow( "Detected corners", I_i0);
 	waitKey(0);
+	
+	Matrix keypoints_frameI_i1 = Harris::corner(I_i1, I_i1_gray, display);
+	//cout << "Plot corners at (x,y)" << endl;
+	//cout << "Matrix dimension 1: " << keypoints.dim1() << endl;
+	//cout << "Matrix dimension 2: " << keypoints.dim2() << endl;
+	
+	for (int k = 0; k < keypoints_frameI_i1.dim1(); k++) {
+		//cout << "(y = " << keypoints(k,1) << ",x = " << keypoints(k,2) << ")" << endl;
+		double x = keypoints_frameI_i1(k,1);
+		double y = keypoints_frameI_i1(k,2);
+		circle (I_i1, Point(y,x), 5, Scalar(200), 2,8,0);
+	}
+	imshow( "Detected corners 2", I_i1);
+	waitKey(0);
+	
+	
 	
 	
 	// Display images

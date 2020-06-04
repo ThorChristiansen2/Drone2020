@@ -76,16 +76,16 @@ Matrix extractMaxHeap(Matrix Corners, int n) {
 	n--;
 	// Bubble down
 	int index = 1;
-	cout << "Begin bubble down" << endl;
+	//cout << "Begin bubble down" << endl;
 	while ((2*index+1) <= n && (Corners(index,0) < Corners(2*index,0) || Corners(index,0) < Corners(2*index+1,0))) {
-		cout << "Bubble down continued" << endl;
+		//cout << "Bubble down continued" << endl;
 		if (Corners(2*index,0) > Corners(2*index+1,0)) {
-			cout << "bubble left" << endl;
+			//cout << "bubble left" << endl;
 			Corners.swap_rows(index,2*index);
 			index = 2*index;
 		}
 		else {
-			cout << "bubble right" << endl;
+			//cout << "bubble right" << endl;
 			Corners.swap_rows(index,2*index+1);
 			index = 2*index+1;
 		}
@@ -93,8 +93,8 @@ Matrix extractMaxHeap(Matrix Corners, int n) {
 	//cout << "Done with while loop extractMaxHeap " << endl;
 	//cout << "Max returned as = (" << Corners(n+1,1) << "," << Corners(n+1,2) << ")" << endl;
 	//return firstRow;
-	cout << "Print inside extract" << endl;
-	printfunction(Corners,n+1);
+	//cout << "Print inside extract" << endl;
+	//printfunction(Corners,n+1);
 	return Corners;
 }
 
@@ -105,13 +105,15 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	const char* corners_window = "Corners detected";
 	
 	// Define variables related to Harris corner
-	int blockSize = 2; 
-	int apertureSize = 3;
-	double k = 0.04;		// Magic parameter 
-	int thres = 200;
+	int blockSize = 4; 
+	int apertureSize = 5;
+	double k = 0.08;		// Magic parameter 
+	int thres = 180;	
+	// Parameters before: blocksize = 2, aperturesize = 3, thres = 200, k = 0.04
 	
 	// Variables related to Non Maximum suppression 
 	int NMSBox = 5;
+	int boundaries = 15; 
 	
 	Mat dst = Mat::zeros( src.size(), CV_32FC1 );
 	cornerHarris (src_gray, dst, blockSize, apertureSize, k);
@@ -128,88 +130,41 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 		int nr_corners = 0;
 		
 		// We only focus on the 200 biggest keypoints
-		int keypoints_limit = 200; // Change to 200
+		int keypoints_limit = 500; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		//int responses[keypoints_limit];
 		//int index_i[keypoints_limit]; // In theory there might be more keypoints?
 		//int index_j[keypoints_limit];
 		
-		cout << "Number of rows: " << dst_norm.rows << endl;
-		cout << "Number of columns: " << dst_norm.cols<< endl;
+		//cout << "Number of rows: " << dst_norm.rows << endl;
+		//cout << "Number of columns: " << dst_norm.cols<< endl;
 		int CornerResponse = 0;
 		int maxCornerResponse = 0;
 		Corners(0,0) = 0;
 		Corners(1,0) = 0;
 		
-		for (int i = 0; i < dst_norm.rows; i++) {
-			for (int j = 0; j < dst_norm.cols; j++) {
+		for (int i = 0+boundaries; i < dst_norm.rows-boundaries; i++) {
+			for (int j = 0+boundaries; j < dst_norm.cols-boundaries; j++) {
 				
 				CornerResponse = (int) dst_norm.at<float>(i,j);
 				if ( CornerResponse > thres && nr_corners < keypoints_limit-1) {
-					cout << "intensity for corner " << nr_corners << " at (" << i << "," << j << "): " << (int) dst_norm.at<float>(i,j) << endl;
+					//cout << "intensity for corner " << nr_corners << " at (" << i << "," << j << "): " << (int) dst_norm.at<float>(i,j) << endl;
 					// Insert node in heap
 					Corners = insertNodeHeap(Corners, CornerResponse,i,j,nr_corners+1);
-					cout << "Heap Corners intensity " << Corners(nr_corners+1,0)  << " at (" << Corners(nr_corners+1,1) << "," << Corners(nr_corners+1,2) << ")" << endl;
+					//cout << "Heap Corners intensity " << Corners(nr_corners+1,0)  << " at (" << Corners(nr_corners+1,1) << "," << Corners(nr_corners+1,2) << ")" << endl;
 					nr_corners++;
 				}
-					
-				/*	
-					
-					int index = 0;
-					discardPoint = false;
-					while (CornerResponse < Corners(i,0)) {
-						index++;
-						pixel_i = Corners(i,1);
-						pixel_j = Corners(i,2);
-						if ((i >= pixel_i-NMSBox && i <= pixel_i+NMSBox) && (j >= pixel_j-NMSBox && j <= pixel_j+NMSBox)) {
-							discardPoint = true;
-							break;
-						}
-					}
-					if (discardPoint == false) {
-						Matrix temp = Corners[index];
-						Corners(index,0) = CornerResponse;
-						Corners(index,1) = i;
-						Corners(index,2) = j;
-						
-						nr_corners ++;
-						Corners(nr_corners,0) = 0;
-						pixel_i = temp(0,1);
-						pixel_j = temp(0,2);
-						if ((i >= pixel_i-NMSBox && i <= pixel_i+NMSBox) && (j >= pixel_j-NMSBox && j <= pixel_j+NMSBox)) {
-							// Check the rest  
-						}
-						else {
-							// Switch and check the rest. 
-							Matrix temp2 = Corners[index + 1];
-							Corners[index+1] = temp;
-							temp = temp2;
-							for (int m = index + 1; m <= nr_corners; m++) {
-								if ()
-								
-							}
-						}
-						for (int m = index+1; m <= nr_corners; m++) {
-							Matrix temp2 = Corners[m];
-							
-							int temp_response = responses[m];
-							int temp
-							PrevCornerResponse;
-							 
-						} 
-					}
-				}
-				*/
 			}
 		}
 		printfunction(Corners,nr_corners);
 		
 		//waitKey(0);
-		cout << "Max in heap: " << Corners(1,0) << " at (" << Corners(1,1) << "," << Corners(1,2) << ")" << endl;
+		//cout << "Max in heap: " << Corners(1,0) << " at (" << Corners(1,1) << "," << Corners(1,2) << ")" << endl;
 		//nr_corners--;
 		// Maybe reduce size of corners Corners = Corners.slice(0,nr_corners);
-		cout << "Number of corners: " << nr_corners << endl;
+		//cout << "Number of corners: " << nr_corners << endl;
+		//waitKey(0);
 		Matrix keypoints(nr_corners,3); // Maybe you don't need to store the intensity value too?
 		keypoints(1,1) = 0;
 		keypoints(1,2) = 0;
@@ -217,45 +172,50 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 		bool Discard_Point = false;
 		int corners_left = 0;
 		// Extract maximum and automatically enforce non-maximum suppression 
-		cout << "Going in to for loop" << endl;
+		//cout << "Going in to for loop" << endl;
 		for (int m = 0; m < nr_corners; m++) {
 			//cout << "Begin deleting corners" << endl;
 			keypoints(m,1) = 0;
 			keypoints(m,2) = 0;
-			cout << "Before max extraction. Parameter n is: " << n << endl;
-			cout << "Parameter m is = " << m << endl;
+			//cout << "Before max extraction. Parameter n is: " << n << endl;
+			//cout << "Parameter m is = " << m << endl;
 			//Matrix temp = extractMaxHeap(Corners, n);
 			Corners = extractMaxHeap(Corners, n);
 			//cout << "Max extracted" << endl;
-			cout << "n is here: " << n << endl;
+			//cout << "n is here: " << n << endl;
 			int intensity = Corners(n,0);
 			int y_temp = Corners(n,1);
 			int x_temp = Corners(n,2);
 			n--;
-			cout << "Max intensity: " << intensity << " at (x_temp,y_temp) = " << x_temp << "," << y_temp << endl;
+			//cout << "Max intensity: " << intensity << " at (x_temp,y_temp) = " << x_temp << "," << y_temp << endl;
 			//waitKey(0);
 			Discard_Point = false;
-			for (int l = 0; l < m; l++) {
+			for (int l = 0; l <= m; l++) {
+			//for (int l = 0; l < m; l++) {
 				int y = keypoints(l,1);
 				int x = keypoints(l,2);
 				cout << "(x,y) = " << x << "," << y << endl;
 				if ((x_temp >= x - NMSBox && x_temp <= x + NMSBox) && (y_temp >= y-NMSBox && y_temp <= y+NMSBox)) {
-					cout << "Point discarted" << endl;
-					cout << "(x_temp,y_temp) = (" << x_temp << "," << y_temp << ")" << endl;
-					cout << "(x,y) = (" << x << "," << y << ")" << endl;
+					//cout << "Point discarted" << endl;
+					//cout << "(x_temp,y_temp) = (" << x_temp << "," << y_temp << ")" << endl;
+					//cout << "(x,y) = (" << x << "," << y << ")" << endl;
 					//waitKey(0);
 					Discard_Point = true;
+					break;
 				}
 			}
 			if (Discard_Point == false) {
 				cout << "Point being inserted" << endl;
 				//keypoints[m] = temp;
-				keypoints(m,0) = intensity;
-				keypoints(m,1) = y_temp;
-				keypoints(m,2) = x_temp;
+				//keypoints(m,0) = intensity;
+				//keypoints(m,1) = y_temp;
+				//keypoints(m,2) = x_temp;
+				keypoints(corners_left,0) = intensity;
+				keypoints(corners_left,1) = y_temp;
+				keypoints(corners_left,2) = x_temp;
 				corners_left++;
-				cout << "Keypoints printed" << endl;
-				printfunction(keypoints,corners_left);
+				//cout << "Keypoints printed" << endl;
+				//printfunction(keypoints,corners_left);
 			}
 		}
 		cout << "Number of corners left: " <<  corners_left << endl;
