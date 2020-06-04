@@ -81,10 +81,10 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	//cout << "Matrix dimension 1: " << keypoints.dim1() << endl;
 	//cout << "Matrix dimension 2: " << keypoints.dim2() << endl;
 	
-	for (int k = 0; k < keypoints.dim2(); k++) {
-		cout << "(y = " << keypoints(1,k) << ",x = " << keypoints(0,k) << ")" << endl;
-		double x = keypoints(0,k);
-		double y = keypoints(1,k);
+	for (int k = 0; k < keypoints.dim1(); k++) {
+		cout << "(y = " << keypoints(k,1) << ",x = " << keypoints(k,2) << ")" << endl;
+		double x = keypoints(k,1);
+		double y = keypoints(k,2);
 		circle (I_i0, Point(y,x), 5, Scalar(200), 2,8,0);
 	}
 	imshow( "Detected corners", I_i0);
@@ -147,9 +147,9 @@ int main ( int argc,char **argv ) {
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
-	namedWindow( source_window);
-	imshow( source_window, I_i1);
-	waitKey(0);
+	//namedWindow( source_window);
+	//imshow( source_window, I_i1);
+	//waitKey(0);
 	initializaiton(I_i0, I_i1);
 	
 

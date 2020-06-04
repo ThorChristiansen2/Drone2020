@@ -6,6 +6,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core/core.hpp>
 #include "Matrix.h"
+#include <math.h>
 
 using namespace cv;
 //using namespace Numeric_lib;

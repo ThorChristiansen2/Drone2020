@@ -21,6 +21,8 @@ opencv2/core/core.hpp
 -
 Matrix.h
 ../Camera/Matrix.h
+math.h
+-
 
 ../libfiles/src/say-hello/hello.hpp
 

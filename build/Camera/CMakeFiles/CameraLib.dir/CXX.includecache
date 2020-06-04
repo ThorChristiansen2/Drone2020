@@ -27,6 +27,8 @@ opencv2/core/core.hpp
 -
 Matrix.h
 /home/pi/GitHub/Drone2020/Camera/Matrix.h
+math.h
+-
 
 /usr/local/include/opencv4/opencv2/core.hpp
 opencv2/core/cvdef.h
