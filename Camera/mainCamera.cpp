@@ -16,19 +16,9 @@
 using namespace std;
 //using namespace Numeric_lib;
 
-/*
-void draw::circles() {
-	// Draw circles
-	std::cout << "Start of main File!\n";
-	//piCamera.set(cv::CAP_PROP_FRAME_WIDTH, (float)640 );
-	
-	Mat image = Mat::zeros(300, 600, CV_8UC3);
-	circle(image, Point(250, 150), 100, Scalar(0, 255, 128), -100);
-	circle(image, Point(350, 150), 100, Scalar(255, 255, 255), -100);
-	imshow("Display Window", image);
-	waitKey(0);
-}
-*/
+
+
+
 
 // Heap operations
 Matrix insertNodeHeap(Matrix Corners, int value, int y, int x, int n) {
@@ -42,9 +32,7 @@ Matrix insertNodeHeap(Matrix Corners, int value, int y, int x, int n) {
 		n = index;
 		index = floor(n/2);
 	}
-	
 	return Corners;
-	
 }
 
 void printfunction(Matrix Corners, int n) {
@@ -56,23 +44,7 @@ void printfunction(Matrix Corners, int n) {
 }
 
 Matrix extractMaxHeap(Matrix Corners, int n) {
-	//cout << "Inside max-extraction function" << endl;
-	
-	/*
-	Matrix firstRow(1,3);
-	int value = Corners(1,0);
-	int y = Corners(1,1);
-	int x = Corners(1,2);
-	firstRow(0,0) = value;
-	firstRow(0,1) = y;
-	firstRow(0,2) = x;
-	Corners[1] = Corners[n];
-	*/
-	Corners.swap_rows(1,n);
-	
-	
-	//cout << "First row updated " << endl;
-	//Corners[1] = Corners[n];
+	Corners.swap_rows(1,n); // Exchange max and last row
 	n--;
 	// Bubble down
 	int index = 1;
@@ -90,11 +62,6 @@ Matrix extractMaxHeap(Matrix Corners, int n) {
 			index = 2*index+1;
 		}
 	}
-	//cout << "Done with while loop extractMaxHeap " << endl;
-	//cout << "Max returned as = (" << Corners(n+1,1) << "," << Corners(n+1,2) << ")" << endl;
-	//return firstRow;
-	//cout << "Print inside extract" << endl;
-	//printfunction(Corners,n+1);
 	return Corners;
 }
 
@@ -108,7 +75,7 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	int blockSize = 4; 
 	int apertureSize = 5;
 	double k = 0.08;		// Magic parameter 
-	int thres = 180;	
+	int thres = 200;	
 	// Parameters before: blocksize = 2, aperturesize = 3, thres = 200, k = 0.04
 	
 	// Variables related to Non Maximum suppression 
@@ -118,27 +85,17 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	Mat dst = Mat::zeros( src.size(), CV_32FC1 );
 	cornerHarris (src_gray, dst, blockSize, apertureSize, k);
 
-	
 	Mat dst_norm, dst_norm_scaled;
 	normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
 	convertScaleAbs( dst_norm, dst_norm_scaled );
 
-	
-	
 	// Find corners and return 
 	if (display == false) {
 		int nr_corners = 0;
 		
-		// We only focus on the 200 biggest keypoints
-		int keypoints_limit = 500; // Change to 200
+		int keypoints_limit = 200; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
-		//int responses[keypoints_limit];
-		//int index_i[keypoints_limit]; // In theory there might be more keypoints?
-		//int index_j[keypoints_limit];
-		
-		//cout << "Number of rows: " << dst_norm.rows << endl;
-		//cout << "Number of columns: " << dst_norm.cols<< endl;
 		int CornerResponse = 0;
 		int maxCornerResponse = 0;
 		Corners(0,0) = 0;
@@ -179,7 +136,6 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 			keypoints(m,2) = 0;
 			//cout << "Before max extraction. Parameter n is: " << n << endl;
 			//cout << "Parameter m is = " << m << endl;
-			//Matrix temp = extractMaxHeap(Corners, n);
 			Corners = extractMaxHeap(Corners, n);
 			//cout << "Max extracted" << endl;
 			//cout << "n is here: " << n << endl;
@@ -188,28 +144,20 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 			int x_temp = Corners(n,2);
 			n--;
 			//cout << "Max intensity: " << intensity << " at (x_temp,y_temp) = " << x_temp << "," << y_temp << endl;
-			//waitKey(0);
 			Discard_Point = false;
-			for (int l = 0; l <= m; l++) {
+			for (int l = 0; l <= m; l++) { // Maybe you should change m to corners_left
 			//for (int l = 0; l < m; l++) {
 				int y = keypoints(l,1);
 				int x = keypoints(l,2);
 				cout << "(x,y) = " << x << "," << y << endl;
 				if ((x_temp >= x - NMSBox && x_temp <= x + NMSBox) && (y_temp >= y-NMSBox && y_temp <= y+NMSBox)) {
-					//cout << "Point discarted" << endl;
-					//cout << "(x_temp,y_temp) = (" << x_temp << "," << y_temp << ")" << endl;
-					//cout << "(x,y) = (" << x << "," << y << ")" << endl;
-					//waitKey(0);
+					// Discard point if it is within another maximum
 					Discard_Point = true;
 					break;
 				}
 			}
 			if (Discard_Point == false) {
 				cout << "Point being inserted" << endl;
-				//keypoints[m] = temp;
-				//keypoints(m,0) = intensity;
-				//keypoints(m,1) = y_temp;
-				//keypoints(m,2) = x_temp;
 				keypoints(corners_left,0) = intensity;
 				keypoints(corners_left,1) = y_temp;
 				keypoints(corners_left,2) = x_temp;
@@ -219,53 +167,34 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 			}
 		}
 		cout << "Number of corners left: " <<  corners_left << endl;
-		
-		/*
-		//cout << "Number of corners before loop: " << nr_corners << endl;
-		cout << "Number of matrix rows: " << keypoints.dim1() << endl;
-		cout << "Number of matrix columns: " << keypoints.dim2() << endl;
-		for (int k = 0; k < nr_corners; k++) {
-			cout << "k = " << k << endl;
-			keypoints(0,k) = index_i[k];
-			keypoints(1,k) = index_j[k];
-			cout << "Keypoint updated: " << keypoints(1,k) << endl;
-		}
-		cout << "Number of corners: " << nr_corners << endl;
-		//cout << "Corner end: (" << interest_points[1][nr_corners] << "," << interest_points[2][nr_corners] << ")" << endl;
-		cout << "Corner end matrix: (" << keypoints(0,nr_corners-1) << "," << keypoints(1,nr_corners-1) << ")" << endl;
-		cout << "mainCamera. Dimensioner: (" << keypoints.dim1() << "," << keypoints.dim2() << ")" << endl;
-		*/
-		
 		return keypoints.slice(0,corners_left);
 	}
-	
-	
-	if (display == true) {
-		for (int i = 0; i < dst_norm.rows; i++) {
-			for (int j = 0; j < dst_norm.cols; j++) {
-				if ( (int) dst_norm.at<float>(i,j) > thres) {
-					//circle (dst_norm_scaled, Point(j,i), 5, Scalar(0), 2,8,0);
-					circle (src, Point(j,i), 5, Scalar(200), 2,8,0);
-				}
-			}
-		}
-		cout << "Display function" << endl;
-		namedWindow( corners_window) ; 
-		imshow( corners_window, src);
-		waitKey(0);
-		Matrix emptyArray(1,1);
-		
-		
-		return emptyArray;
-	}
-	Matrix emptyArray(1,1);
 	cout << "End of Harris " << endl;	
-		
+	Matrix emptyArray(1,3);	
 	return emptyArray;
-	
 }
 
-
+// Find SIFT Desriptors 
+Matrix SIFT::FindDescriptors(Mat src, Matrix keypoints) {
+	int n = keypoints.dim1();
+	
+	// Initialize matrix containing keypoints descriptors
+	Matrix Descriptors(n,128);
+	
+	// Find Image gradients
+	
+	for (int i = 0; i <= n; i++) {
+		int y = keypoints(i,1);
+		int x = keypoints(i,2); 
+	
+	// Scale the norms of the gradients by multiplying a the graidents with a gaussian
+	// centered in the keypoint and with Sigma_w = 1.5*16. 
+	
+	
+	
+	}
+	return Descriptors;
+}
 
 
 

@@ -3,7 +3,6 @@
 #include "mainCamera.hpp"
 #include <unistd.h>
 
-
 // Include directories for raspicam
 #include <ctime>
 #include <cstdlib>
@@ -22,12 +21,12 @@
  * ########################
 */
 
+// ####################### Raspicam Functions #######################
 // Namespace and constants 
 using namespace cv;
 using namespace std;
 const char* source_window = "Source image"; 
 bool doTestSpeedOnly=false;
-
 
 //parse command line
 //returns the index of a command line param in argv. If not found, return -1
@@ -65,6 +64,21 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
         Camera.set ( cv::CAP_PROP_EXPOSURE, getParamVal ( "-ss",argc,argv )  );
 }
 
+// ####################### VO Initialization Pipeline #######################
+void drawCorners(Mat img, Matrix keypoints, const char* frame_name) {
+	//cout << "Matrix dimension 1: " << keypoints.dim1() << endl;
+	//cout << "Matrix dimension 2: " << keypoints.dim2() << endl;
+	for (int k = 0; k < keypoints.dim1(); k++) {
+		//cout << "Plot corners at (x,y)" << endl;
+		double x = keypoints(k,1);
+		double y = keypoints(k,2);
+		circle (img, Point(y,x), 5, Scalar(200), 2,8,0);
+	}
+	imshow(frame_name, img);
+	waitKey(0);
+}
+
+
 // Initialization part of VO pipeline.
 float initializaiton(Mat I_i0, Mat I_i1) {
 	
@@ -75,61 +89,35 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	
 	// Get Feature points
 	bool display = false; // Parameter that displays images
-	//cout << "Start finding corners" << endl;
-	Matrix keypoints_frameI_i0 = Harris::corner(I_i0, I_i0_gray, display);
-	//cout << "Plot corners at (x,y)" << endl;
-	//cout << "Matrix dimension 1: " << keypoints.dim1() << endl;
-	//cout << "Matrix dimension 2: " << keypoints.dim2() << endl;
 	
-	for (int k = 0; k < keypoints_frameI_i0.dim1(); k++) {
-		//cout << "(y = " << keypoints(k,1) << ",x = " << keypoints(k,2) << ")" << endl;
-		double x = keypoints_frameI_i0(k,1);
-		double y = keypoints_frameI_i0(k,2);
-		circle (I_i0, Point(y,x), 5, Scalar(200), 2,8,0);
-	}
-	imshow( "Detected corners", I_i0);
-	waitKey(0);
+	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, display);
+	const char* text1 = "Detected corners *Thor frame I_i0";
+	drawCorners(I_i0, keypoints_I_i0,text1);
 	
-	Matrix keypoints_frameI_i1 = Harris::corner(I_i1, I_i1_gray, display);
-	//cout << "Plot corners at (x,y)" << endl;
-	//cout << "Matrix dimension 1: " << keypoints.dim1() << endl;
-	//cout << "Matrix dimension 2: " << keypoints.dim2() << endl;
+	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, display);
+	const char* text2 = "Detected corners frame I_i1";
+	drawCorners(I_i1, keypoints_I_i1,text2);
 	
-	for (int k = 0; k < keypoints_frameI_i1.dim1(); k++) {
-		//cout << "(y = " << keypoints(k,1) << ",x = " << keypoints(k,2) << ")" << endl;
-		double x = keypoints_frameI_i1(k,1);
-		double y = keypoints_frameI_i1(k,2);
-		circle (I_i1, Point(y,x), 5, Scalar(200), 2,8,0);
-	}
-	imshow( "Detected corners 2", I_i1);
-	waitKey(0);
+	
+	// Find descriptors for Feature Points
+	// Write Sift function
+	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0, keypoints_I_i0);
+	//SIFT::operator()(I_i0_gray,
+	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i0, keypoints_I_i1);
+	
+	// Match Feature Points
+	// Using Least Squared Distance
+	
+	// Find position and rotation from images
 	
 	
 	
-	
-	// Display images
-	if (display == true) {
-		cout << "Display I_i0" <<endl;
-		imshow("Image I_i0",I_i0);
-		waitKey(4000);
-		Harris::corner(I_i0, I_i0_gray, display);
-		waitKey(4000);
-		/*
-		if (display == true) {
-			destroyWindow("Corners detected");
-		}
-		cout << "Display I_i1" << endl;
-		imshow("Image I_i1",I_i1);
-		waitKey(4000);
-		Harris::corner(I_i1, I_i1_gray, display);
-		waitKey(4000);
-		*/
-	}
+	// Should return pose of drone
 	return 0;
 }
 
 
-
+// ####################### Main function #######################
 int main ( int argc,char **argv ) {
 	
 	
@@ -143,8 +131,6 @@ int main ( int argc,char **argv ) {
 	cout<<"Connected to camera ="<<Camera.getId() <<endl;
 	
 	cv::Mat I_i0, I_i1, image;
-	//cv::Mat I_i1;
-	//cv::Mat image;
 	
 	int nCount=getParamVal ( "-nframes",argc,argv, 100 );
 	cout<<"Capturing"<<endl;
@@ -153,73 +139,52 @@ int main ( int argc,char **argv ) {
 	Camera.grab(); // You need to take an initial image in order to make the camera work
 	Camera.retrieve( image ); 
 	cout << "Image captured" <<endl;
-	waitKey(3000);
+	waitKey(1000);
 	
+	// Initial frame 0 
 	Camera.grab();
-	Camera.retrieve( I_i0 ); // Frame 0
+	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
 	imshow("Frame I_i0", I_i0);
-	waitKey(0); // Wait for 3 seconds
+	
+	waitKey(2000);	// Ensures it is sufficiently far away from initial frame
+	// First frame 1 
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
-	//namedWindow( source_window);
-	//imshow( source_window, I_i1);
-	//waitKey(0);
-	initializaiton(I_i0, I_i1);
+
+	// VO-pipeline: Initialization. Bootstraps the initial position. 
+	//initializaiton(I_i0, I_i1);
+	Mat I_i0_gray;
+	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
+	cout << "Print I_i0" << endl;
+	for (int k = 4; k< 8; k++) {
+		for (int j = 4; j< 7; j++) {
+			cout << I_i0_gray.at<int>(k,j) << ", ";
+		}
+		cout << "" << endl;
+	}
 	
+	cout << "Matrix A" << endl;
+	Mat temp = I_i0_gray.colRange(4,7).rowRange(4,8);
+	Mat A = Mat::eye(3,4,CV_32F);
+	A.copyTo(temp);
+	for (int k = 0; k< 4; k++) {
+		for (int j = 0; j< 3; j++) {
+			cout << A.at<int>(k,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	
+	// VO-pipeline: 
 
 
 	double time_=cv::getTickCount();
 	
 	Camera.release();
 }
-/*
-const char* source_window = "Source image"; 
 
-
-int main( int argc,char **argv ) {
-	
-	
-	std::cout << "main Program!\n";
-	hello::say_hello();
-
-	// Start the camera
-	Mat src, src_gray;
-	src = imread("/home/pi/Desktop/imagetest.jpg");
-	imshow("Display image",src);
-	
-	cvtColor(src,src_gray,	COLOR_BGR2GRAY );
-	namedWindow( source_window);
-	//createTrackbar( "Threshold: ", source_window, &thres, max_thresh, Harris::corner);
-	imshow(source_window, src_gray);
-	Harris::corner(src,src_gray);
-	
-	
-	
-	// Test af raspicam
-	if ( argc==1 ) {
-        cerr<<"Usage (-help for help)"<<endl;
-	}
-	if ( findParam ( "-help",argc,argv ) !=-1 ) {
-	    showUsage();
-	    return -1;
-	}
-	raspicam::RaspiCam_Cv Camera;
-	processCommandLine ( argc,argv,Camera );
-	cout<<"Connecting to camera"<<endl;
-	if ( !Camera.open() ) {
-	    cerr<<"Error opening camera"<<endl;
-	    return -1;
-	}
-	cout<<"Connected to camera ="<<Camera.getId() <<endl;
-	
-	
-	waitKey(0);
-	//return 0;
-
-}
-*/
 
 
 

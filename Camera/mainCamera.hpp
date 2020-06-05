@@ -31,6 +31,11 @@ namespace Harris {
 
 }	// Harris Corner
 
+namespace SIFT {
+	Matrix FindDescriptors(Mat src, Matrix keypoints);
+	
+}	// SIFT
+
 
 
 #endif
