@@ -116,6 +116,54 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	return 0;
 }
 
+// Function should maybe be in help library
+string type2str(int type) {
+  string r;
+
+  uchar depth = type & CV_MAT_DEPTH_MASK;
+  uchar chans = 1 + (type >> CV_CN_SHIFT);
+
+  switch ( depth ) {
+    case CV_8U:  r = "8U"; break;
+    case CV_8S:  r = "8S"; break;
+    case CV_16U: r = "16U"; break;
+    case CV_16S: r = "16S"; break;
+    case CV_32S: r = "32S"; break;
+    case CV_32F: r = "32F"; break;
+    case CV_64F: r = "64F"; break;
+    default:     r = "User"; break;
+  }
+
+  r += "C";
+  r += (chans+'0');
+
+  return r;
+}
+
+// Function should maybe be in help library
+void MatType( Mat inputMat )
+{
+    int inttype = inputMat.type();
+
+    string r, a;
+    uchar depth = inttype & CV_MAT_DEPTH_MASK;
+    uchar chans = 1 + (inttype >> CV_CN_SHIFT);
+    switch ( depth ) {
+        case CV_8U:  r = "8U";   a = "Mat.at<uchar>(y,x)"; break;  
+        case CV_8S:  r = "8S";   a = "Mat.at<schar>(y,x)"; break;  
+        case CV_16U: r = "16U";  a = "Mat.at<ushort>(y,x)"; break; 
+        case CV_16S: r = "16S";  a = "Mat.at<short>(y,x)"; break; 
+        case CV_32S: r = "32S";  a = "Mat.at<int>(y,x)"; break; 
+        case CV_32F: r = "32F";  a = "Mat.at<float>(y,x)"; break; 
+        case CV_64F: r = "64F";  a = "Mat.at<double>(y,x)"; break; 
+        default:     r = "User"; a = "Mat.at<UKNOWN>(y,x)"; break; 
+    }   
+    r += "C";
+    r += (chans+'0');
+    cout << "Mat is of type " << r << " and should be accessed with " << a << endl;
+
+}
+
 
 // ####################### Main function #######################
 int main ( int argc,char **argv ) {
@@ -141,13 +189,14 @@ int main ( int argc,char **argv ) {
 	cout << "Image captured" <<endl;
 	waitKey(1000);
 	
+	
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
 	imshow("Frame I_i0", I_i0);
 	
-	waitKey(2000);	// Ensures it is sufficiently far away from initial frame
+	waitKey(1000);	// Ensures it is sufficiently far away from initial frame
 	// First frame 1 
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
@@ -158,20 +207,51 @@ int main ( int argc,char **argv ) {
 	Mat I_i0_gray;
 	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
 	cout << "Print I_i0" << endl;
-	for (int k = 4; k< 8; k++) {
-		for (int j = 4; j< 7; j++) {
-			cout << I_i0_gray.at<int>(k,j) << ", ";
+	for (int k = 1; k< 9; k++) {
+		for (int j = 1; j< 9; j++) {
+			cout << (int) I_i0_gray.at<uchar>(k,j) << ", ";
+			//cout << "Another method" << endl;
+			//Scalar Intenisty = I_i0_gray.at<uchar>(k,j);
+			//cout << "Value is: " << Intenisty.val[0] << endl;
+			//waitKey(0);
 		}
 		cout << "" << endl;
 	}
 	
+	cout << "Show image I_i0" << endl;
+	imshow("Image I_i0_gray", I_i0_gray);
+	
+	
+	string ty = type2str(I_i0_gray.type() ); 
+	printf("Matrix: %s %dx%d \n ", ty.c_str(), I_i0_gray.cols, I_i0_gray.rows );
+	MatType(I_i0_gray);
+	
+	waitKey(0);
+	
 	cout << "Matrix A" << endl;
-	Mat temp = I_i0_gray.colRange(4,7).rowRange(4,8);
-	Mat A = Mat::eye(3,4,CV_32F);
-	A.copyTo(temp);
-	for (int k = 0; k< 4; k++) {
-		for (int j = 0; j< 3; j++) {
-			cout << A.at<int>(k,j) << ", ";
+	//cout << "Type of image I_i0_gray: " << I_i0_gray.type() << endl;
+	//cout << "Cast I_i0_gray to another type: " << endl;
+	//I_i0_gray_<double>();
+	//cout << "Type of image I_i0_gray: " << I_i0_gray.type() << endl;
+	//Mat temp = I_i0_gray.colRange(4,7).rowRange(4,8);
+	Rect r(0,0,10,10);
+	rectangle(I_i0_gray, r, Scalar(255), 1, 8, 0);
+	imshow("Image I_i0_gray w. rectangle", I_i0_gray);
+	waitKey(0);
+	cout << "Rectangle drawn" << endl;
+	
+	
+	
+	Mat A = I_i0_gray(r);
+	cout << "Dimenion of A : " << A.rows << endl;
+	cout << "Dimension of A : " << A.cols << endl;
+	//cout << "Start point " << A.at<double>(1,1) << endl;
+	//Mat A = Mat::zeros(3,4,CV_32FC1);
+	//A.copyTo(temp);
+	
+	for (int k = 1; k< A.rows-1; k++) {
+		for (int j = 1; j< A.cols-1; j++) {
+			cout << (int) A.at<uchar>(k,j) << ", ";
 		}
 		cout << "" << endl;
 	}

@@ -19,6 +19,8 @@ opencv2/imgproc.hpp
 -
 opencv2/core/core.hpp
 -
+opencv2/core/types.hpp
+-
 Matrix.h
 ../Camera/Matrix.h
 math.h
