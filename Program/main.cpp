@@ -94,16 +94,16 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	const char* text1 = "Detected corners *Thor frame I_i0";
 	drawCorners(I_i0, keypoints_I_i0,text1);
 	
-	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, display);
-	const char* text2 = "Detected corners frame I_i1";
-	drawCorners(I_i1, keypoints_I_i1,text2);
+	//Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, display);
+	//const char* text2 = "Detected corners frame I_i1";
+	//drawCorners(I_i1, keypoints_I_i1,text2);
 	
 	
 	// Find descriptors for Feature Points
 	// Write Sift function
-	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0, keypoints_I_i0);
+	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	//SIFT::operator()(I_i0_gray,
-	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i0, keypoints_I_i1);
+	//Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i0, keypoints_I_i1);
 	
 	// Match Feature Points
 	// Using Least Squared Distance
@@ -116,7 +116,10 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	return 0;
 }
 
-// Function should maybe be in help library
+// Function to determine data type of image contained in OpenCV Mat object.
+// Example of use for an image I_i0_gray in Opencv Mat Object
+// string ty = type2str(I_i0_gray.type() ); 
+// printf("Matrix: %s %dx%d \n ", ty.c_str(), I_i0_gray.cols, I_i0_gray.rows );
 string type2str(int type) {
   string r;
 
@@ -140,7 +143,9 @@ string type2str(int type) {
   return r;
 }
 
-// Function should maybe be in help library
+// Function to determine data type of image contained in OpenCV Mat object.
+// Example of use: MatType(I_i0_gray); where I_i0_gray is your Mat object.
+/*
 void MatType( Mat inputMat ) {
 	
     int inttype = inputMat.type();
@@ -163,7 +168,32 @@ void MatType( Mat inputMat ) {
     cout << "Mat is of type " << r << " and should be accessed with " << a << endl;
 	
 }
+*/
 
+/*
+// Select region of interest from image 
+Mat selectRegionOfInterest(Mat img, int y1, int x1, int y2, int x2) {
+	Mat ROI;
+	if (x1 < 0) {
+		x1 = 0;
+	}
+	if (y1 < 0) {
+		y1 = 0;
+	}
+	if (y2 > img.rows) {
+		y2 = img.rows;
+	}
+	if (x2 > img.cols) {
+		x2 = img.cols;
+	}
+	cout << "Rectangle : (" << y1 << "," << x1 << "," << x2 << "," << y2 << ")" << endl;
+	//Rect region(y1, x1, x2-x1, y2-y1);
+	Rect region(y1,x1,x2-x1,y2-y1);
+	ROI = img(region);
+	cout << "Region extracted" << endl;
+	return ROI;
+}
+*/
 
 // ####################### Main function #######################
 int main ( int argc,char **argv ) {
@@ -203,20 +233,29 @@ int main ( int argc,char **argv ) {
 	cout << "Frame I_i1 captured" <<endl;
 
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
-	//initializaiton(I_i0, I_i1);
+	initializaiton(I_i0, I_i1);
+	//MatType(I_i0);
 	
+	/*
+	 * To access a pixel element in an image, you can use two different methods.  
+	 * Either you can get it by: cout << (int) I_i0_gray.at<uchar>(k,j) << ", ";
+	 * Here I_i0_gray is the image, which is a matrix Mat, and "uchar" is the type 
+	 * of the data in the matrix. (k,j) is the position of the pixel.
+	 * Alternatively, you can use the method:
+	 * Scalar Intenisty = I_i0_gray.at<uchar>(k,j);
+	 * Intenisty.val[0]
+	 */
+	
+	/*
 	//cout << Data_type_mat; 
 	Mat I_i0_gray;
 	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
 	cout << "Print I_i0" << endl;
 	//string Data_type_mat = MatType(I_i0_gray);
-	for (int k = 1; k< 9; k++) {
-		for (int j = 1; j< 9; j++) {
+	cout << "Intensity at (k = " << 0 << ",j= " << 0 << ") : " << (int) I_i0_gray.at<uchar>(0,0) << endl; 
+	for (int k = 870; k<= 885; k++) {
+		for (int j = 870; j<= 885; j++) {
 			cout << (int) I_i0_gray.at<uchar>(k,j) << ", ";
-			//cout << "Another method" << endl;
-			//Scalar Intenisty = I_i0_gray.at<uchar>(k,j);
-			//cout << "Value is: " << Intenisty.val[0] << endl;
-			//waitKey(0);
 		}
 		cout << "" << endl;
 	}
@@ -225,40 +264,34 @@ int main ( int argc,char **argv ) {
 	imshow("Image I_i0_gray", I_i0_gray);
 	
 	
-	string ty = type2str(I_i0_gray.type() ); 
-	printf("Matrix: %s %dx%d \n ", ty.c_str(), I_i0_gray.cols, I_i0_gray.rows );
-	MatType(I_i0_gray);
-	
-	waitKey(0);
-	
 	cout << "Matrix A" << endl;
-	//cout << "Type of image I_i0_gray: " << I_i0_gray.type() << endl;
-	//cout << "Cast I_i0_gray to another type: " << endl;
-	//I_i0_gray_<double>();
-	//cout << "Type of image I_i0_gray: " << I_i0_gray.type() << endl;
-	//Mat temp = I_i0_gray.colRange(4,7).rowRange(4,8);
-	Rect r(0,0,10,10);
-	rectangle(I_i0_gray, r, Scalar(255), 1, 8, 0);
-	imshow("Image I_i0_gray w. rectangle", I_i0_gray);
-	waitKey(0);
-	cout << "Rectangle drawn" << endl;
+	
+	cout << "Intensity before r (k = " << 0 << ",j= " << 0 << ") : " << (int) I_i0_gray.at<uchar>(0,0) << endl; 
+	//Rect r(0,0,10,10);
+	cout << "Intensity after r (k = " << 0 << ",j= " << 0 << ") : " << (int) I_i0_gray.at<uchar>(0,0) << endl; 
+	// Draw rectangle on the image 
+	//rectangle(I_i0_gray, r, Scalar(255), 1, 8, 0);
+	//imshow("Image I_i0_gray w. rectangle", I_i0_gray);
+	//waitKey(0);
+	//cout << "Rectangle drawn" << endl;
 	
 	
 	
-	Mat A = I_i0_gray(r);
+	//Mat A = I_i0_gray(r);
+	Mat A = selectRegionOfInterest(I_i0_gray,877-7,877-7,877+8,877+8);
 	cout << "Dimenion of A : " << A.rows << endl;
 	cout << "Dimension of A : " << A.cols << endl;
 	//cout << "Start point " << A.at<double>(1,1) << endl;
 	//Mat A = Mat::zeros(3,4,CV_32FC1);
 	//A.copyTo(temp);
 	
-	for (int k = 1; k< A.rows-1; k++) {
-		for (int j = 1; j< A.cols-1; j++) {
+	for (int k = 0; k<= A.rows; k++) {
+		for (int j = 0; j<= A.cols; j++) {
 			cout << (int) A.at<uchar>(k,j) << ", ";
 		}
 		cout << "" << endl;
 	}
-	
+	*/
 	
 	// VO-pipeline: 
 
