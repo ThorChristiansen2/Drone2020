@@ -141,8 +141,8 @@ string type2str(int type) {
 }
 
 // Function should maybe be in help library
-void MatType( Mat inputMat )
-{
+void MatType( Mat inputMat ) {
+	
     int inttype = inputMat.type();
 
     string r, a;
@@ -161,7 +161,7 @@ void MatType( Mat inputMat )
     r += "C";
     r += (chans+'0');
     cout << "Mat is of type " << r << " and should be accessed with " << a << endl;
-
+	
 }
 
 
@@ -204,9 +204,12 @@ int main ( int argc,char **argv ) {
 
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	//initializaiton(I_i0, I_i1);
+	
+	//cout << Data_type_mat; 
 	Mat I_i0_gray;
 	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
 	cout << "Print I_i0" << endl;
+	//string Data_type_mat = MatType(I_i0_gray);
 	for (int k = 1; k< 9; k++) {
 		for (int j = 1; j< 9; j++) {
 			cout << (int) I_i0_gray.at<uchar>(k,j) << ", ";
