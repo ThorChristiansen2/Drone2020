@@ -36,8 +36,11 @@ namespace Harris {
 
 namespace SIFT {
 	Matrix FindDescriptors(Mat src, Matrix keypoints);
+	Matrix matchDescriptors(Matrix descriptor1, Matrix descriptor2);
 	
 }	// SIFT
+
+
 
 
 

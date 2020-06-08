@@ -5,7 +5,7 @@
 /* ########################
  * Name: mainCamera.cpp
  * Made by: Thor Christiansen - s173949 
- * Data: 18.05.2020
+ * Date: 18.05.2020
  * Objective: The source file mainCamera.cpp contains the functions used
  * by main.cpp to treat the images - find features in the images using 
  * Harris corner etc.
@@ -15,6 +15,45 @@
 
 using namespace std;
 //using namespace Numeric_lib;
+
+Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
+	int n1 = descriptor1.dim1();
+	int n2 = descriptor2.dim1();
+	int k, j, choice;
+	if (n1 < n2) {
+		k = n1;
+		j = n2;
+		//Matrix matches(2,n1);
+	}
+	else {
+		k = n2;
+		j = n1;
+		//Matrix matches(1,n2); // Maybe make a 2nd dimension for SSD
+	}
+	Matrix matches(1,k);
+	for (int i = 0; i < k; i++) {
+		double SSD = 0;
+		double min = 1000;
+		int match = 0;
+		for (int j = 0; j < k; j++) {
+			for (int m = 0; m < 128; m++) {
+				SSD = SSD + pow(descriptor1(i,m)-descriptor2(j,m),2);
+			}
+			if (SSD < min) {
+				match = j;
+				min = SSD;
+			}
+		}
+		matches(0,i) = match;
+		if (n1 < n2) {
+			descriptor2[match] *= 7;
+		}
+		else {
+			descriptor1[match] *= 7;
+		}
+	}
+	return matches;
+}
 
 void MatType( Mat inputMat ) {
 	
@@ -161,8 +200,8 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	// Maybe use minMaxLoc(img, &minVal, &maxVal); for at finde max og minimum, som gemmes i værdierne minVal og maxVal. 	
 	
 	// Define variables related to Harris corner
-	int blockSize = 4; 
-	int apertureSize = 5;
+	int blockSize = 2; 
+	int apertureSize = 3;
 	double k = 0.04;		// Magic parameter 
 	int thres = 200;	
 	// Parameters before: blocksize = 2, aperturesize = 3, thres = 200, k = 0.04
@@ -182,7 +221,7 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	if (display == false) {
 		int nr_corners = 0;
 		
-		int keypoints_limit = 200; // Change to 200
+		int keypoints_limit = 500; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;
@@ -273,26 +312,43 @@ Matrix circularShift(Matrix histogram) {
 		if (value > max) {
 			max = histogram(0,ii);
 			index = ii;
+			cout << "Index ii = " << index << endl;;
 		}
 	}
 	cout << "Max done" << endl;
-	Matrix temp(1,index-1);
-	
+	Matrix temp(1,index);
+	cout << "Temp initialized" << endl;
+	cout << "Temp dimension = " << temp.dim1() << "," << temp.dim2() << endl;
 	// This could maybe be done faster 
 	for (int ii = 0; ii < index; ii++) {
-		temp(0,ii) = histogram(0,ii);
+		double v = histogram(0,ii);
+		cout << "Value given" << endl;
+		temp(0,ii) = v;
 	}
+	cout << "Done with initial circulation" << endl;
 	for (int ii = index; ii < histogram.dim2(); ii++) {
 		histogram(0,ii-index) = histogram(0,ii);
 	}
-	for (int ii = histogram.dim1()-index; ii < histogram.dim2(); ii++) {
-		histogram(0,ii) = temp(0,ii-histogram.dim2()-index);
+	cout << "Done with first assignmnet" << endl;
+	for (int ii = histogram.dim2()-index; ii < histogram.dim2(); ii++) {
+		cout << "ii = " << ii << endl;
+		cout << "histogram.dim2()-index = " << histogram.dim2()-index << endl;
+		double v = temp(0,ii-(histogram.dim2()-index));
+		cout << "v = " << v << endl;
+		histogram(0,ii) = v;
 	}
-
+	cout << "Done with second assignment" << endl;
 	//temp = histogram[0].slice(0,index); // Automatically index -1
 	//histogram[0].slice(0,index) = histogram[0].slice(index);
 	//histogram[0].slice(index) = temp.slice();
-	
+	cout << "Print circulated histogram" << endl;
+	for (int mm = 0; mm < histogram.dim2(); mm++) {
+		cout << "m = " << mm << " and v = ";
+		double v = histogram(0,mm);
+		cout << v << endl;
+	}
+	//waitKey(0);
+	cout << "Done with circular shift" << endl;
 	return histogram;
 }
 
@@ -405,7 +461,7 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 				cout << "" << endl;
 		}
 		
-		waitKey(0);
+		//waitKey(0);
 		
 		// Patch of size 16,16
 		Mat Patch_Ix, Patch_Iy;
@@ -465,7 +521,7 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 			}
 			cout << "" << endl;
 		}
-		waitKey(0);
+		//waitKey(0);
 		
 		
 		// Maybe you should rotate the patch, so it coincides with the orientation in the strongest direction
@@ -477,12 +533,21 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 		int nindex = 0;
 		for (int k1 = 0; k1 <= 12; k1 = k1+4) {
 			for (int k2 = 0; k2 <= 12; k2 = k2 + 4) {
-				subPatchGradients = selectRegionOfInterest(Gradients, k1, k2, 4, 4);
-				subPatchOrientations = selectRegionOfInterest(Orientations, k1, k2, 4, 4);
+				cout << "k1 = " << k1 << endl;
+				cout << "k2 = " << k2 << endl; 
+				subPatchGradients = selectRegionOfInterest(Gradients, k1, k2, k1+4, k2+4);
+				cout << "Subpatch extracted " << endl;
+				subPatchOrientations = selectRegionOfInterest(Orientations, k1, k2, k1+4, k2+4);
+				cout << "Orientations extracted " << endl;
 				Matrix Histogram(1,8);
+				cout << "Histogram initiated " << endl;
+				MatType(subPatchGradients);
+				MatType(subPatchOrientations);
 				for (int l1 = 0; l1 < 4; l1++) {
 					for (int l2 = 0; l2 < 4; l2++) {
+						cout << "Size subPatchOrientations = (" << subPatchOrientations.rows << ", " << subPatchOrientations.cols << ") " << endl;
 						double angle = subPatchOrientations.at<double>(l1,l2);
+						cout << "Mistake here" << endl;
 						if (angle >= -M_PI && angle < -(3*M_PI)/4) {
 							Histogram(0,0) = Histogram(0,0) + subPatchGradients.at<double>(l1,l2);
 						}
@@ -517,11 +582,24 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 					double v = Histogram(0,mm);
 					cout << v << endl;
 				}
-				waitKey(0);
+				//waitKey(0);
 				Histogram = circularShift(Histogram);
-				Descriptors[i].slice(nindex*8,nindex*8+8+1) = Histogram[0].slice(0,Histogram.dim2());
+				cout << "Histogram updated " << endl;
+				for (int ii = 0; ii < Histogram.dim2(); ii++) {
+					Descriptors[i].slice(nindex*8,nindex*8+ii) = Histogram(0,ii);
+				}
+				cout << "Descriptor Done" << endl;
 			}
 		}
+		// Normalizing the vector 
+		double SumOfSquares = 0;
+		for (int ii = 0; ii < Descriptors.dim2(); ii++) {
+			SumOfSquares = SumOfSquares + Descriptors(i,ii)*Descriptors(i,ii);
+		}
+		for (int ii = 0; ii < Descriptors.dim2(); ii++) {
+			Descriptors(i,ii) = Descriptors(i,ii)/sqrt(SumOfSquares);
+		}
+		
 		// Normalize the vector 
 		
 		
@@ -540,10 +618,10 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 		waitKey(0);
 		*/
 		Rect region(x-7,y-7,15,15);
-		//cout << "Draw square " << endl;
+		cout << "Draw square " << endl;
 		rectangle(src_gray, region, Scalar(255), 1, 8, 0);
 		imshow ("image with square", src_gray);
-		waitKey(0);
+		//waitKey(0);
 	
 	// Scale the norms of the gradients by multiplying a the graidents with a gaussian
 	// centered in the keypoint and with Sigma_w = 1.5*16. 
@@ -551,7 +629,7 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 	
 	
 	}
-	
+	cout << "SIFT Done " << endl;
 	return Descriptors;
 }
 
