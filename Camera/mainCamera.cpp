@@ -263,8 +263,27 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	return emptyArray;
 }
 
+Matrix circularShift(Matrix histogram) {
+	float max = 0;
+	int index = 0;
+	for (int ii = 0; ii <= histogram.dim1(); ii++) {
+		if (histogram(0,ii) > max) {
+			max = histogram(0,ii);
+			index = ii;
+		}
+	}
+	Matrix temp(1,index-1);
+	temp = histogram[0].slice(0,index); // Automatically index -1
+	histogram[0].slice(0,index-1) = histogram[0].slice(index);
+	ḧistogram[0].slice(index
+	
+	return histogram;
+}
+
 // Find SIFT Desriptors 
 Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
+	
+	// Simplification of SIFT
 	
 	// Maybe the image should be smoothed first with a Gaussian Kernel
 	
@@ -379,6 +398,7 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 		Patch_Iy = selectRegionOfInterest(grad_y, y-7, x-7, y+8, x+8);
 		
 		// It has to be of dimensions 16x16
+		// This is the scaled gradients 
 		Mat Gradients = Mat::zeros(Size(16,16),CV_64FC1);
 		Mat Orientations = Mat::zeros(Size(16,16),CV_64FC1);
 		for (int coor_y = 0; coor_y < 16; coor_y++) {
@@ -389,6 +409,52 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 			}
 		}
 		
+		
+		// Maybe you should rotate the patch, so it coincides with the orientation in the strongest direction
+		
+		
+		// Divde the 16x16 patch into subpatches of 4x4 
+		Matrix descrip(1,128);
+		Mat subPatchGradients, subPatchOrientations;
+		for (int k1 = 0; k1 < = 12; k1 = k1+4) {
+			for (int k2 = 0; k2 <= 12; k2 = k2 + 4) {
+				subPatchGradients = selectRegionOfInterest(Gradients, k1, k2, 4, 4);
+				subPatchOrientations = selectRegionOfInterest(Orientations, k1, k2, 4, 4);
+				Matrix Histogram(1,8);
+				for (l1 = 0; l1 < 4; l1++) {
+					for (l2 = 0; l2 < 4; l2++) {
+						if (subPatchOrientations.at<double>(l1,l2) >= -M_PI && < -(3*M_PI)/4) {
+							Histogram(0,0) = Histogram(0,0) + subPatchGradients.at<double>(l1,l2);
+						}
+						else if (subPatchOrientations.at<double>(l1,l2) >= -(3*M_PI)/4 && < -M_PI/2) {
+							Histogram(0,1) = Histogram(0,1) + subPatchGradients.at<double>(l1,l2);
+						}
+						else if (subPatchOrientations.at<double>(l1,l2) >= -M_PI/2 && < -M_PI/4) {
+							Histogram(0,2) = Histogram(0,2) + subPatchGradients.at<double>(l1,l2);
+						}
+						else if (subPatchOrientations.at<double>(l1,l2) >= -M_PI/4 && < 0) {
+							Histogram(0,3) = Histogram(0,3) + subPatchGradients.at<double>(l1,l2);
+						}
+						else if (subPatchOrientations.at<double>(l1,l2) >= 0 && < M_PI/4) {
+							Histogram(0,4) = Histogram(0,4) + subPatchGradients.at<double>(l1,l2);
+						}
+						else if (subPatchOrientations.at<double>(l1,l2) >= M_PI/4 && < M_PI/2) {
+							Histogram(0,5) = Histogram(0,5) + subPatchGradients.at<double>(l1,l2);
+						}
+						else if (subPatchOrientations.at<double>(l1,l2) >= M_PI/2 && < 3*M_PI/4) {
+							Histogram(0,6) = Histogram(0,6) + subPatchGradients.at<double>(l1,l2);
+						}
+						else if (subPatchOrientations.at<double>(l1,l2) >= 3*M_PI/4 && < M_PI) {
+							Histogram(0,7) = Histogram(0,7) + subPatchGradients.at<double>(l1,l2);
+						}
+					}
+				}
+				// Rotate it so it becomes rotation invariant
+				
+			
+			}
+		}
+		// Normalize the vector 
 		
 		
 		/*
