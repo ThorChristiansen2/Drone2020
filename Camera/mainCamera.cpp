@@ -60,11 +60,13 @@ Mat selectRegionOfInterest(Mat img, int y1, int x1, int y2, int x2) {
 	if (x2 > img.cols) {
 		x2 = img.cols;
 	}
-	cout << "Rectangle : (" << x1 << "," << y1 << "," << y2-y1 << "," << x2-x1 << ")" << endl;
+	//cout << "Rectangle : (" << x1 << "," << y1 << "," << y2-y1 << "," << x2-x1 << ")" << endl;
 	//Rect region(y1, x1, x2-x1, y2-y1);
 	//Rect region(x1,y1,y2-y1,x2-x1);
 	Rect region(x1,y1,y2-y1,x2-x1);
 	ROI = img(region);
+	
+	/*
 	cout << "ROI is: " << endl;
 	MatType(ROI);
 	waitKey(0);
@@ -76,10 +78,32 @@ Mat selectRegionOfInterest(Mat img, int y1, int x1, int y2, int x2) {
 		cout << "" << endl;
 	} 
 	cout << "Region extracted" << endl;
+	*/
 	return ROI;
 }
 
-
+Mat gaussWindow(int filter_size, float sigma) {
+	
+	float size = filter_size;
+	float norm_const = 246.7938;
+	
+	Mat g = Mat::zeros(Size(filter_size,filter_size),CV_64FC1);
+	
+	float x0 = (size+1)/2;
+	float y0 = (size+1)/2;
+	for (float i = -(size-1)/2; i <= (size-1)/2; i++) {
+		for (float j = -(size-1)/2; j <= (size-1)/2; j++) {
+			float x = i + x0;
+			float y = j + y0;
+			int x_coor = x-1;
+			int y_coor = y-1;
+			g.at<double>(y_coor,x_coor) = (exp(-( (x-x0)*(x-x0) + (y-y0)*(y-y0))/(2*sigma*sigma)))/norm_const;
+			//cout << "G-value is: " << g.at<double>(y_coor,x_coor);
+		}
+	}
+	
+	return g;
+}
 
 
 
@@ -133,6 +157,8 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	
 	// Define variables
 	const char* corners_window = "Corners detected";
+	
+	// Maybe use minMaxLoc(img, &minVal, &maxVal); for at finde max og minimum, som gemmes i værdierne minVal og maxVal. 	
 	
 	// Define variables related to Harris corner
 	int blockSize = 4; 
@@ -238,26 +264,103 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 }
 
 // Find SIFT Desriptors 
-Matrix SIFT::FindDescriptors(Mat src, Matrix keypoints) {
+Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
+	
+	// Maybe the image should be smoothed first with a Gaussian Kernel
+	
 	int n = keypoints.dim1();
 	
 	// Initialize matrix containing keypoints descriptors
 	Matrix Descriptors(n,128);
 	
-	cout << "Dimensions of image (rows,cols) = (" << src.rows << "," << src.cols << ")" << endl;
-	waitKey(0);
+	//cout << "Dimensions of image (rows,cols) = (" << src.rows << "," << src.cols << ")" << endl;
+	//waitKey(0);
+	
+	
+	
 	// Find Image gradients
+	Mat grad_x, grad_y;
+	Mat abs_grad_x, abs_grad_y;
+	int ksize = 1;
+	int scale = 1; 
+	int delta = 0; 
+	int ddepth = CV_16S;
 	
+	Sobel(src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
+	Sobel(src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
 	
-	cout << "Inside SIFT" << endl;
-	for (int i = 0; i < 1; i++) {
+	// Converting back to CV_8U
+	convertScaleAbs(grad_x, abs_grad_x);
+	convertScaleAbs(grad_y, abs_grad_y);
+	
+	/*
+	cout << "Type of src" << endl;
+	MatType(src_gray);
+	cout << "Draw image" << endl;
+	for (int k = 10; k<= 20; k++) {
+		for (int j = 10; j<= 20; j++) {
+			cout << (int) src_gray.at<uchar>(k,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	waitKey(0);
+	
+	cout << "Rows of Image gradients x = " << grad_x.rows << endl;
+	cout << "Columns of Image gradients x = " << grad_x.cols << endl;
+	cout << "Type of image grad " << endl;
+	MatType(grad_x);
+	cout << "Draw Image gradients X" << endl;
+	for (int k = 10; k<= 20; k++) {
+		for (int j = 10; j<= 20; j++) {
+			cout << (int) grad_x.at<short>(k,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	waitKey(0);
+	
+	cout << "Rows of Image gradients y = " << grad_y.rows << endl;
+	cout << "Columns of Image gradients y = " << grad_y.cols << endl;
+	cout << "Type of image grad " << endl;
+	MatType(grad_y);
+	cout << "Draw Image gradients Y" << endl;
+	for (int k = 10; k<= 20; k++) {
+		for (int j = 10; j<= 20; j++) {
+			cout << (int) grad_y.at<short>(k,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	waitKey(0);
+	
+	cout << "Rows of Image gradients x = " << abs_grad_x.rows << endl;
+	cout << "Columns of Image gradients x = " << abs_grad_x.cols << endl;
+	cout << "Type of abs image grad " << endl;
+	MatType(abs_grad_x);
+	cout << "Draw Image abs grad X" << endl;
+	for (int k = 10; k<= 20; k++) {
+		for (int j = 10; j<= 20; j++) {
+			cout << (int) abs_grad_x.at<uchar>(k,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	waitKey(0);
+	*/
+	cout << "Calculating gauss window" << endl;
+	int filter_size = 16;
+	float sigma = 1.5*16;
+	Mat GaussWindow;
+	GaussWindow = gaussWindow(filter_size, sigma);
+	
+	//cout << "Inside SIFT" << endl;
+	for (int i = 0; i < n; i++) {
 		int y = keypoints(i,1);
 		int x = keypoints(i,2); 
-		circle (src, Point(x,y), 5, Scalar(7), 2,8,0);
-		cout << "Keypoint at (y = " << y << ",x = " << x << ")" << endl;
-		cout << "Intensity at keypoint :" << (int) src.at<uchar>(y,x) << endl;
-		cout << "Intensity at pixel left of keypoint :" << (int) src.at<uchar>(y,x-1) << endl;
-		cout << "Intensity at pixel right of keypoint :" << (int) src.at<uchar>(y,x+1) << endl;
+		
+		/*
+		//circle (src, Point(x,y), 5, Scalar(7), 2,8,0);
+		//cout << "Keypoint at (y = " << y << ",x = " << x << ")" << endl;
+		//cout << "Intensity at keypoint :" << (int) src.at<uchar>(y,x) << endl;
+		//cout << "Intensity at pixel left of keypoint :" << (int) src.at<uchar>(y,x-1) << endl;
+		//cout << "Intensity at pixel right of keypoint :" << (int) src.at<uchar>(y,x+1) << endl;
 		
 		cout << "Draw image" << endl;
 		for (int k = y-7; k<= y+8; k++) {
@@ -268,9 +371,27 @@ Matrix SIFT::FindDescriptors(Mat src, Matrix keypoints) {
 		}
 		
 		waitKey(0);
+		*/
 		// Patch of size 16,16
-		Mat Patch;
-		Patch = selectRegionOfInterest(src, y-7, x-7, y+8, x+8);
+		Mat Patch_Ix, Patch_Iy;
+		Patch_Ix = selectRegionOfInterest(grad_x, y-7, x-7, y+8, x+8);
+		
+		Patch_Iy = selectRegionOfInterest(grad_y, y-7, x-7, y+8, x+8);
+		
+		// It has to be of dimensions 16x16
+		Mat Gradients = Mat::zeros(Size(16,16),CV_64FC1);
+		Mat Orientations = Mat::zeros(Size(16,16),CV_64FC1);
+		for (int coor_y = 0; coor_y < 16; coor_y++) {
+			for (int coor_x = 0; coor_x < 16; coor_x++) {
+				float norm = sqrt( pow(Patch_Ix.at<short>(coor_y,coor_x),2) + pow(Patch_Iy.at<short>(coor_y,coor_x),2));
+				Gradients.at<double>(coor_y,coor_x) = norm*GaussWindow.at<double>(coor_y,coor_x);
+				Orientations.at<double>(coor_y,coor_x) = atan2(Patch_Iy.at<short>(coor_y,coor_x),Patch_Ix.at<short>(coor_y,coor_x));
+			}
+		}
+		
+		
+		
+		/*
 		cout << "Number of rows: " << Patch.rows << endl;
 		cout << "Number of columns: " << Patch.cols << endl;
 		
@@ -283,10 +404,11 @@ Matrix SIFT::FindDescriptors(Mat src, Matrix keypoints) {
 			cout << "" << endl;
 		}
 		waitKey(0);
+		*/
 		Rect region(x-7,y-7,15,15);
-		cout << "Draw square " << endl;
-		rectangle(src, region, Scalar(255), 1, 8, 0);
-		imshow ("image with square", src);
+		//cout << "Draw square " << endl;
+		rectangle(src_gray, region, Scalar(255), 1, 8, 0);
+		imshow ("image with square", src_gray);
 		waitKey(0);
 	
 	// Scale the norms of the gradients by multiplying a the graidents with a gaussian
