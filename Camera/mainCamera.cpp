@@ -264,18 +264,34 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 }
 
 Matrix circularShift(Matrix histogram) {
+	cout << "Inside circularshift" << endl;
 	float max = 0;
 	int index = 0;
-	for (int ii = 0; ii <= histogram.dim1(); ii++) {
-		if (histogram(0,ii) > max) {
+	for (int ii = 0; ii < histogram.dim2(); ii++) {
+		double value = histogram(0,ii);
+		cout << "Value given" << endl;
+		if (value > max) {
 			max = histogram(0,ii);
 			index = ii;
 		}
 	}
+	cout << "Max done" << endl;
 	Matrix temp(1,index-1);
-	temp = histogram[0].slice(0,index); // Automatically index -1
-	histogram[0].slice(0,index-1) = histogram[0].slice(index);
-	ḧistogram[0].slice(index
+	
+	// This could maybe be done faster 
+	for (int ii = 0; ii < index; ii++) {
+		temp(0,ii) = histogram(0,ii);
+	}
+	for (int ii = index; ii < histogram.dim2(); ii++) {
+		histogram(0,ii-index) = histogram(0,ii);
+	}
+	for (int ii = histogram.dim1()-index; ii < histogram.dim2(); ii++) {
+		histogram(0,ii) = temp(0,ii-histogram.dim2()-index);
+	}
+
+	//temp = histogram[0].slice(0,index); // Automatically index -1
+	//histogram[0].slice(0,index) = histogram[0].slice(index);
+	//histogram[0].slice(index) = temp.slice();
 	
 	return histogram;
 }
@@ -374,7 +390,7 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 		int y = keypoints(i,1);
 		int x = keypoints(i,2); 
 		
-		/*
+		
 		//circle (src, Point(x,y), 5, Scalar(7), 2,8,0);
 		//cout << "Keypoint at (y = " << y << ",x = " << x << ")" << endl;
 		//cout << "Intensity at keypoint :" << (int) src.at<uchar>(y,x) << endl;
@@ -384,23 +400,47 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 		cout << "Draw image" << endl;
 		for (int k = y-7; k<= y+8; k++) {
 				for (int j = x-7; j<= x+8; j++) {
-					cout << (int) src.at<uchar>(k,j) << ", ";
+					cout << (int) src_gray.at<uchar>(k,j) << ", ";
 				}
 				cout << "" << endl;
 		}
 		
 		waitKey(0);
-		*/
+		
 		// Patch of size 16,16
 		Mat Patch_Ix, Patch_Iy;
 		Patch_Ix = selectRegionOfInterest(grad_x, y-7, x-7, y+8, x+8);
 		
 		Patch_Iy = selectRegionOfInterest(grad_y, y-7, x-7, y+8, x+8);
+		MatType(Patch_Ix);
+		
+		/*
+		cout << "Print Patch_Ix" << endl;
+		for (int mm = 0; mm < Patch_Ix.rows; mm++) {
+			for (int nn = 0; nn < Patch_Ix.cols; nn++) {
+				cout << (double) Patch_Ix.at<short>(mm,nn) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
+		cout << "Print Patch_Iy" << endl;
+		for (int mm = 0; mm < Patch_Iy.rows; mm++) {
+			for (int nn = 0; nn < Patch_Iy.cols; nn++) {
+				cout << (double) Patch_Iy.at<short>(mm,nn) << ", ";
+			}
+			cout << "" << endl;
+		}
+		waitKey(0);
+		*/
 		
 		// It has to be of dimensions 16x16
 		// This is the scaled gradients 
 		Mat Gradients = Mat::zeros(Size(16,16),CV_64FC1);
+		cout << "Type of Gradients" << endl;
+		MatType(Gradients);
 		Mat Orientations = Mat::zeros(Size(16,16),CV_64FC1);
+		cout << "Type of Orientations" << endl;
+		MatType(Orientations);
 		for (int coor_y = 0; coor_y < 16; coor_y++) {
 			for (int coor_x = 0; coor_x < 16; coor_x++) {
 				float norm = sqrt( pow(Patch_Ix.at<short>(coor_y,coor_x),2) + pow(Patch_Iy.at<short>(coor_y,coor_x),2));
@@ -410,48 +450,76 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 		}
 		
 		
+		cout << "Print scaled Gradients" << endl;
+		for (int mm = 0; mm < Gradients.rows; mm++) {
+			for (int nn = 0; nn < Gradients.cols; nn++) {
+				cout << Gradients.at<double>(mm,nn) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
+		cout << "Print Orientations" << endl;
+		for (int mm = 0; mm < Orientations.rows; mm++) {
+			for (int nn = 0; nn < Orientations.cols; nn++) {
+				cout << Orientations.at<double>(mm,nn) << ", ";
+			}
+			cout << "" << endl;
+		}
+		waitKey(0);
+		
+		
 		// Maybe you should rotate the patch, so it coincides with the orientation in the strongest direction
 		
 		
 		// Divde the 16x16 patch into subpatches of 4x4 
 		Matrix descrip(1,128);
 		Mat subPatchGradients, subPatchOrientations;
-		for (int k1 = 0; k1 < = 12; k1 = k1+4) {
+		int nindex = 0;
+		for (int k1 = 0; k1 <= 12; k1 = k1+4) {
 			for (int k2 = 0; k2 <= 12; k2 = k2 + 4) {
 				subPatchGradients = selectRegionOfInterest(Gradients, k1, k2, 4, 4);
 				subPatchOrientations = selectRegionOfInterest(Orientations, k1, k2, 4, 4);
 				Matrix Histogram(1,8);
-				for (l1 = 0; l1 < 4; l1++) {
-					for (l2 = 0; l2 < 4; l2++) {
-						if (subPatchOrientations.at<double>(l1,l2) >= -M_PI && < -(3*M_PI)/4) {
+				for (int l1 = 0; l1 < 4; l1++) {
+					for (int l2 = 0; l2 < 4; l2++) {
+						double angle = subPatchOrientations.at<double>(l1,l2);
+						if (angle >= -M_PI && angle < -(3*M_PI)/4) {
 							Histogram(0,0) = Histogram(0,0) + subPatchGradients.at<double>(l1,l2);
 						}
-						else if (subPatchOrientations.at<double>(l1,l2) >= -(3*M_PI)/4 && < -M_PI/2) {
+						else if (angle >= -(3*M_PI)/4 && angle < -M_PI/2) {
 							Histogram(0,1) = Histogram(0,1) + subPatchGradients.at<double>(l1,l2);
 						}
-						else if (subPatchOrientations.at<double>(l1,l2) >= -M_PI/2 && < -M_PI/4) {
+						else if (angle >= -M_PI/2 && angle < -M_PI/4) {
 							Histogram(0,2) = Histogram(0,2) + subPatchGradients.at<double>(l1,l2);
 						}
-						else if (subPatchOrientations.at<double>(l1,l2) >= -M_PI/4 && < 0) {
+						else if (angle >= -M_PI/4 && angle < 0) {
 							Histogram(0,3) = Histogram(0,3) + subPatchGradients.at<double>(l1,l2);
 						}
-						else if (subPatchOrientations.at<double>(l1,l2) >= 0 && < M_PI/4) {
+						else if (angle >= 0 && angle < M_PI/4) {
 							Histogram(0,4) = Histogram(0,4) + subPatchGradients.at<double>(l1,l2);
 						}
-						else if (subPatchOrientations.at<double>(l1,l2) >= M_PI/4 && < M_PI/2) {
+						else if (angle >= M_PI/4 && angle < M_PI/2) {
 							Histogram(0,5) = Histogram(0,5) + subPatchGradients.at<double>(l1,l2);
 						}
-						else if (subPatchOrientations.at<double>(l1,l2) >= M_PI/2 && < 3*M_PI/4) {
+						else if (angle >= M_PI/2 && angle < 3*M_PI/4) {
 							Histogram(0,6) = Histogram(0,6) + subPatchGradients.at<double>(l1,l2);
 						}
-						else if (subPatchOrientations.at<double>(l1,l2) >= 3*M_PI/4 && < M_PI) {
+						else if (angle >= 3*M_PI/4 && angle < M_PI) {
 							Histogram(0,7) = Histogram(0,7) + subPatchGradients.at<double>(l1,l2);
 						}
 					}
 				}
 				// Rotate it so it becomes rotation invariant
-				
-			
+				cout << "Print histogram" << endl;
+				cout << "Second dimension: " << Histogram.dim2() << endl;
+				for (int mm = 0; mm < Histogram.dim2(); mm++) {
+					cout << "m = " << mm << " and v = ";
+					double v = Histogram(0,mm);
+					cout << v << endl;
+				}
+				waitKey(0);
+				Histogram = circularShift(Histogram);
+				Descriptors[i].slice(nindex*8,nindex*8+8+1) = Histogram[0].slice(0,Histogram.dim2());
 			}
 		}
 		// Normalize the vector 
