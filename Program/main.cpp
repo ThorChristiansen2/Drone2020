@@ -92,22 +92,70 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	
 	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, display);
 	const char* text1 = "Detected corners *Thor frame I_i0";
-	drawCorners(I_i0, keypoints_I_i0,text1);
+	drawCorners(I_i0, keypoints_I_i0, text1);
+	//waitKey(1000);
 	
 	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, display);
 	const char* text2 = "Detected corners frame I_i1";
-	//drawCorners(I_i1, keypoints_I_i1,text2);
-	
+	drawCorners(I_i1, keypoints_I_i1,text2);
+	//waitKey(1000);
 	
 	// Find descriptors for Feature Points
 	// Write Sift function
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	cout << "descriptors_I_i0 dimensions = (" << descriptors_I_i0.dim1() << "," << descriptors_I_i0.dim2() << ")" << endl;
+	//waitKey(1000);
+	
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
-	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
-	for (int i = 0; i <= matches.dim2(); i++) {
-		cout << "Keypoint " << i << " matches with keypoint " << matches(0,i) << endl;
+	cout << "descriptors_I_i1 dimensions = (" << descriptors_I_i1.dim1() << "," << descriptors_I_i1.dim2() << ")" << endl;
+	//waitKey(0);
+	/*
+	cout << "Print of descriptors_I_i1" << endl;
+	for (int i = 0; i < descriptors_I_i1.dim1(); i++) {
+		for (int j = 0; j < 128; j++) {
+			cout << descriptors_I_i1(i,j) << ", ";
+		}
+		cout << "" << endl;
 	}
+	*/
+	
+	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+	
+	bool valid;
+	if (descriptors_I_i0.dim1() < descriptors_I_i1.dim1()) {
+		valid = true;
+	} 
+	else {
+		valid = false;
+	}
+	for (int i = 0; i < matches.dim2(); i++) {
+		cout << "Keypoint " << i << " matches with keypoint " << matches(0,i) << endl;
+		if (valid == true) {
+			double x = keypoints_I_i0(i,1); // Skal måske være 0
+			double y = keypoints_I_i0(i,2); // Skal måske være 1
+			double x2 = keypoints_I_i1(matches(0,i),1);
+			double y2 = keypoints_I_i1(matches(0,i),2);
+			circle (I_i0, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
+			imshow("Matched features I0", I_i0);
+			waitKey(0);
+			circle (I_i1, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+			imshow("Matched features I1", I_i1);
+			waitKey(0);
+		}
+		else {
+			double x = keypoints_I_i0(matches(0,i),1); // Skal måske være 0
+			double y = keypoints_I_i0(matches(0,i),2); // Skal måske være 1
+			double x2 = keypoints_I_i1(i,1);
+			double y2 = keypoints_I_i1(i,2);
+			circle (I_i0, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
+			imshow("Matched features I0", I_i0);
+			waitKey(0);
+			circle (I_i1, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+			imshow("Matched features I1", I_i1);
+			waitKey(0);
+		}
+	}
+	
 	
 	//SIFT::operator()(I_i0_gray,
 	//Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i0, keypoints_I_i1);
