@@ -120,7 +120,23 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	*/
 	
 	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+	for (int i = 0; i < matches.dim1(); i++) {
+		double x = keypoints_I_i1(matches(i,0),1);
+		double y = keypoints_I_i1(matches(i,0),2);
+		double x2 = keypoints_I_i0(matches(i,1),1);
+		double y2 = keypoints_I_i0(matches(i,1),2);
+		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
+		imshow("Matched features I0", I_i0);
+		waitKey(0);
+		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		imshow("Matched features I1", I_i1);
+		waitKey(0);
+	}
 	
+	
+	
+	
+	/*
 	bool valid;
 	if (descriptors_I_i0.dim1() < descriptors_I_i1.dim1()) {
 		valid = true;
@@ -155,6 +171,7 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 			waitKey(0);
 		}
 	}
+	*/
 	
 	
 	//SIFT::operator()(I_i0_gray,

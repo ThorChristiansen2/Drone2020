@@ -20,23 +20,68 @@ Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 	cout << "Inside Match descriptors " << endl;
 	int n1 = descriptor1.dim1();
 	int n2 = descriptor2.dim1();
-	Matrix KeypointIndex1(n1,1);
-	for (int i = 0; i < n1; i++) {
-		KeypointIndex1(i,0) = i;
-	}
-	Matrix KeypointIndex2(n2,1);
+	
+	// Match keypoints in frame 2 to keypoints in frame 1 
+	Matrix matches(n2,5);
+	
+	int count = 0;
 	for (int i = 0; i < n2; i++) {
-		KeypointIndex2(i,0) = i;
+		double SSD;
+		double min = 1000;
+		double match;
+		// Bare for at initialisere det
+		matches(i,0) = 0;
+		matches(i,1) = 0;
+		matches(i,2) = 0;
+		matches(i,3) = 0;
+		matches(i,4) = 0;
+		for (int j = 0; j < n1; j++) {
+			SSD = 0;
+			for (int k = 0; k < 128; k++) {
+				SSD = SSD + pow((descriptor2(i,k)-descriptor1(j,k)),2);
+			}
+			if (SSD < min) {
+				min = SSD;
+				matches(i,2) = matches(i,0);
+				matches(i,3) = matches(i,1); // SSD
+				matches(i,0) = j;
+				matches(i,1) = SSD;
+			}
+			
+		}
+		
+		double distance_ratio = matches(i,1)/matches(i,3);
+		if (distance_ratio < 0.8) {
+			count++;
+			matches(i,4) = 1;
+		}
+		cout << "Keypoint i: " << matches(i,0)  << ", " << matches(i,1) << ", " << matches(i,2) << ", " << matches(i,3) << " Match = " << matches(i,4) <<  endl;
 	}
-	int k, j, choice;
+	Matrix valid_matches(count,2);
+	cout << "Count = " << count;
+	int index = 0;
+	for (int i = 0; i < n2; i++) {
+		if (matches(i,4) == 1) {
+			valid_matches(index,0) = i;
+			valid_matches(index,1) = matches(i,0);
+			index++;
+		}
+	}
+	
+	// Make sure that only the one with the lowest SSD is detected. 
+	
+	
+	/*
+	int k;
+	Matrix Keypoint_index(std::min(n1,n2),1);
 	if (n1 < n2) {
 		k = n1;
-		j = n2;
+		Matrix Keypoint_index(n2,1);
 		//Matrix matches(2,n1);
 	}
 	else {
 		k = n2;
-		j = n1;
+		Matrix Keypoint_index(n2,1);
 		//Matrix matches(1,n2); // Maybe make a 2nd dimension for SSD
 	}
 	cout << "n1, n2, k, j = " << n1 << "," << n2 << "," << k << "," << j << "," << endl;
@@ -66,6 +111,7 @@ Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 		}
 		j--;
 		if (n1 < n2) {
+			
 		}
 		else {
 			
@@ -79,7 +125,12 @@ Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 			descriptor1[match] *= 7;
 		}
 	}
-	return matches;
+	*/
+	
+	for (int i = 0; i < valid_matches.dim1(); i++) {
+		cout << "Keypoint " << valid_matches(i,0) << " match with " << valid_matches(i,1) << endl;
+	}
+	return valid_matches;
 }
 
 void MatType( Mat inputMat ) {
