@@ -125,14 +125,23 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 		double y = keypoints_I_i1(matches(i,0),2);
 		double x2 = keypoints_I_i0(matches(i,1),1);
 		double y2 = keypoints_I_i0(matches(i,1),2);
+		//line(I_i1,Point(y2,x2),Point(y,x),Scalar(0,255,0),3);
+		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-		imshow("Matched features I0", I_i0);
-		waitKey(0);
 		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		
+		
+		/* For drawing circles
+		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
 		imshow("Matched features I1", I_i1);
 		waitKey(0);
+		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		imshow("Matched features I0", I_i0);
+		waitKey(0);
+		*/
 	}
-	
+	imshow("Matched features I1", I_i1);
+	waitKey(0);
 	
 	
 	
@@ -297,8 +306,9 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
 	imshow("Frame I_i0", I_i0);
+	waitKey(0);
 	
-	waitKey(1000);	// Ensures it is sufficiently far away from initial frame
+	waitKey(4000);	// Ensures it is sufficiently far away from initial frame
 	// First frame 1 
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 

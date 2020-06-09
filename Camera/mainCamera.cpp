@@ -1,5 +1,6 @@
 #include <iostream>
 #include "mainCamera.hpp"
+#include <limits> 
 //#include "Matrix.h"
 
 /* ########################
@@ -17,48 +18,131 @@ using namespace std;
 //using namespace Numeric_lib;
 
 Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
-	cout << "Inside Match descriptors " << endl;
+	//cout << "Inside Match descriptors " << endl;
 	int n1 = descriptor1.dim1();
 	int n2 = descriptor2.dim1();
 	
+	double threshold = 400;
+	
 	// Match keypoints in frame 2 to keypoints in frame 1 
 	Matrix matches(n2,5);
+	Matrix multiple_matches(n1,2);
+	//cout << "What is the element: " << multiple_matches(0,0) << endl;
 	
 	int count = 0;
 	for (int i = 0; i < n2; i++) {
 		double SSD;
-		double min = 1000;
+		//double min = 10000;
+		double min = std::numeric_limits<double>::infinity();
 		double match;
 		// Bare for at initialisere det
 		matches(i,0) = 0;
-		matches(i,1) = 0;
+		matches(i,1) = min;
 		matches(i,2) = 0;
-		matches(i,3) = 0;
+		matches(i,3) = min;
 		matches(i,4) = 0;
 		for (int j = 0; j < n1; j++) {
 			SSD = 0;
 			for (int k = 0; k < 128; k++) {
 				SSD = SSD + pow((descriptor2(i,k)-descriptor1(j,k)),2);
 			}
+			if (SSD < matches(i,1)) {
+				matches(i,2) = matches(i,0);
+				matches(i,3) = matches(i,1);
+				matches(i,1) = SSD;
+				matches(i,0) = j;
+				if (multiple_matches(j,1) == 0) {
+					multiple_matches(j,0) = i;
+					multiple_matches(j,1) = SSD;
+					matches(i,4) = 0;
+				}
+				else if (SSD < multiple_matches(j,1)) {
+					/*
+					waitKey(0);
+					cout << "i = " << i << endl;
+					cout << "j = " << j << endl;
+					cout << "SSD = " << SSD << endl; 
+					cout << "multiple_matches(j,0) = " << multiple_matches(j,0) << endl;
+					cout << "multiple_matches(j,1) = " << multiple_matches(j,1) << endl;
+					waitKey(0);
+					*/
+					int temp_index = multiple_matches(j,0);
+					multiple_matches(j,0) = i;
+					multiple_matches(j,1) = SSD;
+					if (matches(temp_index,0) == j) {
+						//cout << "Changed " << endl;
+						matches(temp_index,4) = 2;
+					}
+					matches(i,4) = 0;
+				}
+				else {
+					//matches(i,4) = 2;
+				}
+			}
+			else if (SSD < matches(i,3)) {
+				matches(i,2) = j;
+				matches(i,3) = SSD;
+			}
+			
+			
+			
+			/*
 			if (SSD < min) {
 				min = SSD;
 				matches(i,2) = matches(i,0);
 				matches(i,3) = matches(i,1); // SSD
 				matches(i,0) = j;
 				matches(i,1) = SSD;
+				
+				if (multiple_matches(j,1) == 0) { // Chekcs if the SSD is zero
+					multiple_matches(j,0) = i;
+					multiple_matches(j,1) = SSD; 
+					matches(i,4) = 0;
+				 }
+				 else if (SSD < multiple_matches(j,1)) {
+					 double temp_index = multiple_matches(j,0);
+					 double temp_SSD = multiple_matches(j,1);
+					 multiple_matches(j,0) = i;
+					 multiple_matches(j,1) = SSD;
+					 if (matches(temp_index,0) == j) {
+						 matches(temp_index,4) = 2;
+					 }
+					 matches(i,4) = 0;
+				 }
+				 else {
+					 matches(i,4) = 2;
+				 }
+				 */
+		}
+	}
+	for (int i = 0; i < n2; i++) {
+		double distance_ratio = matches(i,1)/matches(i,3);
+		if (distance_ratio < 0.8 && matches(i,1) < threshold) {
+			//matches(i,4) = 1;
+			if (matches(i,4) != 2) {
+				matches(i,4) = 1;
+				count++;
 			}
 			
 		}
-		
-		double distance_ratio = matches(i,1)/matches(i,3);
-		if (distance_ratio < 0.8) {
-			count++;
-			matches(i,4) = 1;
-		}
-		cout << "Keypoint i: " << matches(i,0)  << ", " << matches(i,1) << ", " << matches(i,2) << ", " << matches(i,3) << " Match = " << matches(i,4) <<  endl;
+		cout << "Keypoint " << i << " : " << matches(i,0)  << ", " << matches(i,1) << ", " << matches(i,2) << ", " << matches(i,3) << " Match = " << matches(i,4) <<  endl;
+	}
+	
+	
+	
+	/*
+	cout << "Mutliple matches " << endl;
+	for (int i = 0; i < n1; i++) {
+		cout << "Keypoint " << i << " : " << multiple_matches(i,0) << " SSD: " << multiple_matches(i,1) << endl;
 	}
 	Matrix valid_matches(count,2);
-	cout << "Count = " << count;
+	cout << "Print of matches igen" << endl;
+	for (int i = 0; i < n2; i++) {
+		cout << "Keypoint " << i << " : " << matches(i,0)  << ", " << matches(i,1) << ", " << matches(i,2) << ", " << matches(i,3) << " Match = " << matches(i,4) <<  endl;
+	}
+	*/
+	Matrix valid_matches(count,2);
+	cout << "Count = " << count << endl;
 	int index = 0;
 	for (int i = 0; i < n2; i++) {
 		if (matches(i,4) == 1) {
@@ -130,6 +214,7 @@ Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 	for (int i = 0; i < valid_matches.dim1(); i++) {
 		cout << "Keypoint " << valid_matches(i,0) << " match with " << valid_matches(i,1) << endl;
 	}
+	
 	return valid_matches;
 }
 
@@ -278,9 +363,9 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	// Maybe use minMaxLoc(img, &minVal, &maxVal); for at finde max og minimum, som gemmes i værdierne minVal og maxVal. 	
 	
 	// Define variables related to Harris corner
-	int blockSize = 2; 
+	int blockSize = 9; 
 	int apertureSize = 3;
-	double k = 0.08;		// Magic parameter 
+	double k = 0.12;		// Magic parameter 
 	int thres = 200;	
 	// Parameters before: blocksize = 2, aperturesize = 3, thres = 200, k = 0.04
 	
@@ -299,7 +384,7 @@ Matrix Harris::corner(Mat src, Mat src_gray, bool display) {
 	if (display == false) {
 		int nr_corners = 0;
 		
-		int keypoints_limit = 500; // Change to 200
+		int keypoints_limit = 600; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;

@@ -17,6 +17,8 @@ iostream
 -
 mainCamera.hpp
 /home/pi/GitHub/Drone2020/Camera/mainCamera.hpp
+limits
+-
 
 /home/pi/GitHub/Drone2020/Camera/mainCamera.hpp
 opencv2/highgui.hpp
