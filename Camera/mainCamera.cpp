@@ -86,12 +86,12 @@ Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 			}
 			
 		}
-		cout << "Keypoint " << i << " : " << matches(i,0)  << ", " << matches(i,1) << ", " << matches(i,2) << ", " << matches(i,3) << " Match = " << matches(i,4) <<  endl;
+		//cout << "Keypoint " << i << " : " << matches(i,0)  << ", " << matches(i,1) << ", " << matches(i,2) << ", " << matches(i,3) << " Match = " << matches(i,4) <<  endl;
 	}
 	
 	// Create matrix with the keypoints that are valid and which are returned.
 	Matrix valid_matches(count,2);
-	cout << "Count = " << count << endl;
+	cout << "Count of valid matches  = " << count << endl;
 	int index = 0;
 	for (int i = 0; i < n2; i++) {
 		if (matches(i,4) == 1) {
@@ -102,9 +102,11 @@ Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 	}
 	
 	// Print the keypoints
+	/*
 	for (int i = 0; i < valid_matches.dim1(); i++) {
 		cout << "Keypoint " << valid_matches(i,0) << " match with " << valid_matches(i,1) << endl;
 	}
+	*/
 	
 	return valid_matches;
 }
@@ -162,6 +164,35 @@ Mat selectRegionOfInterest(Mat img, int y1, int x1, int y2, int x2) {
 	ROI = img(region);
 	
 	return ROI;
+}
+
+
+void nonMaximumSuppression(Mat img, int y1, int x1, int y2, int x2) {
+	if (x1 < 0) {
+		x1 = 0;
+	}
+	if (x1 > img.cols) {
+		x1 = img.cols;
+	}
+	if (y1 < 0) {
+		y1 = 0;
+	}
+	if (y1 > img.rows) {
+		y1 = img.rows;
+	}
+	if (y2 > img.rows) {
+		y2 = img.rows;
+	}
+	if (x2 > img.cols) {
+		x2 = img.cols;
+	}
+	/* Make a region of the proper size. 
+	 * Start point in point (x1,y1) width = y2-y1 and height x2-x1. 
+	 */ 
+	Rect region(x1,y1,y2-y1,x2-x1);
+	
+	// Extract the rectangle from the image
+	img(region) = 0;
 }
 
 // Function to initialize GaussWindow. 
@@ -246,7 +277,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	
 	// Variables related to Non Maximum suppression 
 	int NMSBox = 5;
-	int boundaries = 15; 
+	int boundaries = 10; // Boundaries in the image 
 	
 	Mat dst = Mat::zeros( src.size(), CV_32FC1 );
 	cornerHarris (src_gray, dst, blockSize, apertureSize, k);
@@ -260,7 +291,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	if (display == false) {
 		int nr_corners = 0;
 		
-		int keypoints_limit = 1000; // Change to 200
+		int keypoints_limit = 150; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;
@@ -268,19 +299,59 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 		Corners(0,0) = 0;
 		Corners(1,0) = 0;
 		
-		for (int i = 0+boundaries; i < dst_norm.rows-boundaries; i++) {
-			for (int j = 0+boundaries; j < dst_norm.cols-boundaries; j++) {
-				
-				CornerResponse = (int) dst_norm.at<float>(i,j);
-				if ( CornerResponse > thres && nr_corners < keypoints_limit-1) {
-					//cout << "intensity for corner " << nr_corners << " at (" << i << "," << j << "): " << (int) dst_norm.at<float>(i,j) << endl;
-					// Insert node in heap
-					Corners = insertNodeHeap(Corners, CornerResponse,i,j,nr_corners+1);
-					//cout << "Heap Corners intensity " << Corners(nr_corners+1,0)  << " at (" << Corners(nr_corners+1,1) << "," << Corners(nr_corners+1,2) << ")" << endl;
-					nr_corners++;
+		Matrix keypoints(keypoints_limit,3);
+		for (int count = 0; count < keypoints_limit; count++) {
+			double max = 0; 
+			int x = 0; 
+			int y = 0; 
+			for (int i = 0+boundaries; i < dst_norm.rows-boundaries; i++) {
+				for (int j = 0+boundaries; j < dst_norm.cols-boundaries; j++) {
+					if ((double) dst_norm.at<float>(i,j) > max) {
+						max = (double) dst_norm.at<float>(i,j) ;
+						y = i;
+						x = j;
+						
+					}
+					/*
+					CornerResponse = (int) dst_norm.at<float>(i,j);
+					if ( CornerResponse > thres && nr_corners < keypoints_limit-1) {
+						//cout << "intensity for corner " << nr_corners << " at (" << i << "," << j << "): " << (int) dst_norm.at<float>(i,j) << endl;
+						// Insert node in heap
+						Corners = insertNodeHeap(Corners, CornerResponse,i,j,nr_corners+1);
+						//cout << "Heap Corners intensity " << Corners(nr_corners+1,0)  << " at (" << Corners(nr_corners+1,1) << "," << Corners(nr_corners+1,2) << ")" << endl;
+						nr_corners++;
+					}
+					*/
 				}
 			}
+			//cout << "Keypoints extracted" << endl;
+			keypoints(count,0) = max;
+			keypoints(count,1) = y;
+			keypoints(count,2) = x;
+			/*
+			cout << "Keypoint at (y,x) = (" << y << "," << x << ") with intensity = " << max << endl;
+			waitKey(0);
+			for (int nn = y-NMSBox; nn <= y + NMSBox; nn++) {
+				for (int mm = x - NMSBox; mm <= x + NMSBox; mm++) {
+					cout << (double) dst_norm.at<float>(nn,mm) << ", ";
+				}
+				cout << "" << endl;
+			}
+			waitKey(0);
+			*/
+			nonMaximumSuppression(dst_norm, y-NMSBox, x-NMSBox, y+NMSBox+1, x+NMSBox+1);
+			/*
+			for (int nn = y-NMSBox; nn <= y + NMSBox; nn++) {
+				for (int mm = x - NMSBox; mm <= x + NMSBox; mm++) {
+					cout << (double) dst_norm.at<float>(nn,mm) << ", ";
+				}
+				cout << "" << endl;
+			}
+			waitKey(0);
+			*/
 		}
+		
+		/*
 		cout << "Number of corners: " << nr_corners << endl;
 		//printfunction(Corners,nr_corners);
 		
@@ -326,6 +397,8 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 		}
 		cout << "Number of corners left: " <<  corners_left << endl;
 		return keypoints.slice(0,corners_left);
+		*/
+		return keypoints;
 	}
 	cout << "End of Harris " << endl;	
 	Matrix emptyArray(1,3);	
@@ -378,7 +451,7 @@ Matrix circularShift(Matrix histogram) {
 Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 	
 	// Simplification of SIFT
-	
+	//cout << "Error here" << endl;
 	// Maybe the image should be smoothed first with a Gaussian Kernel
 	int n = keypoints.dim1();
 	
@@ -401,7 +474,7 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 	convertScaleAbs(grad_x, abs_grad_x);
 	convertScaleAbs(grad_y, abs_grad_y);
 	
-	
+	//cout << "Error 2 here" << endl;
 	//cout << "Calculating gauss window" << endl;
 	int filter_size = 16;
 	float sigma = 1.5*16;
@@ -417,9 +490,10 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 		
 		// Extract a patch of size 16,16 from the image with x-gradients and y-gradients
 		Mat Patch_Ix, Patch_Iy;
+		//cout << "Error to here" << endl;
 		Patch_Ix = selectRegionOfInterest(grad_x, y-7, x-7, y+8, x+8);
 		Patch_Iy = selectRegionOfInterest(grad_y, y-7, x-7, y+8, x+8);
-
+		//cout << "Error 2 here" << endl;
 		// This is the scaled gradients 
 		Mat Gradients = Mat::zeros(Size(16,16),CV_64FC1);
 		// This is the orientations (angles of the gradients in radians)

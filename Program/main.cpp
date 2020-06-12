@@ -90,13 +90,15 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	// Get Feature points
 	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray);
 	const char* text0 = "Detected corners *Thor frame I_i0";
-	drawCorners(I_i0, keypoints_I_i0, text0);
-	
+	//drawCorners(I_i0, keypoints_I_i0, text0);
+	//waitKey(0);
 	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray);
 	const char* text1 = "Detected corners frame I_i1";
-	drawCorners(I_i1, keypoints_I_i1,text1);
-	
+	//drawCorners(I_i1, keypoints_I_i1,text1);
+	//waitKey(0);
+	//cout << "Done with finding keypoints " << endl;
 	// Find descriptors for Feature Points
+	
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	cout << "descriptors_I_i0 dimensions = (" << descriptors_I_i0.dim1() << "," << descriptors_I_i0.dim2() << ")" << endl;
 	
@@ -132,12 +134,18 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 		//line(I_i1,Point(y2,x2),Point(y,x),Scalar(0,255,0),3);
 		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		//imshow("Matched features I1", I_i1);
+		//waitKey(0);
+		//circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0
+		//circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		//imshow("Matched features I0", I_i0);
+		//waitKey(0);
+		
+		
 		/* For drawing circles
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
 		imshow("Matched features I1", I_i1);
 		waitKey(0);
-		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
 		imshow("Matched features I0", I_i0);
 		waitKey(0);
 		*/
@@ -211,14 +219,15 @@ int main ( int argc,char **argv ) {
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
-	imshow("Frame I_i0", I_i0);
+	//imshow("Frame I_i0", I_i0);
 	
-	waitKey(100);	// Ensures it is sufficiently far away from initial frame
+	//waitKey(0);	// Ensures it is sufficiently far away from initial frame
 	// First frame 1 
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
-
+	//waitKey(0);
+	
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	initializaiton(I_i0, I_i1);
 	
