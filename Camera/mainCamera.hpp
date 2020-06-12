@@ -29,7 +29,7 @@ namespace draw {
 */ 
 
 namespace Harris {
-	Matrix corner(Mat src, Mat src_gray, bool display);
+	Matrix corner(Mat src, Mat src_gray);
 	//void corner(Mat src, Mat src_gray, bool display);
 
 }	// Harris Corner

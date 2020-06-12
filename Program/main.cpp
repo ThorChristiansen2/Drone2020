@@ -88,49 +88,51 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	cvtColor(I_i1, I_i1_gray, COLOR_BGR2GRAY );
 	
 	// Get Feature points
-	bool display = false; // Parameter that displays images
+	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray);
+	const char* text0 = "Detected corners *Thor frame I_i0";
+	drawCorners(I_i0, keypoints_I_i0, text0);
 	
-	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, display);
-	const char* text1 = "Detected corners *Thor frame I_i0";
-	drawCorners(I_i0, keypoints_I_i0, text1);
-	//waitKey(1000);
-	
-	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, display);
-	const char* text2 = "Detected corners frame I_i1";
-	drawCorners(I_i1, keypoints_I_i1,text2);
-	//waitKey(1000);
+	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray);
+	const char* text1 = "Detected corners frame I_i1";
+	drawCorners(I_i1, keypoints_I_i1,text1);
 	
 	// Find descriptors for Feature Points
-	// Write Sift function
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	cout << "descriptors_I_i0 dimensions = (" << descriptors_I_i0.dim1() << "," << descriptors_I_i0.dim2() << ")" << endl;
-	//waitKey(1000);
 	
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
 	cout << "descriptors_I_i1 dimensions = (" << descriptors_I_i1.dim1() << "," << descriptors_I_i1.dim2() << ")" << endl;
-	//waitKey(0);
-	/*
-	cout << "Print of descriptors_I_i1" << endl;
-	for (int i = 0; i < descriptors_I_i1.dim1(); i++) {
-		for (int j = 0; j < 128; j++) {
-			cout << descriptors_I_i1(i,j) << ", ";
-		}
-		cout << "" << endl;
-	}
-	*/
 	
+	// Match descriptors 
 	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+	
+	// Find Point correspondences
+	// Points from image 0 in row 1 and row 2 
+	// Points from image 1 in row 3 and row 4
+	int N = matches.dim1();
+	Matrix pointCorrespondences(4,N);
+	for (int i = 0; i < N; i++) {
+		pointCorrespondences(0,i) = keypoints_I_i0(matches(i,1),1); // x
+		pointCorrespondences(1,i) = keypoints_I_i0(matches(i,1),2); // y
+		pointCorrespondences(2,i) = keypoints_I_i1(matches(i,0),1); // x2
+		pointCorrespondences(3,i) = keypoints_I_i1(matches(i,0),2); // y2
+	}
+	
+	
+	// Plot Point corespondences
 	for (int i = 0; i < matches.dim1(); i++) {
-		double x = keypoints_I_i1(matches(i,0),1);
-		double y = keypoints_I_i1(matches(i,0),2);
-		double x2 = keypoints_I_i0(matches(i,1),1);
-		double y2 = keypoints_I_i0(matches(i,1),2);
+		//double x = keypoints_I_i1(matches(i,0),1);
+		//double y = keypoints_I_i1(matches(i,0),2);
+		//double x2 = keypoints_I_i0(matches(i,1),1);
+		//double y2 = keypoints_I_i0(matches(i,1),2);
+		double x = pointCorrespondences(0,i);
+		double y = pointCorrespondences(1,i);
+		double x2 = pointCorrespondences(2,i);
+		double y2 = pointCorrespondences(3,i);
 		//line(I_i1,Point(y2,x2),Point(y,x),Scalar(0,255,0),3);
 		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
 		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
-		
-		
 		/* For drawing circles
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
 		imshow("Matched features I1", I_i1);
@@ -144,50 +146,6 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	waitKey(0);
 	
 	
-	
-	/*
-	bool valid;
-	if (descriptors_I_i0.dim1() < descriptors_I_i1.dim1()) {
-		valid = true;
-	} 
-	else {
-		valid = false;
-	}
-	for (int i = 0; i < matches.dim2(); i++) {
-		cout << "Keypoint " << i << " matches with keypoint " << matches(0,i) << endl;
-		if (valid == true) {
-			double x = keypoints_I_i0(i,1); // Skal måske være 0
-			double y = keypoints_I_i0(i,2); // Skal måske være 1
-			double x2 = keypoints_I_i1(matches(0,i),1);
-			double y2 = keypoints_I_i1(matches(0,i),2);
-			circle (I_i0, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-			imshow("Matched features I0", I_i0);
-			waitKey(0);
-			circle (I_i1, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
-			imshow("Matched features I1", I_i1);
-			waitKey(0);
-		}
-		else {
-			double x = keypoints_I_i0(matches(0,i),1); // Skal måske være 0
-			double y = keypoints_I_i0(matches(0,i),2); // Skal måske være 1
-			double x2 = keypoints_I_i1(i,1);
-			double y2 = keypoints_I_i1(i,2);
-			circle (I_i0, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-			imshow("Matched features I0", I_i0);
-			waitKey(0);
-			circle (I_i1, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
-			imshow("Matched features I1", I_i1);
-			waitKey(0);
-		}
-	}
-	*/
-	
-	
-	//SIFT::operator()(I_i0_gray,
-	//Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i0, keypoints_I_i1);
-	
-	// Match Feature Points
-	// Using Least Squared Distance
 	
 	// Find position and rotation from images
 	
@@ -224,58 +182,6 @@ string type2str(int type) {
   return r;
 }
 
-// Function to determine data type of image contained in OpenCV Mat object.
-// Example of use: MatType(I_i0_gray); where I_i0_gray is your Mat object.
-/*
-void MatType( Mat inputMat ) {
-	
-    int inttype = inputMat.type();
-
-    string r, a;
-    uchar depth = inttype & CV_MAT_DEPTH_MASK;
-    uchar chans = 1 + (inttype >> CV_CN_SHIFT);
-    switch ( depth ) {
-        case CV_8U:  r = "8U";   a = "Mat.at<uchar>(y,x)"; break;  
-        case CV_8S:  r = "8S";   a = "Mat.at<schar>(y,x)"; break;  
-        case CV_16U: r = "16U";  a = "Mat.at<ushort>(y,x)"; break; 
-        case CV_16S: r = "16S";  a = "Mat.at<short>(y,x)"; break; 
-        case CV_32S: r = "32S";  a = "Mat.at<int>(y,x)"; break; 
-        case CV_32F: r = "32F";  a = "Mat.at<float>(y,x)"; break; 
-        case CV_64F: r = "64F";  a = "Mat.at<double>(y,x)"; break; 
-        default:     r = "User"; a = "Mat.at<UKNOWN>(y,x)"; break; 
-    }   
-    r += "C";
-    r += (chans+'0');
-    cout << "Mat is of type " << r << " and should be accessed with " << a << endl;
-	
-}
-*/
-
-/*
-// Select region of interest from image 
-Mat selectRegionOfInterest(Mat img, int y1, int x1, int y2, int x2) {
-	Mat ROI;
-	if (x1 < 0) {
-		x1 = 0;
-	}
-	if (y1 < 0) {
-		y1 = 0;
-	}
-	if (y2 > img.rows) {
-		y2 = img.rows;
-	}
-	if (x2 > img.cols) {
-		x2 = img.cols;
-	}
-	cout << "Rectangle : (" << y1 << "," << x1 << "," << x2 << "," << y2 << ")" << endl;
-	//Rect region(y1, x1, x2-x1, y2-y1);
-	Rect region(y1,x1,x2-x1,y2-y1);
-	ROI = img(region);
-	cout << "Region extracted" << endl;
-	return ROI;
-}
-*/
-
 // ####################### Main function #######################
 int main ( int argc,char **argv ) {
 	
@@ -306,9 +212,8 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
 	imshow("Frame I_i0", I_i0);
-	waitKey(0);
 	
-	waitKey(4000);	// Ensures it is sufficiently far away from initial frame
+	waitKey(100);	// Ensures it is sufficiently far away from initial frame
 	// First frame 1 
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
@@ -316,7 +221,6 @@ int main ( int argc,char **argv ) {
 
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	initializaiton(I_i0, I_i1);
-	//MatType(I_i0);
 	
 	/*
 	 * To access a pixel element in an image, you can use two different methods.  
@@ -328,52 +232,13 @@ int main ( int argc,char **argv ) {
 	 * Intenisty.val[0]
 	 */
 	
-	/*
-	//cout << Data_type_mat; 
-	Mat I_i0_gray;
-	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
-	cout << "Print I_i0" << endl;
-	//string Data_type_mat = MatType(I_i0_gray);
-	cout << "Intensity at (k = " << 0 << ",j= " << 0 << ") : " << (int) I_i0_gray.at<uchar>(0,0) << endl; 
-	for (int k = 870; k<= 885; k++) {
-		for (int j = 870; j<= 885; j++) {
-			cout << (int) I_i0_gray.at<uchar>(k,j) << ", ";
-		}
-		cout << "" << endl;
-	}
 	
-	cout << "Show image I_i0" << endl;
-	imshow("Image I_i0_gray", I_i0_gray);
-	
-	
-	cout << "Matrix A" << endl;
-	
-	cout << "Intensity before r (k = " << 0 << ",j= " << 0 << ") : " << (int) I_i0_gray.at<uchar>(0,0) << endl; 
-	//Rect r(0,0,10,10);
-	cout << "Intensity after r (k = " << 0 << ",j= " << 0 << ") : " << (int) I_i0_gray.at<uchar>(0,0) << endl; 
+
 	// Draw rectangle on the image 
 	//rectangle(I_i0_gray, r, Scalar(255), 1, 8, 0);
 	//imshow("Image I_i0_gray w. rectangle", I_i0_gray);
 	//waitKey(0);
 	//cout << "Rectangle drawn" << endl;
-	
-	
-	
-	//Mat A = I_i0_gray(r);
-	Mat A = selectRegionOfInterest(I_i0_gray,877-7,877-7,877+8,877+8);
-	cout << "Dimenion of A : " << A.rows << endl;
-	cout << "Dimension of A : " << A.cols << endl;
-	//cout << "Start point " << A.at<double>(1,1) << endl;
-	//Mat A = Mat::zeros(3,4,CV_32FC1);
-	//A.copyTo(temp);
-	
-	for (int k = 0; k<= A.rows; k++) {
-		for (int j = 0; j<= A.cols; j++) {
-			cout << (int) A.at<uchar>(k,j) << ", ";
-		}
-		cout << "" << endl;
-	}
-	*/
 	
 	// VO-pipeline: 
 
