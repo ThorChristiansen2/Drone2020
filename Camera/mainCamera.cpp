@@ -1,6 +1,7 @@
 #include <iostream>
 #include "mainCamera.hpp"
 #include <limits> 
+#include <assert.h> 
 //#include "Matrix.h"
 
 /* ########################
@@ -11,12 +12,16 @@
  * by main.cpp to treat the images - find features in the images using 
  * Harris corner etc.
  * Project: Bachelor project 2020
+ * Notes: Maybe you should restrict yourself to only use one type of matrix
+ * element - Instead of using both Matrix and Mat, maybe just use one of them
+ * When you are at it: Use Pointers instead of indexing. 
  * ########################
 */
 
 using namespace std;
 //using namespace Numeric_lib;
 
+// Match SIFT Descriptors 
 Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 
 	int n1 = descriptor1.dim1();	// Matrix containing descriptors for keypoints in image 0
@@ -232,14 +237,6 @@ Matrix insertNodeHeap(Matrix Corners, int value, int y, int x, int n) {
 		index = floor(n/2);
 	}
 	return Corners;
-}
-
-void printfunction(Matrix Corners, int n) {
-	cout << "Start printing" << endl;
-	for (int i = 0; i <= n; i ++) {
-		cout << "Corners intensity: " << Corners(i,0) << " at (" << Corners(i,1) << "," << Corners(i,2) << ")" << endl;
-	}
-	
 }
 
 Matrix extractMaxHeap(Matrix Corners, int n) {
@@ -586,8 +583,191 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 	return Descriptors;
 }
 
+ 
 
 
+
+
+// Estimate pose of camera
+Matrix cross2Matrix(Vector x) {
+	Matrix M(3,3);
+	
+	M(0,1) = -x(2);
+	M(0,2) = x(1);
+	M(1,0) = x(2);
+	M(1,2) = -x(0);
+	M(2,0) = -x(1); 
+	M(2,1) = x(0);
+	
+	return M;
+}
+
+// Multiplicaiton of a matrix with a vector 
+Vector MatVecMul(const Matrix& m, const Vector& u) {
+	int n = m.dim1();
+	Vector v(n);
+	for (int i = 0; i <n; ++i) {
+		v(i) = dot_product(m[i],u);
+	}
+	return v;
+}
+
+Matrix MatMatMul(const Matrix& m1, const Matrix& m2) {
+	cout << "MatMatMul" << endl;
+	// Checks for proper dimensions
+	assert (m1.dim2() == m2.dim1());
+	Matrix m(m1.dim1(),m2.dim2());
+	for (int i = 0; i < m1.dim2(); i++) {
+		for (int j = 0; j < m2.dim2(); j++) {
+			Vector u(m2.dim1());
+			for (int k = 0; k < m2.dim1(); k++) {
+				u(k) = m2(k,j);
+			}
+			m(i,j) = dot_product(m1[i],u);
+			cout << m(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	return m;
+}
+
+Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
+	
+	int dim1 = p1.dim1();
+	int NumPoints1 = p1.dim2();
+	int dim2 = p2.dim1();
+	int NumPoints2 = p2.dim2();
+	
+	// Checks the dimensions
+	assert (dim1 == dim2);
+	assert (NumPoints1 == NumPoints2);
+	
+	Matrix P(4,NumPoints1);
+	
+	for (int j = 0; j < P.dim2(); j++) {
+		
+		Vector u1(p1.dim1());
+		for (int k = 0; k < p1.dim1(); k++) {
+			u1(k) = p1(k,j);
+		}
+		Matrix A1 = MatMatMul(cross2Matrix(u1), M1);
+		
+		Vector u2(p2.dim1());
+		cout << "Vector u2" << endl;
+		for (int k = 0; k < p2.dim1(); k++) {
+			u2(k) = p2(k,j);
+			cout << u2(k) << endl;
+		}
+		Matrix M = cross2Matrix(u2);
+		cout << "u2 cross Matrix " << endl;
+		for (int h1 = 0; h1 < M.dim1(); h1++) {
+			for (int h2 = 0; h2 < M.dim2(); h2++) {
+				cout << M(h1,h2) << ", ";
+			}
+			cout << "" << endl;
+		}
+		Matrix A2 = MatMatMul(cross2Matrix(u2), M2);
+		cout << "A2 Matrix " << endl;
+		for (int h1 = 0; h1 < A2.dim1(); h1++) {
+			for (int h2 = 0; h2 < A2.dim2(); h2++) {
+				cout << A2(h1,h2) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
+		assert (A1.dim1() == A2.dim1());
+		Mat A = Mat::zeros((2*A1.dim1()), M2.dim2(), CV_64FC1);
+		cout << "Dimensions of A: " << A.rows << "," << A.cols << endl;
+		for (int h1 = 0; h1 < A.rows; h1++) {
+			for (int h2 = 0; h2 < A.cols; h2++) {
+				if (h1 < A.rows/2) {
+					A.at<double>(h1,h2) = A1(h1,h2);
+				}
+				else {
+					A.at<double>(h1,h2) = A2(h1-A2.dim1(),h2);
+				} 
+			}
+		}
+		cout << "Matrix A" << endl;
+		for (int h1 = 0; h1 < A.rows; h1++) {
+			for (int h2 = 0; h2 < A.cols; h2++) {
+				cout << A.at<double>(h1,h2) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
+		
+		Mat Sigma = Mat::zeros(M2.dim2(), M2.dim2(), CV_64FC1);
+		Mat S, U, VT;
+		SVDecomp(A, S, U, VT, SVD::FULL_UV);
+		MatType(S);
+		MatType(U);
+		MatType(VT);
+		cout << "Matrix VT" << endl;
+		for (int nn = 0; nn < VT.rows; nn++) {
+			for (int mm = 0; mm < VT.cols; mm++) {
+				cout << VT.at<double>(nn,mm) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "Matrix S" << endl;
+		for (int nn = 0; nn < S.rows; nn++) {
+			for (int mm = 0; mm < S.cols; mm++) {
+				cout << S.at<double>(nn,mm) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "Matrix U" << endl;
+		for (int nn = 0; nn < U.rows; nn++) {
+			for (int mm = 0; mm < U.cols; mm++) {
+				cout << U.at<double>(nn,mm) << ", ";
+			}
+			cout << "" << endl;
+		}
+		/*
+		for (int h = 0; h < VT.rows; h++) {
+			VT.row(h) = VT.row(h) * S.at<double>(h,0);
+		}
+		*/
+		Mat VTtransposed = VT.t();
+		cout << "After multiplying with s Matrix VT" << endl;
+		for (int nn = 0; nn < VTtransposed.rows; nn++) {
+			for (int mm = 0; mm < VTtransposed.cols; mm++) {
+				cout << VTtransposed.at<double>(nn,mm) << ", ";
+			}
+			cout << "" << endl;
+		}
+	}
+	
+	/*
+	Matrix a(3,3);
+	a(0,0) = 2;
+	a(1,1) = 3;
+	a(2,2) = 2;
+	Vector b(3);
+	b(0) = 1;
+	b(1) = 7;
+	b(2) = 1;
+	
+	Vector n = MatVecMul(a,b);
+	Matrix q(3,1);
+	for (int i = 0; i < 3; i++) {
+		cout << "n(" << i << ") = " << n(i) << endl;
+		q(i,0) = n(i);
+	}
+	
+	Matrix M = MatMatMul(M1,M2);
+	for (int i = 0; i < M.dim1(); i++) {
+		for (int j = 0; j < M.dim2(); j++) {
+			cout << M(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
+	
+	
+	return P;
+}
 
 
 

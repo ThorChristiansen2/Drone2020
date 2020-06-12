@@ -4,6 +4,7 @@
 // Libraries from opencv2
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/core.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/types.hpp>
 
@@ -14,6 +15,7 @@
 using namespace cv;
 //using namespace Numeric_lib;
 using Matrix = Numeric_lib::Matrix<double,2>;
+using Vector = Numeric_lib::Matrix<double,1>;
 
 /*
 namespace draw {
@@ -39,6 +41,9 @@ namespace SIFT {
 	Matrix matchDescriptors(Matrix descriptor1, Matrix descriptor2);
 	
 }	// SIFT
+
+
+Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2);
 
 
 

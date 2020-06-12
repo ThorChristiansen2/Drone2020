@@ -229,7 +229,56 @@ int main ( int argc,char **argv ) {
 	//waitKey(0);
 	
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
-	initializaiton(I_i0, I_i1);
+	//initializaiton(I_i0, I_i1);
+	
+	
+	
+	Matrix p1(3,1);
+	Matrix p2(3,1);
+	Matrix M1(3,4);
+	M1(0,0) = 500; 
+	M1(0,2) = 320; 
+	M1(1,1) = 500; 
+	M1(1,2) = 240;
+	M1(2,2) = 1; 
+	cout << "Matrix M1" << endl;
+	for (int i = 0; i < M1.dim1(); i++) {
+		for (int j = 0; j < M1.dim2(); j++) {
+			cout << M1(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	Matrix M2(3,4);
+	M2(0,0) = 500; 
+	M2(0,2) = 320; 
+	M2(0,3) = -100;
+	M2(1,1) = 500;
+	M2(1,2) = 240;
+	M2(2,2) = 1;
+	cout << "Matrix M2" << endl;
+	for (int i = 0; i < M2.dim1(); i++) {
+		for (int j = 0; j < M2.dim2(); j++) {
+			cout << M2(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	
+	p1(0,0) = 4492.45639;
+	p1(1,0) = 4004.7998;
+	p1(2,0) = 14.8799;
+	
+	p2(0,0) = 4392.45639;
+	p2(1,0) = 4004.799;
+	p2(2,0) = 14.879;
+	
+	
+	
+	Matrix P = linearTriangulation(p1, p2, M1, M2);
+	
+	
+	
 	
 	/*
 	 * To access a pixel element in an image, you can use two different methods.  
