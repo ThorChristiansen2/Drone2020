@@ -146,10 +146,12 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99,5000);
 	
 	// Estimate Essential Matrix
-	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);
+	//Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);
 	
+	
+	Mat essential_matrix = (Mat_<double>(3,3) << -0.10579, -0.37558, -0.5162047, 4.39583, 0.25655, 19.99309, 0.4294123, -20.32203997, 0.023287939);
 	// Find the rotation and translation assuming the first frame is taken with the drone on the ground 
-	Mat transformation_matrix = findRotationAndTranslation(essential_matrix);
+	Mat transformation_matrix = findRotationAndTranslation(essential_matrix, K, points1, points2);
 	
 	
 	// Triangulate initial point cloud

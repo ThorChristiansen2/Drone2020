@@ -46,7 +46,7 @@ namespace SIFT {
 // Estimate position of camera 
 Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2);
 Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K);
-Mat findRotationAndTranslation(Mat essential_matrix);
+Mat findRotationAndTranslation(Mat essential_matrix, Mat K, vector points0_h, vector points0_h);
 
 
 

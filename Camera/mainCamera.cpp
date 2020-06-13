@@ -632,6 +632,7 @@ Matrix MatMatMul(const Matrix& m1, const Matrix& m2) {
 	return m;
 }
 
+// Should be changed to work with Mat instead 
 Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 	
 	int dim1 = p1.dim1();
@@ -811,7 +812,7 @@ Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K) {
 }
 
 
-Mat findRotationAndTranslation(Mat essential_matrix) {
+Mat findRotationAndTranslation(Mat essential_matrix, Mat K, vector<Point2f> points0_h, vector<Point2f> points1_h) {
 	Mat transformation_matrix;
 	
 	Mat S, U, VT;  // VT = V transposed
@@ -820,6 +821,7 @@ Mat findRotationAndTranslation(Mat essential_matrix) {
 	
 	// Translation vector t 
 	
+	// Find the two possible rotations 
 	Vector t(3);
 	for (int i = 0; i < 3; i++) {
 		t(i) = U.at<double>(i,2);
@@ -827,14 +829,140 @@ Mat findRotationAndTranslation(Mat essential_matrix) {
 	
 	Mat W = (Mat_<double>(3,3) << 0, -1, 0, 1, 0, 0, 0, 0, 1);
 	
+	/*
+	cout << "U" << endl;
+	for (int i = 0; i < U.rows; i++) {
+		for (int j = 0; j < U.cols; j++) {
+			cout << U.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	cout << "S" << endl;
+	for (int i = 0; i < S.rows; i++) {
+		for (int j = 0; j < S.cols; j++) {
+			cout << S.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	VT = VT.t();
+	cout << "VT" << endl;
+	for (int i = 0; i < VT.rows; i++) {
+		for (int j = 0; j < VT.cols; j++) {
+			cout << VT.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
+	
 	Mat R1 = U * W * VT.t();
 	Mat R2 = U * W.t() * VT.t();
 	
 	if (determinant(R1) < 0) {
-		
+		R1 = -1*R1;
 	}
 	
 	if (determinant(R2) < 0) {
+		R2 = -1*R2;
+	}
+	
+	double length = sqrt(t(0)*t(0) + t(1)*t(1) + t(2)*t(2));
+	if (length != 0) {
+		for (int i = 0; i < 3; i++) {
+			t(i) = t(i)/length;
+		}
+	}
+	
+	/*
+	cout << "u3" << endl;
+	for (int i = 0; i<3; i++) {
+		cout << t(i) << endl;
+	}
+	
+	cout << "R1" << endl;
+	for (int i = 0; i < R1.rows; i++) {
+		for (int j = 0; j < R1.cols; j++) {
+			cout << R1.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "R2" << endl;
+	for (int i = 0; i < R2.rows; i++) {
+		for (int j = 0; j < R2.cols; j++) {
+			cout << R2.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
+	// Disambiguate pose 
+	Mat Trans_I0 = (Mat_<double>(3,4) << 1,0,0,0, 0,1,0,0, 0,0,1,0);
+	Mat M0 = K * Trans_I0;
+	
+	Mat R;
+	int total_points_in_front_best = 0;
+	for(int iRot = 0; iRot <= 1; iRot++) {
+		if (iRot == 0) {
+			R = R1;
+		}
+		else {
+			R = R2;
+		}
+		for (int iSignT = 1; iSignT <= 2; iSignT++) {
+			Vector T = t * pow((-1),iSignT);
+			
+			Mat Trans_I1 = (Mat_<double>(3,4) << R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2),T(0), R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2),T(1), R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2),T(2));
+			Mat M1 = K * Trans_I1;
+			Mat P_C0 = linearTriangulation(points0_h, points1_h, M0, M1);
+			
+			// Projekct in both cameras
+			// Only the 3rd dimension is needed, so the matrix is reduced
+			Mat P_C1 = Mat::zeros(1, P_C0.cols, CV_64FC1);
+			int num_points_in_front1 = 0;
+			for (int i = 0; i < P_C1.cols; i++) {
+				for (int j = 0; j < P_C0.rows; j++) {
+					P_C1.at<double>(0,i) = P_C1.at<double>(0,i) + Trans_I1.at<double>(2,j)*P_C0.at<double>(j,i);
+				}
+				if (P_C1.at<double>(0,i) > 0) {
+					num_points_in_front1++;
+				}
+			}
+			int num_points_in_front0 = 0;
+			for (int i = 0; i < P_C0.cols; i++) {
+				if (P_C0.at<double>(3,i) > 0) {
+					num_points_in_front0++;
+				}
+			}
+			int total_points_in_front = num_points_in_front1 + num_points_in_front0;
+			if (total_points_in_front > total_points_in_front_best) {
+				
+				
+				transformation_matrix = Trans_I1;
+				
+				/*
+				transformation_matrix.at<double>(0,0) = R.at<double>(0,0);
+				transformation_matrix.at<double>(0,1) = R.at<double>(0,1);
+				transformation_matrix.at<double>(0,2) = R.at<double>(0,2);
+				transformation_matrix.at<double>(1,0) = R.at<double>(1,0);
+				transformation_matrix.at<double>(1,1) = R.at<double>(1,1);
+				transformation_matrix.at<double>(1,2) = R.at<double>(1,2);
+				transformation_matrix.at<double>(2,0) = R.at<double>(2,0);
+				transformation_matrix.at<double>(2,0) = R.at<double>(2,1);
+				transformation_matrix.at<double>(2,0) = R.at<double>(2,2);
+				
+				transformation_matrix.at<double>(0,3) = T(0);
+				transformation_matrix.at<double>(1,3) = T(1);
+				transformation_matrix.at<double>(2,3) = T(2);
+				*/
+				
+				
+				total_points_in_front_best = total_points_in_front;
+			}
+		}
+		 
+		
+		
+		
 		
 	}
 	
