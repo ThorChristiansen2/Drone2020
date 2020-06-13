@@ -2,6 +2,7 @@
 #include "mainCamera.hpp"
 #include <limits> 
 #include <assert.h> 
+
 //#include "Matrix.h"
 
 /* ########################
@@ -613,7 +614,7 @@ Vector MatVecMul(const Matrix& m, const Vector& u) {
 }
 
 Matrix MatMatMul(const Matrix& m1, const Matrix& m2) {
-	cout << "MatMatMul" << endl;
+	//cout << "MatMatMul" << endl;
 	// Checks for proper dimensions
 	assert (m1.dim2() == m2.dim1());
 	Matrix m(m1.dim1(),m2.dim2());
@@ -624,9 +625,9 @@ Matrix MatMatMul(const Matrix& m1, const Matrix& m2) {
 				u(k) = m2(k,j);
 			}
 			m(i,j) = dot_product(m1[i],u);
-			cout << m(i,j) << ", ";
+			//cout << m(i,j) << ", ";
 		}
-		cout << "" << endl;
+		//cout << "" << endl;
 	}
 	return m;
 }
@@ -652,13 +653,19 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 		}
 		Matrix A1 = MatMatMul(cross2Matrix(u1), M1);
 		
+		
 		Vector u2(p2.dim1());
-		cout << "Vector u2" << endl;
+		
+		
+		//cout << "Vector u2" << endl;
 		for (int k = 0; k < p2.dim1(); k++) {
 			u2(k) = p2(k,j);
-			cout << u2(k) << endl;
+			//cout << u2(k) << endl;
 		}
-		Matrix M = cross2Matrix(u2);
+		
+		//Matrix M = cross2Matrix(u2);
+		
+		/*
 		cout << "u2 cross Matrix " << endl;
 		for (int h1 = 0; h1 < M.dim1(); h1++) {
 			for (int h2 = 0; h2 < M.dim2(); h2++) {
@@ -666,7 +673,10 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 			}
 			cout << "" << endl;
 		}
+		*/
 		Matrix A2 = MatMatMul(cross2Matrix(u2), M2);
+		
+		/*
 		cout << "A2 Matrix " << endl;
 		for (int h1 = 0; h1 < A2.dim1(); h1++) {
 			for (int h2 = 0; h2 < A2.dim2(); h2++) {
@@ -674,10 +684,13 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 			}
 			cout << "" << endl;
 		}
+		*/
 		
 		assert (A1.dim1() == A2.dim1());
 		Mat A = Mat::zeros((2*A1.dim1()), M2.dim2(), CV_64FC1);
-		cout << "Dimensions of A: " << A.rows << "," << A.cols << endl;
+		
+		
+		//cout << "Dimensions of A: " << A.rows << "," << A.cols << endl;
 		for (int h1 = 0; h1 < A.rows; h1++) {
 			for (int h2 = 0; h2 < A.cols; h2++) {
 				if (h1 < A.rows/2) {
@@ -688,6 +701,7 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 				} 
 			}
 		}
+		/*
 		cout << "Matrix A" << endl;
 		for (int h1 = 0; h1 < A.rows; h1++) {
 			for (int h2 = 0; h2 < A.cols; h2++) {
@@ -695,14 +709,15 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 			}
 			cout << "" << endl;
 		}
-		
+		*/
 		
 		Mat Sigma = Mat::zeros(M2.dim2(), M2.dim2(), CV_64FC1);
 		Mat S, U, VT;
 		SVDecomp(A, S, U, VT, SVD::FULL_UV);
-		MatType(S);
-		MatType(U);
-		MatType(VT);
+		//MatType(S);
+		//MatType(U);
+		//MatType(VT);
+		/*
 		cout << "Matrix VT" << endl;
 		for (int nn = 0; nn < VT.rows; nn++) {
 			for (int mm = 0; mm < VT.cols; mm++) {
@@ -710,6 +725,8 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 			}
 			cout << "" << endl;
 		}
+		*/
+		/*
 		cout << "Matrix S" << endl;
 		for (int nn = 0; nn < S.rows; nn++) {
 			for (int mm = 0; mm < S.cols; mm++) {
@@ -717,6 +734,8 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 			}
 			cout << "" << endl;
 		}
+		*/
+		/*
 		cout << "Matrix U" << endl;
 		for (int nn = 0; nn < U.rows; nn++) {
 			for (int mm = 0; mm < U.cols; mm++) {
@@ -724,22 +743,26 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 			}
 			cout << "" << endl;
 		}
-		/*
+		
 		for (int h = 0; h < VT.rows; h++) {
 			VT.row(h) = VT.row(h) * S.at<double>(h,0);
 		}
 		*/
 		VT = VT.t();
 		for (int i = 0; i < P.dim1(); i++) {
-			if (VT.at<double>(3,4)/VT.at<double>(4,4) < 0) {
-				P(i,j) = (-1)*VT.at<double>(i,4)/(VT.at<double>(4,4));
+			if (VT.at<double>(2,3)/VT.at<double>(3,3) < 0) {
+				P(i,j) = (-1)*VT.at<double>(i,4)/(VT.at<double>(3,3));
 			}
 			else {
-				P(i,j) = VT.at<double>(i,4)/(VT.at<double>(4,4));
+				P(i,j) = VT.at<double>(i,3)/(VT.at<double>(3,3));
 			}
 		}
+		cout << "Point P" << endl;
+		for (int nn = 0; nn < 4; nn++) {
+			cout << P(nn,j) << endl;
+		}
 		
-		
+		/*
 		cout << "After multiplying with s Matrix VT" << endl;
 		for (int nn = 0; nn < VT.rows; nn++) {
 			for (int mm = 0; mm < VT.cols; mm++) {
@@ -747,6 +770,7 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 			}
 			cout << "" << endl;
 		}
+		*/
 	}
 	
 	/*
@@ -779,6 +803,45 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 	return P;
 }
 
+Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K) {
+	
+	Mat essential_matrix = K.t() * fundamental_matrix * K;
+	
+	return essential_matrix;
+}
+
+
+Mat findRotationAndTranslation(Mat essential_matrix) {
+	Mat transformation_matrix;
+	
+	Mat S, U, VT;  // VT = V transposed
+	// SV Decomposition of essential matrix
+	SVDecomp(essential_matrix, S, U, VT, SVD::FULL_UV);
+	
+	// Translation vector t 
+	
+	Vector t(3);
+	for (int i = 0; i < 3; i++) {
+		t(i) = U.at<double>(i,2);
+	}
+	
+	Mat W = (Mat_<double>(3,3) << 0, -1, 0, 1, 0, 0, 0, 0, 1);
+	
+	Mat R1 = U * W * VT.t();
+	Mat R2 = U * W.t() * VT.t();
+	
+	if (determinant(R1) < 0) {
+		
+	}
+	
+	if (determinant(R2) < 0) {
+		
+	}
+	
+	
+	
+	return transformation_matrix;
+}
 
 
 

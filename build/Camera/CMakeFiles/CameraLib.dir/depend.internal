@@ -5,7 +5,9 @@ Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o
  /home/pi/GitHub/Drone2020/Camera/Matrix.h
  /home/pi/GitHub/Drone2020/Camera/mainCamera.cpp
  /home/pi/GitHub/Drone2020/Camera/mainCamera.hpp
+ /usr/local/include/opencv4/opencv2/calib3d.hpp
  /usr/local/include/opencv4/opencv2/core.hpp
+ /usr/local/include/opencv4/opencv2/core/affine.hpp
  /usr/local/include/opencv4/opencv2/core/base.hpp
  /usr/local/include/opencv4/opencv2/core/bufferpool.hpp
  /usr/local/include/opencv4/opencv2/core/check.hpp
@@ -35,6 +37,10 @@ Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o
  /usr/local/include/opencv4/opencv2/core/utils/tls.hpp
  /usr/local/include/opencv4/opencv2/core/version.hpp
  /usr/local/include/opencv4/opencv2/core/vsx_utils.hpp
+ /usr/local/include/opencv4/opencv2/features2d.hpp
+ /usr/local/include/opencv4/opencv2/flann/config.h
+ /usr/local/include/opencv4/opencv2/flann/defines.h
+ /usr/local/include/opencv4/opencv2/flann/miniflann.hpp
  /usr/local/include/opencv4/opencv2/highgui.hpp
  /usr/local/include/opencv4/opencv2/imgcodecs.hpp
  /usr/local/include/opencv4/opencv2/imgproc.hpp

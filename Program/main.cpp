@@ -80,7 +80,7 @@ void drawCorners(Mat img, Matrix keypoints, const char* frame_name) {
 
 
 // Initialization part of VO pipeline.
-float initializaiton(Mat I_i0, Mat I_i1) {
+float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	
 	// Transform color images to gray images
 	cv::Mat I_i0_gray, I_i1_gray;
@@ -110,17 +110,52 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 	
 	// Find Point correspondences
 	// Points from image 0 in row 1 and row 2 
-	// Points from image 1 in row 3 and row 4
+	// Points from image 1 in row 3 and row 
+	
+	/*
+	int point_count = 100;
+	vector<Point2f> points1(point_count);
+	vector<Point2f> points2(point_count);
+	
+	for (int i = 0; i < point_count; i++) {
+		points1[i] = Point2f(5,2);
+		points2[i] = Point2f(3,7);
+	}
+	
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
+	*/
+	
+	
 	int N = matches.dim1();
+	// For plotting
 	Matrix pointCorrespondences(4,N);
+	// For fudamental matrix
+	vector<Point2f> points1(N);
+	vector<Point2f> points2(N);
 	for (int i = 0; i < N; i++) {
+		// Be aware of differences in x and y
+		points1[i] = Point2f(keypoints_I_i0(matches(i,1),1),keypoints_I_i0(matches(i,1),2));
+		points2[i] = Point2f(keypoints_I_i1(matches(i,0),1),keypoints_I_i1(matches(i,0),2));
 		pointCorrespondences(0,i) = keypoints_I_i0(matches(i,1),1); // x
 		pointCorrespondences(1,i) = keypoints_I_i0(matches(i,1),2); // y
 		pointCorrespondences(2,i) = keypoints_I_i1(matches(i,0),1); // x2
 		pointCorrespondences(3,i) = keypoints_I_i1(matches(i,0),2); // y2
 	}
 	
+	// Find fudamental matrix 
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99,5000);
 	
+	// Estimate Essential Matrix
+	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);
+	
+	// Find the rotation and translation assuming the first frame is taken with the drone on the ground 
+	Mat transformation_matrix = findRotationAndTranslation(essential_matrix);
+	
+	
+	// Triangulate initial point cloud
+	
+	
+	/*
 	// Plot Point corespondences
 	for (int i = 0; i < matches.dim1(); i++) {
 		//double x = keypoints_I_i1(matches(i,0),1);
@@ -142,16 +177,17 @@ float initializaiton(Mat I_i0, Mat I_i1) {
 		//waitKey(0);
 		
 		
-		/* For drawing circles
+		For drawing circles
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
 		imshow("Matched features I1", I_i1);
 		waitKey(0);
 		imshow("Matched features I0", I_i0);
 		waitKey(0);
-		*/
+		
 	}
-	imshow("Matched features I1", I_i1);
-	waitKey(0);
+	*/
+	//imshow("Matched features I1", I_i1);
+	//waitKey(0);
 	
 	
 	
@@ -203,6 +239,9 @@ int main ( int argc,char **argv ) {
 	}
 	cout<<"Connected to camera ="<<Camera.getId() <<endl;
 	
+	// Calibrate camera to get intrinsic parameters K 
+	Mat K = Mat::ones(3,3,CV_64FC1);
+	
 	cv::Mat I_i0, I_i1, image;
 	
 	int nCount=getParamVal ( "-nframes",argc,argv, 100 );
@@ -229,18 +268,48 @@ int main ( int argc,char **argv ) {
 	//waitKey(0);
 	
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
-	//initializaiton(I_i0, I_i1);
 	
 	
+	initializaiton(I_i0, I_i1, K);
 	
-	Matrix p1(3,1);
-	Matrix p2(3,1);
+	/*
+	Mat W = (Mat_<double>(3,3) << 0, -1, 0, 1, 0, 0, 0, 0, 1);
+	for (int i = 0; i < W.rows; i++) {
+		for (int j = 0; j < W.cols; j++) {
+			cout << W.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
+	
+	
+	/*
+	int point_count = 100;
+	vector<Point2f> points1(point_count);
+	vector<Point2f> points2(point_count);
+	
+	for (int i = 0; i < point_count; i++) {
+		points1[i] = Point2f(5,2);
+		points2[i] = Point2f(3,7);
+	}
+	
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
+	
+	cout << "Fundamental matrix" << endl;
+	for (int i = 0; i < 
+	*/
+	
+	/*
+	Matrix p1(3,2);
+	Matrix p2(3,2);
 	Matrix M1(3,4);
 	M1(0,0) = 500; 
 	M1(0,2) = 320; 
 	M1(1,1) = 500; 
 	M1(1,2) = 240;
 	M1(2,2) = 1; 
+	
+	
 	cout << "Matrix M1" << endl;
 	for (int i = 0; i < M1.dim1(); i++) {
 		for (int j = 0; j < M1.dim2(); j++) {
@@ -249,6 +318,7 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	
+	
 	Matrix M2(3,4);
 	M2(0,0) = 500; 
 	M2(0,2) = 320; 
@@ -256,6 +326,8 @@ int main ( int argc,char **argv ) {
 	M2(1,1) = 500;
 	M2(1,2) = 240;
 	M2(2,2) = 1;
+	
+	
 	cout << "Matrix M2" << endl;
 	for (int i = 0; i < M2.dim1(); i++) {
 		for (int j = 0; j < M2.dim2(); j++) {
@@ -264,7 +336,8 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	
-	/*
+	
+	
 	p1(0,0) = 4492.45639;
 	p1(1,0) = 4004.7998;
 	p1(2,0) = 14.8799;
@@ -272,18 +345,19 @@ int main ( int argc,char **argv ) {
 	p2(0,0) = 4392.45639;
 	p2(1,0) = 4004.799;
 	p2(2,0) = 14.879;
+	
+	
+	
+	p1(0,1) = 626.036988;
+	p1(1,1) = 581.456;
+	p1(2,1) = 3.5127;
+	
+	p2(0,1) = 526.036988;
+	p2(1,1) = 581.456011;
+	p2(2,1) = 3.5127626;
 	*/
 	
 	/*
-	p1(0,0) = 626.036988;
-	p1(1,0) = 581.456;
-	p1(2,0) = 3.5127;
-	
-	p2(0,0) = 526.036988;
-	p2(1,0) = 581.456011;
-	p2(2,0) = 3.5127626;
-	*/
-	
 	p1(0,0) = 2341.900;
 	p1(1,0) = 2067.790;
 	p1(2,0) = 7.0425;
@@ -291,9 +365,10 @@ int main ( int argc,char **argv ) {
 	p2(0,0) = 2241.900;
 	p2(1,0) = 2067.790;
 	p2(2,0) = 7.0425;
+	*/
 	
 	
-	Matrix P = linearTriangulation(p1, p2, M1, M2);
+	//Matrix P = linearTriangulation(p1, p2, M1, M2);
 	
 	
 	

@@ -23,6 +23,8 @@ opencv2/core/core.hpp
 -
 opencv2/core/types.hpp
 -
+opencv2/calib3d.hpp
+-
 Matrix.h
 ../Camera/Matrix.h
 math.h

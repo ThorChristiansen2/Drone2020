@@ -4,7 +4,9 @@
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: ../Camera/Matrix.h
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: ../Camera/mainCamera.cpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: ../Camera/mainCamera.hpp
+Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/calib3d.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/core.hpp
+Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/core/affine.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/core/base.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/core/bufferpool.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/core/check.hpp
@@ -34,6 +36,10 @@ Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/ope
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/core/utils/tls.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/core/version.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/core/vsx_utils.hpp
+Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/features2d.hpp
+Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/flann/config.h
+Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/flann/defines.h
+Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/flann/miniflann.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/highgui.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/imgcodecs.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/imgproc.hpp

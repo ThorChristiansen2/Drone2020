@@ -7,6 +7,7 @@
 #include <opencv2/core.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/types.hpp>
+#include <opencv2/calib3d.hpp>
 
 // Other libaries
 #include "Matrix.h"
@@ -42,9 +43,10 @@ namespace SIFT {
 	
 }	// SIFT
 
-
+// Estimate position of camera 
 Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2);
-
+Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K);
+Mat findRotationAndTranslation(Mat essential_matrix);
 
 
 
