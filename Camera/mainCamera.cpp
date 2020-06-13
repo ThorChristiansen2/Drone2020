@@ -729,11 +729,21 @@ Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
 			VT.row(h) = VT.row(h) * S.at<double>(h,0);
 		}
 		*/
-		Mat VTtransposed = VT.t();
+		VT = VT.t();
+		for (int i = 0; i < P.dim1(); i++) {
+			if (VT.at<double>(3,4)/VT.at<double>(4,4) < 0) {
+				P(i,j) = (-1)*VT.at<double>(i,4)/(VT.at<double>(4,4));
+			}
+			else {
+				P(i,j) = VT.at<double>(i,4)/(VT.at<double>(4,4));
+			}
+		}
+		
+		
 		cout << "After multiplying with s Matrix VT" << endl;
-		for (int nn = 0; nn < VTtransposed.rows; nn++) {
-			for (int mm = 0; mm < VTtransposed.cols; mm++) {
-				cout << VTtransposed.at<double>(nn,mm) << ", ";
+		for (int nn = 0; nn < VT.rows; nn++) {
+			for (int mm = 0; mm < VT.cols; mm++) {
+				cout << VT.at<double>(nn,mm) << ", ";
 			}
 			cout << "" << endl;
 		}
