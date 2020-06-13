@@ -129,6 +129,9 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	int N = matches.dim1();
 	// For plotting
 	Matrix pointCorrespondences(4,N);
+	// For efficiency, you should maybe just use vectors instead of creating two new matrices
+	Mat points1Mat = Mat::zeros(2, N, CV_64FC1);
+	Mat points2Mat = Mat::zeros(2, N, CV_64FC1);
 	// For fudamental matrix
 	vector<Point2f> points1(N);
 	vector<Point2f> points2(N);
@@ -136,10 +139,16 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 		// Be aware of differences in x and y
 		points1[i] = Point2f(keypoints_I_i0(matches(i,1),1),keypoints_I_i0(matches(i,1),2));
 		points2[i] = Point2f(keypoints_I_i1(matches(i,0),1),keypoints_I_i1(matches(i,0),2));
-		pointCorrespondences(0,i) = keypoints_I_i0(matches(i,1),1); // x
-		pointCorrespondences(1,i) = keypoints_I_i0(matches(i,1),2); // y
-		pointCorrespondences(2,i) = keypoints_I_i1(matches(i,0),1); // x2
-		pointCorrespondences(3,i) = keypoints_I_i1(matches(i,0),2); // y2
+		
+		points1Mat.at<double>(0,i) = keypoints_I_i0(matches(i,1),1);
+		points1Mat.at<double>(1,i) = keypoints_I_i0(matches(i,1),2); 
+		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),1);
+		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),2);
+		
+		//pointCorrespondences(0,i) = keypoints_I_i0(matches(i,1),1); // x
+		//pointCorrespondences(1,i) = keypoints_I_i0(matches(i,1),2); // y
+		//pointCorrespondences(2,i) = keypoints_I_i1(matches(i,0),1); // x2
+		//pointCorrespondences(3,i) = keypoints_I_i1(matches(i,0),2); // y2
 	}
 	
 	// Find fudamental matrix 
@@ -151,8 +160,13 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	
 	Mat essential_matrix = (Mat_<double>(3,3) << -0.10579, -0.37558, -0.5162047, 4.39583, 0.25655, 19.99309, 0.4294123, -20.32203997, 0.023287939);
 	// Find the rotation and translation assuming the first frame is taken with the drone on the ground 
-	Mat transformation_matrix = findRotationAndTranslation(essential_matrix, K, points1, points2);
-	
+	Mat transformation_matrix = findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
+	for (int i = 0; i < transformation_matrix.rows; i++) {
+		for (int j = 0; j < transformation_matrix.cols; j++) {
+			cout << transformation_matrix.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
 	
 	// Triangulate initial point cloud
 	
@@ -244,6 +258,8 @@ int main ( int argc,char **argv ) {
 	// Calibrate camera to get intrinsic parameters K 
 	Mat K = Mat::ones(3,3,CV_64FC1);
 	
+	
+	
 	cv::Mat I_i0, I_i1, image;
 	
 	int nCount=getParamVal ( "-nframes",argc,argv, 100 );
@@ -272,7 +288,7 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	
 	
-	initializaiton(I_i0, I_i1, K);
+	//initializaiton(I_i0, I_i1, K);
 	
 	/*
 	Mat W = (Mat_<double>(3,3) << 0, -1, 0, 1, 0, 0, 0, 0, 1);
@@ -302,62 +318,63 @@ int main ( int argc,char **argv ) {
 	*/
 	
 	/*
-	Matrix p1(3,2);
-	Matrix p2(3,2);
-	Matrix M1(3,4);
-	M1(0,0) = 500; 
-	M1(0,2) = 320; 
-	M1(1,1) = 500; 
-	M1(1,2) = 240;
-	M1(2,2) = 1; 
+	Mat p1 = Mat::zeros(3, 2, CV_64FC1);
+	Mat p2 = Mat::zeros(3, 2, CV_64FC1);
+	Mat M1 = Mat::zeros(3, 4, CV_64FC1);
+	M1.at<double>(0,0) = 500; 
+	M1.at<double>(0,2) = 320; 
+	M1.at<double>(1,1) = 500; 
+	M1.at<double>(1,2) = 240;
+	M1.at<double>(2,2) = 1; 
 	
 	
 	cout << "Matrix M1" << endl;
-	for (int i = 0; i < M1.dim1(); i++) {
-		for (int j = 0; j < M1.dim2(); j++) {
-			cout << M1(i,j) << ", ";
+	for (int i = 0; i < M1.rows; i++) {
+		for (int j = 0; j < M1.cols; j++) {
+			cout << M1.at<double>(i,j) << ", ";
 		}
 		cout << "" << endl;
 	}
 	
 	
-	Matrix M2(3,4);
-	M2(0,0) = 500; 
-	M2(0,2) = 320; 
-	M2(0,3) = -100;
-	M2(1,1) = 500;
-	M2(1,2) = 240;
-	M2(2,2) = 1;
+	Mat M2 = Mat::zeros(3, 4, CV_64FC1);
+	M2.at<double>(0,0) = 500; 
+	M2.at<double>(0,2) = 320; 
+	M2.at<double>(0,3) = -100;
+	M2.at<double>(1,1) = 500;
+	M2.at<double>(1,2) = 240;
+	M2.at<double>(2,2) = 1;
 	
 	
 	cout << "Matrix M2" << endl;
-	for (int i = 0; i < M2.dim1(); i++) {
-		for (int j = 0; j < M2.dim2(); j++) {
-			cout << M2(i,j) << ", ";
+	for (int i = 0; i < M2.rows; i++) {
+		for (int j = 0; j < M2.cols; j++) {
+			cout << M2.at<double>(i,j) << ", ";
 		}
 		cout << "" << endl;
 	}
 	
 	
 	
-	p1(0,0) = 4492.45639;
-	p1(1,0) = 4004.7998;
-	p1(2,0) = 14.8799;
+	p1.at<double>(0,0) = 4492.45639;
+	p1.at<double>(1,0) = 4004.7998;
+	p1.at<double>(2,0) = 14.8799;
 	
-	p2(0,0) = 4392.45639;
-	p2(1,0) = 4004.799;
-	p2(2,0) = 14.879;
+	p2.at<double>(0,0) = 4392.45639;
+	p2.at<double>(1,0) = 4004.799;
+	p2.at<double>(2,0) = 14.879;
 	
 	
 	
-	p1(0,1) = 626.036988;
-	p1(1,1) = 581.456;
-	p1(2,1) = 3.5127;
+	p1.at<double>(0,1) = 626.036988;
+	p1.at<double>(1,1) = 581.456;
+	p1.at<double>(2,1) = 3.5127;
 	
-	p2(0,1) = 526.036988;
-	p2(1,1) = 581.456011;
-	p2(2,1) = 3.5127626;
+	p2.at<double>(0,1) = 526.036988;
+	p2.at<double>(1,1) = 581.456011;
+	p2.at<double>(2,1) = 3.5127626;
 	*/
+	
 	
 	/*
 	p1(0,0) = 2341.900;
@@ -370,7 +387,7 @@ int main ( int argc,char **argv ) {
 	*/
 	
 	
-	//Matrix P = linearTriangulation(p1, p2, M1, M2);
+	//Mat P = linearTriangulation(p1, p2, M1, M2);
 	
 	
 	

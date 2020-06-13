@@ -590,15 +590,15 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 
 
 // Estimate pose of camera
-Matrix cross2Matrix(Vector x) {
-	Matrix M(3,3);
+Mat cross2Matrix(Mat x) {
+	Mat M = Mat::zeros(3, 3, CV_64FC1);
 	
-	M(0,1) = -x(2);
-	M(0,2) = x(1);
-	M(1,0) = x(2);
-	M(1,2) = -x(0);
-	M(2,0) = -x(1); 
-	M(2,1) = x(0);
+	M.at<double>(0,1) = -x.at<double>(0,2);
+	M.at<double>(0,2) = x.at<double>(0,1);
+	M.at<double>(1,0) = x.at<double>(0,2);
+	M.at<double>(1,2) = -x.at<double>(0,0);
+	M.at<double>(2,0) = -x.at<double>(0,1); 
+	M.at<double>(2,1) = x.at<double>(0,0);
 	
 	return M;
 }
@@ -633,174 +633,70 @@ Matrix MatMatMul(const Matrix& m1, const Matrix& m2) {
 }
 
 // Should be changed to work with Mat instead 
-Matrix linearTriangulation(Matrix p1, Matrix p2, Matrix M1, Matrix M2) {
+Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2) {
 	
-	int dim1 = p1.dim1();
-	int NumPoints1 = p1.dim2();
-	int dim2 = p2.dim1();
-	int NumPoints2 = p2.dim2();
 	
-	// Checks the dimensions
-	assert (dim1 == dim2);
-	assert (NumPoints1 == NumPoints2);
+	assert(p1.rows == p2.rows);
+	assert(p1.cols == p2.cols);
+	int NumPoints = p1.cols;
 	
-	Matrix P(4,NumPoints1);
+	Mat P = Mat::zeros(4, NumPoints, CV_64FC1);
 	
-	for (int j = 0; j < P.dim2(); j++) {
-		
-		Vector u1(p1.dim1());
-		for (int k = 0; k < p1.dim1(); k++) {
-			u1(k) = p1(k,j);
+	for (int j = 0; j < NumPoints; j++) {
+		Mat temp_point = Mat::zeros(3, 1, CV_64FC1);
+		temp_point.at<double>(0,0) = p1.at<double>(0,j);
+		temp_point.at<double>(1,0) = p1.at<double>(1,j);
+		if (p1.rows == 2) {
+			temp_point.at<double>(2,0) = 1;
 		}
-		Matrix A1 = MatMatMul(cross2Matrix(u1), M1);
-		
-		
-		Vector u2(p2.dim1());
-		
-		
-		//cout << "Vector u2" << endl;
-		for (int k = 0; k < p2.dim1(); k++) {
-			u2(k) = p2(k,j);
-			//cout << u2(k) << endl;
+		else {
+			temp_point.at<double>(2,0) = p1.at<double>(2,j);
 		}
 		
-		//Matrix M = cross2Matrix(u2);
-		
-		/*
-		cout << "u2 cross Matrix " << endl;
-		for (int h1 = 0; h1 < M.dim1(); h1++) {
-			for (int h2 = 0; h2 < M.dim2(); h2++) {
-				cout << M(h1,h2) << ", ";
-			}
-			cout << "" << endl;
+		Mat A1 = cross2Matrix(temp_point) * M1;
+	
+	
+		temp_point.at<double>(0,0) = p2.at<double>(0,j);
+		temp_point.at<double>(1,0) = p2.at<double>(1,j);
+		if (p2.rows == 2) {
+			temp_point.at<double>(2,0) = 1;
 		}
-		*/
-		Matrix A2 = MatMatMul(cross2Matrix(u2), M2);
-		
-		/*
-		cout << "A2 Matrix " << endl;
-		for (int h1 = 0; h1 < A2.dim1(); h1++) {
-			for (int h2 = 0; h2 < A2.dim2(); h2++) {
-				cout << A2(h1,h2) << ", ";
-			}
-			cout << "" << endl;
+		else {
+			temp_point.at<double>(2,0) = p2.at<double>(2,j);
 		}
-		*/
 		
-		assert (A1.dim1() == A2.dim1());
-		Mat A = Mat::zeros((2*A1.dim1()), M2.dim2(), CV_64FC1);
+		Mat A2 = cross2Matrix(temp_point) * M2;
 		
+		Mat A = Mat::zeros((A1.rows+A2.rows), A1.cols, CV_64FC1);
 		
-		//cout << "Dimensions of A: " << A.rows << "," << A.cols << endl;
 		for (int h1 = 0; h1 < A.rows; h1++) {
 			for (int h2 = 0; h2 < A.cols; h2++) {
 				if (h1 < A.rows/2) {
-					A.at<double>(h1,h2) = A1(h1,h2);
+					A.at<double>(h1,h2) = A1.at<double>(h1,h2);
 				}
 				else {
-					A.at<double>(h1,h2) = A2(h1-A2.dim1(),h2);
+					A.at<double>(h1,h2) = A2.at<double>(h1-A2.rows,h2);
 				} 
 			}
 		}
-		/*
-		cout << "Matrix A" << endl;
-		for (int h1 = 0; h1 < A.rows; h1++) {
-			for (int h2 = 0; h2 < A.cols; h2++) {
-				cout << A.at<double>(h1,h2) << ", ";
-			}
-			cout << "" << endl;
-		}
-		*/
 		
-		Mat Sigma = Mat::zeros(M2.dim2(), M2.dim2(), CV_64FC1);
 		Mat S, U, VT;
 		SVDecomp(A, S, U, VT, SVD::FULL_UV);
-		//MatType(S);
-		//MatType(U);
-		//MatType(VT);
-		/*
-		cout << "Matrix VT" << endl;
-		for (int nn = 0; nn < VT.rows; nn++) {
-			for (int mm = 0; mm < VT.cols; mm++) {
-				cout << VT.at<double>(nn,mm) << ", ";
-			}
-			cout << "" << endl;
-		}
-		*/
-		/*
-		cout << "Matrix S" << endl;
-		for (int nn = 0; nn < S.rows; nn++) {
-			for (int mm = 0; mm < S.cols; mm++) {
-				cout << S.at<double>(nn,mm) << ", ";
-			}
-			cout << "" << endl;
-		}
-		*/
-		/*
-		cout << "Matrix U" << endl;
-		for (int nn = 0; nn < U.rows; nn++) {
-			for (int mm = 0; mm < U.cols; mm++) {
-				cout << U.at<double>(nn,mm) << ", ";
-			}
-			cout << "" << endl;
-		}
 		
-		for (int h = 0; h < VT.rows; h++) {
-			VT.row(h) = VT.row(h) * S.at<double>(h,0);
-		}
-		*/
 		VT = VT.t();
-		for (int i = 0; i < P.dim1(); i++) {
+		for (int i = 0; i < P.rows; i++) {
 			if (VT.at<double>(2,3)/VT.at<double>(3,3) < 0) {
-				P(i,j) = (-1)*VT.at<double>(i,4)/(VT.at<double>(3,3));
+				P.at<double>(i,j) = (-1)*VT.at<double>(i,4)/(VT.at<double>(3,3));
 			}
 			else {
-				P(i,j) = VT.at<double>(i,3)/(VT.at<double>(3,3));
+				P.at<double>(i,j) = VT.at<double>(i,3)/(VT.at<double>(3,3));
 			}
 		}
 		cout << "Point P" << endl;
 		for (int nn = 0; nn < 4; nn++) {
-			cout << P(nn,j) << endl;
+			cout << P.at<double>(nn,j) << endl;
 		}
-		
-		/*
-		cout << "After multiplying with s Matrix VT" << endl;
-		for (int nn = 0; nn < VT.rows; nn++) {
-			for (int mm = 0; mm < VT.cols; mm++) {
-				cout << VT.at<double>(nn,mm) << ", ";
-			}
-			cout << "" << endl;
-		}
-		*/
 	}
-	
-	/*
-	Matrix a(3,3);
-	a(0,0) = 2;
-	a(1,1) = 3;
-	a(2,2) = 2;
-	Vector b(3);
-	b(0) = 1;
-	b(1) = 7;
-	b(2) = 1;
-	
-	Vector n = MatVecMul(a,b);
-	Matrix q(3,1);
-	for (int i = 0; i < 3; i++) {
-		cout << "n(" << i << ") = " << n(i) << endl;
-		q(i,0) = n(i);
-	}
-	
-	Matrix M = MatMatMul(M1,M2);
-	for (int i = 0; i < M.dim1(); i++) {
-		for (int j = 0; j < M.dim2(); j++) {
-			cout << M(i,j) << ", ";
-		}
-		cout << "" << endl;
-	}
-	*/
-	
-	
 	return P;
 }
 
@@ -812,7 +708,7 @@ Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K) {
 }
 
 
-Mat findRotationAndTranslation(Mat essential_matrix, Mat K, vector<Point2f> points0_h, vector<Point2f> points1_h) {
+Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat points2Mat) {
 	Mat transformation_matrix;
 	
 	Mat S, U, VT;  // VT = V transposed
@@ -913,7 +809,7 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, vector<Point2f> poin
 			
 			Mat Trans_I1 = (Mat_<double>(3,4) << R.at<double>(0,0),R.at<double>(0,1),R.at<double>(0,2),T(0), R.at<double>(1,0),R.at<double>(1,1),R.at<double>(1,2),T(1), R.at<double>(2,0),R.at<double>(2,1),R.at<double>(2,2),T(2));
 			Mat M1 = K * Trans_I1;
-			Mat P_C0 = linearTriangulation(points0_h, points1_h, M0, M1);
+			Mat P_C0 = linearTriangulation(points1Mat, points2Mat, M0, M1);
 			
 			// Projekct in both cameras
 			// Only the 3rd dimension is needed, so the matrix is reduced
