@@ -1,0 +1,3 @@
+/home/pi/CameraCalibration/build/CMakeFiles/rebuild_cache.dir
+/home/pi/CameraCalibration/build/CMakeFiles/mainprogram.dir
+/home/pi/CameraCalibration/build/CMakeFiles/edit_cache.dir

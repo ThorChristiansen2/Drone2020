@@ -692,9 +692,9 @@ Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2) {
 				P.at<double>(i,j) = VT.at<double>(i,3)/(VT.at<double>(3,3));
 			}
 		}
-		cout << "Point P" << endl;
+		//cout << "Point P" << endl;
 		for (int nn = 0; nn < 4; nn++) {
-			cout << P.at<double>(nn,j) << endl;
+			//cout << P.at<double>(nn,j) << endl;
 		}
 	}
 	return P;

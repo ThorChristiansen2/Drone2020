@@ -90,12 +90,12 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	// Get Feature points
 	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray);
 	const char* text0 = "Detected corners *Thor frame I_i0";
-	//drawCorners(I_i0, keypoints_I_i0, text0);
-	//waitKey(0);
+	drawCorners(I_i0, keypoints_I_i0, text0);
+	waitKey(0);
 	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray);
 	const char* text1 = "Detected corners frame I_i1";
-	//drawCorners(I_i1, keypoints_I_i1,text1);
-	//waitKey(0);
+	drawCorners(I_i1, keypoints_I_i1,text1);
+	waitKey(0);
 	//cout << "Done with finding keypoints " << endl;
 	// Find descriptors for Feature Points
 	
@@ -145,20 +145,41 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),1);
 		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),2);
 		
+		double x = keypoints_I_i1(matches(i,0),1);
+		double y = keypoints_I_i1(matches(i,0),2);
+		double x2 = keypoints_I_i0(matches(i,1),1);
+		double y2 = keypoints_I_i0(matches(i,1),2);
+		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
+		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
+		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
 		//pointCorrespondences(0,i) = keypoints_I_i0(matches(i,1),1); // x
 		//pointCorrespondences(1,i) = keypoints_I_i0(matches(i,1),2); // y
 		//pointCorrespondences(2,i) = keypoints_I_i1(matches(i,0),1); // x2
 		//pointCorrespondences(3,i) = keypoints_I_i1(matches(i,0),2); // y2
 	}
+	imshow("Match",I_i1);
+	waitKey(0);
+	/*
+	cout << "Points as vectors: Points1" << endl;
+	for (int i = 0; i < N; i++) {
+		cout << points1[i] << ", ";
+	}
+	cout << "" << endl;
+	cout << "Points as vectors: Points2" << endl;
+	for (int i = 0; i < N; i++) {
+		cout << points2[i] << ", ";
+	}
+	cout << "" << endl;
+	*/
 	
 	// Find fudamental matrix 
 	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99,5000);
 	
 	// Estimate Essential Matrix
-	//Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);
+	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);
 	
 	
-	Mat essential_matrix = (Mat_<double>(3,3) << -0.10579, -0.37558, -0.5162047, 4.39583, 0.25655, 19.99309, 0.4294123, -20.32203997, 0.023287939);
+	//Mat essential_matrix = (Mat_<double>(3,3) << -0.10579, -0.37558, -0.5162047, 4.39583, 0.25655, 19.99309, 0.4294123, -20.32203997, 0.023287939);
 	// Find the rotation and translation assuming the first frame is taken with the drone on the ground 
 	Mat transformation_matrix = findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
 	for (int i = 0; i < transformation_matrix.rows; i++) {
@@ -256,8 +277,15 @@ int main ( int argc,char **argv ) {
 	cout<<"Connected to camera ="<<Camera.getId() <<endl;
 	
 	// Calibrate camera to get intrinsic parameters K 
-	Mat K = Mat::ones(3,3,CV_64FC1);
-	
+	//Mat K = Mat::ones(3,3,CV_64FC1)
+	Mat K = (Mat_<double>(3,3) << 769.893, 0, 2.50001, 0,1613.3,4.0000, 0, 0, 1);
+	cout << "K (intrinsic matrix)" << endl;
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			cout << K.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
 	
 	
 	cv::Mat I_i0, I_i1, image;
@@ -288,7 +316,7 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	
 	
-	//initializaiton(I_i0, I_i1, K);
+	initializaiton(I_i0, I_i1, K);
 	
 	/*
 	Mat W = (Mat_<double>(3,3) << 0, -1, 0, 1, 0, 0, 0, 0, 1);
