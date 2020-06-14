@@ -22,6 +22,20 @@ using namespace std;
 using namespace cv;
 
 
+/* This file is written by Thor Vestergaard Christiansen (s173949)
+ * by inspiration from George Lecakes - https://www.youtube.com/watch?v=HNfPbw-1e_w
+ * In order to calibrate the camera, simply just run this file. 
+ * When you can see that the corners are detected properly, hit the space button on
+ * your computer. This saves an image and tells you how many images are saved.
+ * When you have accuqired around ~ 56 images, you should hit the enter key
+ * This will give you a matrix and save it in the file Ca.librationMatrixFile
+ * Remember to move the picture of the corners around in the image and rotate it. 
+ * 
+ * 
+ * 
+ */
+
+
 const float calibrationSquareDimension = 0.02402f; // meters 
 const float arucoSquareDimension = 0.1016f; // meters
 const Size chessboardDimensions = Size(6, 9);
@@ -145,8 +159,9 @@ bool saveCameraCalibraiton(string name, Mat cameraMatrix, Mat distanceCoefficien
 		uint16_t rows = cameraMatrix.rows;
 		uint16_t columns = cameraMatrix.cols;
 		
-		outStream << rows << endl;
-		outStream << columns << endl;
+		outStream << "Calibration Matrix K (Intrinsic Parameters)" << endl;
+		outStream << "Rows: " << rows << endl;
+		outStream << "Columns: " << columns << endl;
 		for (int r = 0; r < rows; r++) {
 			for (int c = 0; c < columns; c++) {
 				
@@ -268,7 +283,7 @@ int main( int argc,char **argv ) {
 				// start callibration 
 				if (savedImages.size() > 15) {
 					cameraCalibration(savedImages, chessboardDimensions, calibrationSquareDimension, cameraMatrix, distanceCoefficients);
-					saveCameraCalibraiton("ILoveCameraCalibration", cameraMatrix, distanceCoefficients);
+					saveCameraCalibraiton("CalibrationMatrixFile", cameraMatrix, distanceCoefficients);
 				
 				}
 				
