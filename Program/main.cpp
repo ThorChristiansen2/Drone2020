@@ -80,7 +80,7 @@ void drawCorners(Mat img, Matrix keypoints, const char* frame_name) {
 
 
 // Initialization part of VO pipeline.
-float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
+Mat initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	
 	// Transform color images to gray images
 	cv::Mat I_i0_gray, I_i1_gray;
@@ -90,14 +90,17 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	// Get Feature points
 	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray);
 	const char* text0 = "Detected corners *Thor frame I_i0";
-	drawCorners(I_i0, keypoints_I_i0, text0);
-	waitKey(0);
+	//drawCorners(I_i0, keypoints_I_i0, text0);
+	//waitKey(0);
 	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray);
 	const char* text1 = "Detected corners frame I_i1";
-	drawCorners(I_i1, keypoints_I_i1,text1);
-	waitKey(0);
+	//drawCorners(I_i1, keypoints_I_i1,text1);
+	//waitKey(0);
 	//cout << "Done with finding keypoints " << endl;
 	// Find descriptors for Feature Points
+	
+	
+	// Maybe use KLT instead 
 	
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	cout << "descriptors_I_i0 dimensions = (" << descriptors_I_i0.dim1() << "," << descriptors_I_i0.dim2() << ")" << endl;
@@ -173,7 +176,8 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	*/
 	
 	// Find fudamental matrix 
-	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99,5000);
+	//Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99, 5000);
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99); // 1 should be changed ot 3 
 	
 	// Estimate Essential Matrix
 	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);
@@ -188,6 +192,9 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 		}
 		cout << "" << endl;
 	}
+	
+	// Obtain 3D point cloud
+	
 	
 	// Triangulate initial point cloud
 	
@@ -233,7 +240,22 @@ float initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	
 	
 	// Should return pose of drone
-	return 0;
+	//return 0;
+	return transformation_matrix;
+}
+
+Mat calibrate_matrix(Mat transformation_matrix) {
+	
+	Mat calib_matrix = Mat::eye(3, 4, CV_64FC1) - transformation_matrix;
+	
+	for (int r = 0; r < calib_matrix.rows; r++) {
+		for (int c = 0; c < calib_matrix.cols; c++) {
+			cout << calib_matrix.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	return calib_matrix;
 }
 
 // Function to determine data type of image contained in OpenCV Mat object.
@@ -263,6 +285,25 @@ string type2str(int type) {
   return r;
 }
 
+
+// For the continous operation at struct is made. 
+struct state {
+	/* Si = (Pi, Xi, Ci, Fi, Ti)
+	 * K = Number of keypoints
+	 * Pi = Keypoints 														2 x K
+	 * Xi = 3D landmarks 													2 x K
+	 * Ci = Candidate Keypoints (The most recent observation)				3 x M
+	 * Fi = The first ever observation of the keypoint						2 x M
+	 * Ti = The Camera pose at the first ever observation of the keypoint 	6 x M
+	 */
+	int k;
+	Mat Pi;
+	Mat Xi; 
+	Mat Ci; 
+	Mat Fi; 
+	Mat Ti; 
+};
+
 // ####################### Main function #######################
 int main ( int argc,char **argv ) {
 	
@@ -278,7 +319,7 @@ int main ( int argc,char **argv ) {
 	
 	// Calibrate camera to get intrinsic parameters K 
 	//Mat K = Mat::ones(3,3,CV_64FC1)
-	Mat K = (Mat_<double>(3,3) << 769.893, 0, 2.50001, 0,1613.3,4.0000, 0, 0, 1);
+	Mat K = (Mat_<double>(3,3) << 769.893, 0, 2.5, 0,1613.3,4, 0, 0, 1);
 	cout << "K (intrinsic matrix)" << endl;
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
@@ -316,7 +357,39 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	
 	
-	initializaiton(I_i0, I_i1, K);
+	Mat transformation_matrix = initializaiton(I_i0, I_i1, K);
+	
+	
+	/*
+	Mat offset = calibrate_matrix(transformation_matrix);
+	
+	transformation_matrix = transformation_matrix + offset;
+	
+	for (int r = 0; r < transformation_matrix.rows; r++) {
+		for (int c = 0; c < transformation_matrix.cols; c++) {
+			cout << transformation_matrix.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "wait statement" << endl;
+	waitKey(5000);
+	Mat I_i1_new;
+	Camera.grab();
+	Camera.retrieve( I_i1_new ); 
+	
+	// Updated transformation matrix
+	transformation_matrix = initializaiton(I_i1, I_i1_new, K);
+	
+	// Updated transformation matrix
+	transformation_matrix = transformation_matrix + offset;
+	
+	for (int r = 0; r < transformation_matrix.rows; r++) {
+		for (int c = 0; c < transformation_matrix.cols; c++) {
+			cout << transformation_matrix.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
 	
 	/*
 	Mat W = (Mat_<double>(3,3) << 0, -1, 0, 1, 0, 0, 0, 0, 1);
@@ -414,8 +487,8 @@ int main ( int argc,char **argv ) {
 	p2(2,0) = 7.0425;
 	*/
 	
-	
 	//Mat P = linearTriangulation(p1, p2, M1, M2);
+	
 	
 	
 	
@@ -438,7 +511,45 @@ int main ( int argc,char **argv ) {
 	//waitKey(0);
 	//cout << "Rectangle drawn" << endl;
 	
+	
+	/*
 	// VO-pipeline: 
+	// The VO pipleine is controlled by a flag and if the VO-pipeline suddenly 
+	int flag = 0; // Should be set to 1 - and hsould be an argument controlled by the main controller
+	int pipelineBroke = 0;
+	
+	Mat Ii, Ii_1;
+	Ii_1 = I_i1_new;
+	
+	int num_minimum_keypoints = 50; // 
+	
+	// Parameters for KLT
+	int r_t = 15;
+	double lambda = 0.1;
+	int num_iters = 100;
+	
+	state Si, Si_1;
+	Si_1.k = 0;
+		
+	while (pipelineBroke != 1 && flag == 1) {
+		Camera.grab();
+		Camera.retrieve( Ii );
+		
+		
+		Mat keypoints_i1 = KLT::trackKLTrobustly(Ii_1, Ii, Mat keypoints, r_t, num_iters, lambda);
+		
+		// = processFrame(Ii_1, Ii, Si_1)
+		Ii = Ii_1;
+		
+		if (Si_1.k < num_minimum_keypoints) {
+			// Triangulate new keypoints
+		}
+		Si = Si_1;
+				
+	}
+	// processFrame()
+	*/
+	
 
 
 	double time_=cv::getTickCount();

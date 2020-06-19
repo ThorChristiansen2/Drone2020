@@ -43,6 +43,13 @@ namespace SIFT {
 	
 }	// SIFT
 
+
+/*
+namespace KLT {
+	Mat KLT::trackKLTrobustly(Mat I1, Mat I2, Mat keypoints, int r_t, int num_iters, double lambda);
+}
+*/
+
 // Estimate position of camera 
 Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2);
 Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K);

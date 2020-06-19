@@ -269,7 +269,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	// Define variables related to Harris corner
 	int blockSize = 9; 
 	int apertureSize = 3;
-	double k = 0.04;		// Magic parameter 
+	double k = 0.08;		// Magic parameter 
 	int thres = 200;	
 	// Parameters before: blocksize = 2, aperturesize = 3, thres = 200, k = 0.04
 	
@@ -289,7 +289,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	if (display == false) {
 		int nr_corners = 0;
 		
-		int keypoints_limit = 150; // Change to 200
+		int keypoints_limit = 200; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;
@@ -856,18 +856,18 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 			}
 		}
 		 
-		
-		
-		
-		
+
 	}
 	
 	
 	
 	return transformation_matrix;
 }
-
-
+/*
+Mat KLT::trackKLTrobustly(Mat I1, Mat I2, Mat keypoints, int r_t, int num_iters, double lambda) {
+	
+}
+*/
 
 
 
