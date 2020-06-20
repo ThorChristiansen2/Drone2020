@@ -25,6 +25,8 @@ assert.h
 /home/pi/GitHub/Drone2020/Camera/mainCamera.hpp
 opencv2/highgui.hpp
 -
+opencv2/highgui/highgui.hpp
+-
 opencv2/imgproc.hpp
 -
 opencv2/core.hpp
@@ -397,6 +399,10 @@ opencv2/imgcodecs.hpp
 /usr/local/include/opencv4/opencv2/opencv2/imgcodecs.hpp
 opencv2/videoio.hpp
 /usr/local/include/opencv4/opencv2/opencv2/videoio.hpp
+
+/usr/local/include/opencv4/opencv2/highgui/highgui.hpp
+opencv2/highgui.hpp
+/usr/local/include/opencv4/opencv2/highgui/opencv2/highgui.hpp
 
 /usr/local/include/opencv4/opencv2/imgcodecs.hpp
 opencv2/core.hpp

@@ -15,6 +15,8 @@ algorithm
 ../Camera/mainCamera.hpp
 opencv2/highgui.hpp
 -
+opencv2/highgui/highgui.hpp
+-
 opencv2/imgproc.hpp
 -
 opencv2/core.hpp

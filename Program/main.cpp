@@ -197,43 +197,7 @@ Mat initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	
 	
 	// Triangulate initial point cloud
-	
-	
-	/*
-	// Plot Point corespondences
-	for (int i = 0; i < matches.dim1(); i++) {
-		//double x = keypoints_I_i1(matches(i,0),1);
-		//double y = keypoints_I_i1(matches(i,0),2);
-		//double x2 = keypoints_I_i0(matches(i,1),1);
-		//double y2 = keypoints_I_i0(matches(i,1),2);
-		double x = pointCorrespondences(0,i);
-		double y = pointCorrespondences(1,i);
-		double x2 = pointCorrespondences(2,i);
-		double y2 = pointCorrespondences(3,i);
-		//line(I_i1,Point(y2,x2),Point(y,x),Scalar(0,255,0),3);
-		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
-		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-		//imshow("Matched features I1", I_i1);
-		//waitKey(0);
-		//circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0
-		//circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
-		//imshow("Matched features I0", I_i0);
-		//waitKey(0);
-		
-		
-		For drawing circles
-		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-		imshow("Matched features I1", I_i1);
-		waitKey(0);
-		imshow("Matched features I0", I_i0);
-		waitKey(0);
-		
-	}
-	*/
-	//imshow("Matched features I1", I_i1);
-	//waitKey(0);
-	
-	
+
 	
 	// Find position and rotation from images
 	
@@ -355,9 +319,22 @@ int main ( int argc,char **argv ) {
 	//waitKey(0);
 	
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
+	//Mat transformation_matrix = initializaiton(I_i0, I_i1, K);
 	
-	
-	Mat transformation_matrix = initializaiton(I_i0, I_i1, K);
+	// Test of KLT
+	Mat I_R = imread("000000.png", IMREAD_COLOR);
+	imshow("Image shown", I_R);
+	waitKey(0);
+	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
+	x_T.at<double>(0,0) = 900;
+	x_T.at<double>(0,1) = 291;
+	int r_T = 15;
+	int num_iters = 50;
+	Mat W = getSimWarp(10, 6, 0, 1);
+	cout << "Warp obtained" << endl;
+	Mat I = warpImage(I_R, W);
+	cout << "Image warped" << endl;
+	trackKLT(I_R, I, x_T, r_T, num_iters);
 	
 	
 	/*

@@ -3,6 +3,7 @@
 
 // Libraries from opencv2
 #include <opencv2/highgui.hpp>
+#include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/core/core.hpp>
@@ -44,11 +45,11 @@ namespace SIFT {
 }	// SIFT
 
 
-/*
+
 namespace KLT {
-	Mat KLT::trackKLTrobustly(Mat I1, Mat I2, Mat keypoints, int r_t, int num_iters, double lambda);
+	Mat trackKLTrobustly(Mat I1, Mat I2, Mat keypoints, int r_t, int num_iters, double lambda);
 }
-*/
+
 
 // Estimate position of camera 
 Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2);
@@ -56,6 +57,9 @@ Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K);
 Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat points2Mat);
 
 
-
+// For KLT
+Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters);
+Mat getSimWarp(double dx, double dy, double alpha_deg, double lambda);
+Mat warpImage(Mat I_R, Mat W);
 
 #endif

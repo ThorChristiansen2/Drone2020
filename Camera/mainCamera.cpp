@@ -863,11 +863,256 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 	
 	return transformation_matrix;
 }
-/*
-Mat KLT::trackKLTrobustly(Mat I1, Mat I2, Mat keypoints, int r_t, int num_iters, double lambda) {
+
+Mat warpImage(Mat I_R, Mat W) {
+	Mat I = Mat::zeros(I_R.rows, I_R.cols, CV_64FC1);
 	
+	for (int x = 0; x < I_R.cols; x++) {
+		for (int y = 0; y < I_R.rows; y++) {
+			Mat vector = Mat::ones(3, 1, CV_64FC1);
+			vector.at<double>(0,0) = x;
+			vector.at<double>(1,0) = y; 
+			Mat warped = W * vector;
+			warped = warped.t();
+			if (warped.at<double>(0,0) < I_R.cols && warped.at<double>(0,1) < I_R.rows) {
+				if (warped.at<double>(0,0) > 1 && warped.at<double>(0,1) > 1) {
+					I.at<double>(y,x) = I_R.at<double>(floor(warped.at<double>(0,1)),floor(warped.at<double>(0,0)));
+				}
+				
+			}
+			
+		}
+		
+	} 
+	return I;
 }
-*/
+
+
+
+// Get the warping matrix
+Mat getSimWarp(double dx, double dy, double alpha_deg, double lambda) {
+	
+	Mat W = Mat::zeros(2, 3, CV_64FC1);
+	double alpha_rad = (alpha_deg * M_PI) / 180;
+	W.at<double>(0,0) = lambda * cos( alpha_rad );
+	W.at<double>(1,0) = lambda * sin( alpha_rad );
+	W.at<double>(0,1) = lambda * -sin( alpha_rad );
+	W.at<double>(1,1) = lambda * cos( alpha_rad );
+	W.at<double>(0,2 ) = lambda * dx;
+	W.at<double>(1,2) = lambda * dy;
+	
+	return W;
+}
+
+// Get the patch
+Mat getWarpedPatch(Mat I, Mat W, Mat x_T, int r_T) {
+	
+	// Initialize patch
+	Mat patch = Mat::zeros(2*r_T + 1, 2*r_T + 1, CV_64FC1);
+	
+	// Get dimensions of image 
+	int max_coords_rows = I.rows;
+	int max_coords_cols = I.cols;
+	
+	// Find the transpose
+	Mat WT = W.t();
+	
+	Mat pre_warp = Mat::zeros(1, 3, CV_64FC1);
+	for (int x = -r_T; x <= r_T; x++) {
+		for (int y = -r_T; y <= r_T; y++) {
+			pre_warp.at<double>(0,0) = x;
+			pre_warp.at<double>(0,1) = y;
+			pre_warp.at<double>(0,2) = 1;
+			
+			Mat warped = x_T + pre_warp * WT;
+			
+			if (warped.at<double>(0,0) < max_coords_rows && warped.at<double>(0,1) < max_coords_cols) {
+				if (warped.at<double>(0,0) > 1 && warped.at<double>(0,1) > 1) {
+					
+					//Mat floors = floor(warped);
+					Mat floors = Mat::zeros(warped.rows, warped.cols, CV_64FC1);
+					for (int r = 0; r < floors.rows; r++) {
+						for (int c = 0; c < floors.cols; c++) {
+							floors.at<double>(r, c) = floor(warped.at<double>(r, c));
+						}
+					}
+					
+					Mat weights = warped - floors;
+					
+					double a = weights.at<double>(0,0);
+					double b = weights.at<double>(0,1);
+					
+					double intensity = (1-b) * ((1-a) * I.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)) + a * I.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)+1));
+					
+					intensity = intensity + b * ((1-a) * I.at<double>(floors.at<double>(0,1)+1,floors.at<double>(0,0)) + a * I.at<double>(floors.at<double>(0,1)+1,floors.at<double>(0,0)+1));
+					
+					
+					patch.at<double>(y + r_T + 1, x + r_T + 1) = intensity;
+					
+				}	
+			}
+		}
+	}
+	return patch;
+}
+
+Mat Kroneckerproduct(Mat A, Mat B) {
+	
+	int rowa = A.rows;
+	int cola = A.cols;
+	int rowb = B.rows;
+	int colb = B.cols;
+	
+	Mat C = Mat::zeros(rowa * rowb, cola * colb, CV_64FC1);
+	
+	for (int i = 0; i < rowa; i++) {
+		
+		for (int k = 0; k < rowb; k++) {
+			
+			for (int j = 0; j < cola; j++) {
+				
+				for (int l = 0; l < colb; l++) {
+					
+					C.at<double>(i + l + 1, j + k + 1) = A.at<double>(i, j) * B.at<double>(k, l);
+				}
+				
+			}
+			
+		}
+		
+	}
+	return C;
+}
+
+// Track KLT
+Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
+	Mat p_hist = Mat::zeros(6, num_iters+1, CV_64FC1);
+	Mat W = getSimWarp(0, 0, 0, 1);
+	
+	
+	int temp_index = 0;
+	for (int c = 0; c < W.cols; c++) {
+		for (int r = 0; r < W.rows; r++) {
+			p_hist.at<double>(temp_index, 0) = W.at<double>(r,c);
+			temp_index++;
+		}
+	}
+	
+	Mat I_RT = getWarpedPatch(I_R, W, x_T, r_T);
+	cout << "We have gotten warped patch" << endl;
+	// Reshape matrix 
+	Mat i_R = I_RT.reshape(I_RT.rows * I_RT.cols, 1);
+	
+	int n = 2*r_T + 1;
+	Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
+	temp_index = 0; 
+	for (int i = -r_T; i <= r_T; i++) {
+		for (int j = -r_T; j <= r_T; j++) {
+			xy1.at<double>(temp_index,0) = i;
+			xy1.at<double>(temp_index,1) = j;
+			xy1.at<double>(temp_index,2) = 1;
+			temp_index++;
+		} 
+	}
+	Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
+	cout << "Kroeneckerproduct worked " << endl;
+	
+	// 2D filters for convolution
+	Mat kernelx, kernely; 
+	Point anchorx, anchory;
+	double delta;
+	int ddepth; 
+	int kernel_size;
+	
+	anchorx = Point(-1,0);
+	anchory = Point(0,-1);
+	delta = 0; 
+	ddepth = -1;
+	
+	kernelx = Mat::zeros(1, 3, CV_64FC1);
+	kernelx.at<double>(0,0) = 1;
+	kernelx.at<double>(0,2) = -1;
+	kernely = Mat::zeros(3, 1, CV_64FC1);
+	kernely.at<double>(0,0) = 1;
+	kernely.at<double>(2,0) = -1;
+	
+	
+	cout << "About to begin iteration " << endl;
+	for (int iter = 0; iter < num_iters; iter++) {
+		Mat big_IWT = getWarpedPatch(I, W, x_T, r_T + 1);
+		
+		Mat IWT_temp, IWT;
+		IWT_temp = selectRegionOfInterest(big_IWT, 1, 1, big_IWT.rows-1, big_IWT.cols-1);
+		IWT_temp.copyTo(IWT);
+		
+		cout << "Before reshape " << endl;
+		cout << "IWT rows and cols = (" << IWT.rows << "," << IWT.cols << ") " << endl;
+		Mat i = IWT.reshape(IWT.rows * IWT.cols, 1);
+		
+		// Getting di/dp 
+		cout << "Getting di/dp" << endl;
+		Mat IWTx, IWTy, temp_IWTx, temp_IWTy, temp_IWTx2, temp_IWTy2;
+		temp_IWTx2 = selectRegionOfInterest(big_IWT, 1, 0, big_IWT.rows-1, big_IWT.cols); // Maybe check for values
+		temp_IWTy2 = selectRegionOfInterest(big_IWT, 0, 1, big_IWT.rows, big_IWT.cols-1);
+		
+		cout << "Not here yet " << endl;
+		temp_IWTx2.copyTo(temp_IWTx);
+		temp_IWTy2.copyTo(temp_IWTy);
+		
+		// Convolve x
+		filter2D(temp_IWTx, IWTx, ddepth, kernelx, anchorx, delta, BORDER_DEFAULT);
+		
+		// Convolve y 
+		filter2D(temp_IWTy, IWTy, ddepth, kernely, anchory, delta, BORDER_DEFAULT);
+		
+		// Concatenate vectors 
+		cout << "2D convolution obtained" << endl;
+		temp_IWTx = IWTx.reshape(IWTx.rows * IWTx.cols, 1);
+		temp_IWTy = IWTy.reshape(IWTy.rows * IWTy.cols, 1);
+		Mat didw;
+		hconcat(temp_IWTx, temp_IWTy, didw);
+		cout << "Matric concatenated" << endl;
+		
+		Mat didp = Mat::zeros(n * n, 6, CV_64FC1);
+		double vdidw1, vdidw2, vdwdx1, vdwdx2;
+		for (int pixel_i = 0; pixel_i < n * n; pixel_i++) {
+			vdidw1 = didw.at<double>(pixel_i,0);
+			vdidw2 = didw.at<double>(pixel_i,1);
+			for (int j = 0; j < 6; j++) {
+				vdwdx1 = dwdx.at<double>(pixel_i * 2 - 1, j);
+				vdidw2 = dwdx.at<double>(pixel_i * 2, j);
+				didp.at<double>(pixel_i, j) = vdidw1 * vdwdx1 + vdidw2 * vdidw2;
+				
+			}
+		} 
+		cout << "Hessian about to be calculated" << endl;
+		Mat H = didp.t() * didp;
+		
+		Mat delta_p = H.inv() * didp.t() * (i_R - i); // Maybe problem with 
+		W = W + delta_p.reshape(2, 3);
+		
+		cout << "delta_p and W obtaiend" << endl;
+		Mat temp_W = W.reshape(W.rows * W.cols, 1);
+		for (int i = 0; i < 6; i++) {
+			p_hist.at<double>(i, iter+1) =  temp_W.at<double>(i,0);
+		}
+		
+		
+		
+	}
+	cout << "W is " << endl;
+	cout << "Coordinate 1: " << W.at<double>(0,2) << " and Coordinate 2: " << W.at<double>(1,2) << endl;
+	
+	
+	return p_hist;
+}
+
+Mat KLT::trackKLTrobustly(Mat I_R, Mat I, Mat keypoints, int r_t, int num_iters, double lambda) {
+	Mat W = Mat::zeros(3, 3, CV_64FC1); // Dummy matrix
+	
+	return W;
+}
+
 
 
 
