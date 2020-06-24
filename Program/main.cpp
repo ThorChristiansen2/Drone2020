@@ -322,17 +322,57 @@ int main ( int argc,char **argv ) {
 	//Mat transformation_matrix = initializaiton(I_i0, I_i1, K);
 	
 	// Test of KLT
-	Mat I_R = imread("000000.png", IMREAD_COLOR);
-	imshow("Image shown", I_R);
-	waitKey(0);
+	Mat I_R = imread("000000.png", IMREAD_UNCHANGED);
+	MatType(I_R);
+	cout << "Dimensions of I_R = " << I_R.rows << "," << I_R.cols << endl;
+	cout << "Print Billede " << endl;
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 20; j++) {
+			//cout << I_R.at<uchar>(i,j) << ", ";
+		}
+		//cout << "" << endl;
+	}
+	
+	
+	cout << "Image I_R should have been here" << endl;
+	I_R.convertTo(I_R, CV_64FC1);
+	cout << "New type " << endl;
+	MatType(I_R);
+	cout << "Print Billede 2 " << endl;
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 20; j++) {
+			//cout << I_R.at<double>(i,j) << ", ";
+		}
+		//cout << "" << endl;
+	}
+	//cout << "Dimensions of I_R = " << I_R.rows << "," << I_R.cols << endl;
+	//imshow("Image shown", I_R);
+	//waitKey(0);
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
 	x_T.at<double>(0,0) = 900;
 	x_T.at<double>(0,1) = 291;
 	int r_T = 15;
 	int num_iters = 50;
 	Mat W = getSimWarp(10, 6, 0, 1);
+	for (int i = 0; i < W.rows; i++) {
+		for (int j = 0; j < W.cols; j++) {
+			cout << W.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
 	cout << "Warp obtained" << endl;
 	Mat I = warpImage(I_R, W);
+	
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 20; j++) {
+			cout << I.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	waitKey(5000);
+	MatType(I);
+	//imshow("Image I", I);
+	//waitKey(10000);
 	cout << "Image warped" << endl;
 	trackKLT(I_R, I, x_T, r_T, num_iters);
 	

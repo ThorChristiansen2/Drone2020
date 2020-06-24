@@ -143,6 +143,8 @@ void MatType( Mat inputMat ) {
 // Select region of interest from image 
 Mat selectRegionOfInterest(Mat img, int y1, int x1, int y2, int x2) {
 	Mat ROI;
+	cout << "Dimensions of img = (" << img.rows << "," << img.cols << ")" << endl;
+	cout << "y1,x1,y2,x2 = (" << y1 << "," << x1 << "," << y2 << "," << x2 << ")" << endl;
 	if (x1 < 0) {
 		x1 = 0;
 	}
@@ -156,19 +158,25 @@ Mat selectRegionOfInterest(Mat img, int y1, int x1, int y2, int x2) {
 		y1 = img.rows;
 	}
 	if (y2 > img.rows) {
-		y2 = img.rows;
+		if (y2-y1 > img.rows) {
+			y2 = img.rows;
+		}
 	}
 	if (x2 > img.cols) {
-		x2 = img.cols;
+		if (x2-x1 > img.cols) {
+			x2 = img.cols;
+		}
 	}
 	/* Make a region of the proper size. 
 	 * Start point in point (x1,y1) width = y2-y1 and height x2-x1. 
 	 */ 
+	cout << "Mistake here 1" << endl;
 	Rect region(x1,y1,y2-y1,x2-x1);
 	
 	// Extract the rectangle from the image
+	cout << "Mistake here 2" << endl;
 	ROI = img(region);
-	
+	cout << "Mistake here 3" << endl;
 	return ROI;
 }
 
@@ -874,9 +882,28 @@ Mat warpImage(Mat I_R, Mat W) {
 			vector.at<double>(1,0) = y; 
 			Mat warped = W * vector;
 			warped = warped.t();
+			//waitKey(1000);
+			//cout << "Print of Warp" << endl;
+			for (int i = 0; i < warped.rows; i++) {
+				for (int j = 0; j < warped.cols; j++) {
+					//cout << warped.at<double>(i,j) << ", ";
+				}
+				//cout << "" << endl;
+			}
+			//waitKey(2000);
 			if (warped.at<double>(0,0) < I_R.cols && warped.at<double>(0,1) < I_R.rows) {
 				if (warped.at<double>(0,0) > 1 && warped.at<double>(0,1) > 1) {
+					//cout << "Before warp: " << I.at<double>(y,x) << " which is the intensity of I" << endl;
+					//cout << "image coordinates = (" << floor(warped.at<double>(0,1)) << "," << floor(warped.at<double>(0,0)) << ")" << endl;
+					
+					
+					uchar m = I_R.at<double>(floor(warped.at<double>(0,1)),floor(warped.at<double>(0,0)));
+					//cout << "Intensity of I_R: " << m << endl;
+					//cout << "Value = " << I_R.at<double>(floor(warped.at<double>(0,1)),floor(warped.at<double>(0,0))) << endl;
+					
+					
 					I.at<double>(y,x) = I_R.at<double>(floor(warped.at<double>(0,1)),floor(warped.at<double>(0,0)));
+					//cout << "After warp: " << I.at<double>(y,x) << " which is the intensity" << endl;
 				}
 				
 			}
@@ -909,13 +936,25 @@ Mat getWarpedPatch(Mat I, Mat W, Mat x_T, int r_T) {
 	
 	// Initialize patch
 	Mat patch = Mat::zeros(2*r_T + 1, 2*r_T + 1, CV_64FC1);
+	cout << "Dimensions of patch = (" << patch.rows << "," << patch.cols << ")" << endl; 
+	waitKey(2000);
 	
 	// Get dimensions of image 
+	cout << "Dimensions of image (" << I.rows << "," << I.cols << ")" << endl;
 	int max_coords_rows = I.rows;
 	int max_coords_cols = I.cols;
+	cout << "Values = " << max_coords_rows << "," << max_coords_cols << endl;
 	
 	// Find the transpose
 	Mat WT = W.t();
+	cout << "Print WT" << endl;
+	for (int i = 0; i < WT.rows; i++) {
+		for (int j = 0; j < WT.cols; j++) {
+			cout << WT.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	//waitKey(2000);
 	
 	Mat pre_warp = Mat::zeros(1, 3, CV_64FC1);
 	for (int x = -r_T; x <= r_T; x++) {
@@ -926,8 +965,14 @@ Mat getWarpedPatch(Mat I, Mat W, Mat x_T, int r_T) {
 			
 			Mat warped = x_T + pre_warp * WT;
 			
-			if (warped.at<double>(0,0) < max_coords_rows && warped.at<double>(0,1) < max_coords_cols) {
-				if (warped.at<double>(0,0) > 1 && warped.at<double>(0,1) > 1) {
+			//cout << "Print warped" << endl;
+			//cout << warped.at<double>(0,0) << ","<<  warped.at<double>(0,1) << endl;
+			//waitKey(2000);
+			
+			if (warped.at<double>(0,0) < max_coords_cols && warped.at<double>(0,1) < max_coords_rows) {
+				//cout << "First statement breaks" << endl;
+				if (warped.at<double>(0,0) > 0 && warped.at<double>(0,1) > 0) { // Den skal være større end 0
+					//cout << "Second statement not true" << endl;
 					
 					//Mat floors = floor(warped);
 					Mat floors = Mat::zeros(warped.rows, warped.cols, CV_64FC1);
@@ -936,35 +981,70 @@ Mat getWarpedPatch(Mat I, Mat W, Mat x_T, int r_T) {
 							floors.at<double>(r, c) = floor(warped.at<double>(r, c));
 						}
 					}
+					/*
+					//cout << "Print floors" << endl;
+					for (int i = 0; i < floors.rows; i++) {
+						for (int j = 0; j < floors.cols; j++) {
+							//cout << floors.at<double>(i,j) << ", ";
+						}
+						//cout << "" << endl;
+					}
+					//waitKey(2000);
+					*/
 					
 					Mat weights = warped - floors;
+					//cout << "weights " << endl;
+					/*
+					for (int i = 0; i < weights.rows; i++) {
+						for (int j = 0; j < weights.cols; j++) {
+							//cout << weights.at<double>(i,j) << ", ";
+						}
+						//cout << "" << endl;
+					}
+					//waitKey(2000);
+					*/
+					
 					
 					double a = weights.at<double>(0,0);
+					//cout << "a = " << a << endl;
 					double b = weights.at<double>(0,1);
+					//cout << "b = " << b << endl;
 					
-					double intensity = (1-b) * ((1-a) * I.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)) + a * I.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)+1));
+					double intensity = (1-b) * ((1-a) * I.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) + a * I.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)));
 					
-					intensity = intensity + b * ((1-a) * I.at<double>(floors.at<double>(0,1)+1,floors.at<double>(0,0)) + a * I.at<double>(floors.at<double>(0,1)+1,floors.at<double>(0,0)+1));
+					intensity = intensity + b * ((1-a) * I.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)-1) + a * I.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)));
 					
 					
-					patch.at<double>(y + r_T + 1, x + r_T + 1) = intensity;
-					
+					patch.at<double>(y + r_T, x + r_T) = intensity;
+					//cout << "Patch value " << endl;
+					//cout << patch.at<double>(y + r_T + 1, x + r_T + 1) << endl;
+					//waitKey(2000);
 				}	
 			}
 		}
+	}
+	for (int i = 0; i < patch.rows; i++) {
+		for (int j = 0; j < patch.cols; j++) {
+			//cout << patch.at<double>(i,j) << ", ";
+		}
+		//cout << "" << endl;
 	}
 	return patch;
 }
 
 Mat Kroneckerproduct(Mat A, Mat B) {
 	
+	cout << "Inside Kroneckerproduct " << endl;
+	
 	int rowa = A.rows;
 	int cola = A.cols;
 	int rowb = B.rows;
 	int colb = B.cols;
+	cout << "rowa, cola, rowb, colb = (" << rowa << "," << cola << "," << rowb << "," << colb << ")" << endl;
 	
 	Mat C = Mat::zeros(rowa * rowb, cola * colb, CV_64FC1);
-	
+	cout << "rows and cols of C = (" << C.rows << "," << C.cols << ")" << endl; 
+	waitKey(2000);
 	for (int i = 0; i < rowa; i++) {
 		
 		for (int k = 0; k < rowb; k++) {
@@ -973,8 +1053,11 @@ Mat Kroneckerproduct(Mat A, Mat B) {
 				
 				for (int l = 0; l < colb; l++) {
 					
-					C.at<double>(i + l + 1, j + k + 1) = A.at<double>(i, j) * B.at<double>(k, l);
+					C.at<double>(i*rowb + k, j*colb + l) = A.at<double>(i, j) * B.at<double>(k, l);
+					//cout << C.at<double>(i + l, j + k) << ", "; 
 				}
+				//cout << "" << endl;
+				//waitKey(1000);
 				
 			}
 			
@@ -998,25 +1081,49 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 		}
 	}
 	
+	cout << "Get Warped Patch from I_RT " << endl;
 	Mat I_RT = getWarpedPatch(I_R, W, x_T, r_T);
 	cout << "We have gotten warped patch" << endl;
+	cout << "Dimensions of I_RT = (" << I_RT.rows << "," << I_RT.cols << ")" << endl;
+	cout << "Product = " << I_RT.rows * I_RT.cols << endl;
 	// Reshape matrix 
-	Mat i_R = I_RT.reshape(I_RT.rows * I_RT.cols, 1);
-	
+	waitKey(2000);
+	I_RT = I_RT.t();
+	Mat i_R = I_RT.reshape(0,I_RT.rows * I_RT.cols);
+	cout << "Dimensions of i_R = (" << i_R.rows << "," << i_R.cols << ")" << endl;
+	//waitKey(5000);
+	cout << "Print i_R" << endl;
+	for (int i = 0; i < i_R.rows; i++) {
+		//cout << i_R.at<double>(i,0) << endl;
+		//waitKey(1000);
+	}
+	//waitKey(2000);
 	int n = 2*r_T + 1;
 	Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
 	temp_index = 0; 
+	cout << "Print xy1" << endl;
 	for (int i = -r_T; i <= r_T; i++) {
 		for (int j = -r_T; j <= r_T; j++) {
 			xy1.at<double>(temp_index,0) = i;
 			xy1.at<double>(temp_index,1) = j;
 			xy1.at<double>(temp_index,2) = 1;
+			cout << xy1.at<double>(temp_index,0) << "," << xy1.at<double>(temp_index,1) << "," << xy1.at<double>(temp_index,2) << endl;
 			temp_index++;
 		} 
+		//waitKey(1000);
+		cout << "" << endl;
 	}
+	waitKey(5000);
 	Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
 	cout << "Kroeneckerproduct worked " << endl;
-	
+	for (int i = 0; i < dwdx.rows; i++) {
+		for (int j = 0; j < dwdx.cols; j++) {
+			cout << dwdx.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+		//waitKey(1000);
+	}
+	waitKey(1000);
 	// 2D filters for convolution
 	Mat kernelx, kernely; 
 	Point anchorx, anchory;
@@ -1030,74 +1137,216 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 	ddepth = -1;
 	
 	kernelx = Mat::zeros(1, 3, CV_64FC1);
-	kernelx.at<double>(0,0) = 1;
-	kernelx.at<double>(0,2) = -1;
+	kernelx.at<double>(0,0) = -1;
+	kernelx.at<double>(0,2) = 1;
 	kernely = Mat::zeros(3, 1, CV_64FC1);
-	kernely.at<double>(0,0) = 1;
-	kernely.at<double>(2,0) = -1;
+	kernely.at<double>(0,0) = -1;
+	kernely.at<double>(2,0) = 1;
 	
 	
 	cout << "About to begin iteration " << endl;
 	for (int iter = 0; iter < num_iters; iter++) {
 		Mat big_IWT = getWarpedPatch(I, W, x_T, r_T + 1);
 		
+		cout << "Print of big_IWT " << endl;
+		for (int hh = 0; hh < big_IWT.rows; hh++) {
+			for (int jj = 0; jj < big_IWT.cols; jj++) {
+				cout << big_IWT.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "" << endl;
+		cout << "" << endl;
+		
 		Mat IWT_temp, IWT;
 		IWT_temp = selectRegionOfInterest(big_IWT, 1, 1, big_IWT.rows-1, big_IWT.cols-1);
 		IWT_temp.copyTo(IWT);
 		
+		cout << "Print of IWT " << endl;
+		for (int hh = 0; hh < IWT.rows; hh++) {
+			for (int jj = 0; jj < IWT.cols; jj++) {
+				cout << IWT.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+		}
+		waitKey(1000);
 		cout << "Before reshape " << endl;
 		cout << "IWT rows and cols = (" << IWT.rows << "," << IWT.cols << ") " << endl;
-		Mat i = IWT.reshape(IWT.rows * IWT.cols, 1);
+		IWT = IWT.t();
+		Mat i = IWT.reshape(0, IWT.rows * IWT.cols);
+		cout << "Dimensions of I = (" << i.rows << "," << i.cols << ")" << endl; 
+		MatType(I);
+		for (int hh = 0; hh < i.rows; hh++) {
+			//cout << i.at<double>(hh,0) << endl;
+			//waitKey(1000);
+		}
 		
 		// Getting di/dp 
 		cout << "Getting di/dp" << endl;
 		Mat IWTx, IWTy, temp_IWTx, temp_IWTy, temp_IWTx2, temp_IWTy2;
-		temp_IWTx2 = selectRegionOfInterest(big_IWT, 1, 0, big_IWT.rows-1, big_IWT.cols); // Maybe check for values
-		temp_IWTy2 = selectRegionOfInterest(big_IWT, 0, 1, big_IWT.rows, big_IWT.cols-1);
+		temp_IWTx2 = selectRegionOfInterest(big_IWT, 1, 0, big_IWT.cols+1, big_IWT.rows-2); // Maybe check for values
+		temp_IWTy2 = selectRegionOfInterest(big_IWT, 0, 1, big_IWT.cols-2, big_IWT.rows+1);
 		
 		cout << "Not here yet " << endl;
 		temp_IWTx2.copyTo(temp_IWTx);
 		temp_IWTy2.copyTo(temp_IWTy);
 		
+		cout << "Print of temp_IWTx " << endl;
+		for (int hh = 0; hh < temp_IWTx.rows; hh++) {
+			for (int jj = 0; jj < temp_IWTx.cols; jj++) {
+				cout << temp_IWTx.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
+		cout << "Print of temp_IWTy " << endl;
+		for (int hh = 0; hh < temp_IWTy.rows; hh++) {
+			for (int jj = 0; jj < temp_IWTy.cols; jj++) {
+				cout << temp_IWTy.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
+		
 		// Convolve x
 		filter2D(temp_IWTx, IWTx, ddepth, kernelx, anchorx, delta, BORDER_DEFAULT);
+		IWTx = selectRegionOfInterest(IWTx, 0, 1, IWTx.cols-1, IWTx.rows+1);
+		
+		//cout << "Print Kernelx" << endl;
+		for (int hh = 0; hh < kernelx.rows; hh++) {
+			for (int jj = 0; jj < kernelx.cols; jj++) {
+				//cout << kernelx.at<double>(hh,jj) << ", ";
+			}
+			//cout << "" << endl;
+		}
+		
+		//cout << "Print of IWTx " << endl;
+		for (int hh = 0; hh < IWTx.rows; hh++) {
+			for (int jj = 0; jj < IWTx.cols; jj++) {
+				//cout << IWTx.at<double>(hh,jj) << ", ";
+			}
+			//cout << "" << endl;
+		}
 		
 		// Convolve y 
 		filter2D(temp_IWTy, IWTy, ddepth, kernely, anchory, delta, BORDER_DEFAULT);
+		IWTy = selectRegionOfInterest(IWTy, 1, 0, IWTy.cols+1, IWTy.rows-1);
+		
+		//cout << "Print kernely" << endl;
+		for (int hh = 0; hh < kernely.rows; hh++) {
+			for (int jj = 0; jj < kernely.cols; jj++) {
+				//cout << kernely.at<double>(hh,jj) << ", ";
+			}
+			//cout << "" << endl;
+		}
+		
+		//cout << "Print of IWTy " << endl;
+		for (int hh = 0; hh < IWTy.rows; hh++) {
+			for (int jj = 0; jj < IWTy.cols; jj++) {
+				//cout << IWTy.at<double>(hh,jj) << ", ";
+			}
+			//cout << "" << endl;
+		}
 		
 		// Concatenate vectors 
 		cout << "2D convolution obtained" << endl;
-		temp_IWTx = IWTx.reshape(IWTx.rows * IWTx.cols, 1);
-		temp_IWTy = IWTy.reshape(IWTy.rows * IWTy.cols, 1);
+		Mat IWTx_new, IWTy_new;
+		IWTx.copyTo(IWTx_new);
+		IWTy.copyTo(IWTy_new);
+		IWTx_new = IWTx_new.t();
+		IWTy_new = IWTy_new.t();
+		temp_IWTx = IWTx_new.reshape(0, IWTx.rows * IWTx.cols);
+		temp_IWTy = IWTy_new.reshape(0, IWTy.rows * IWTy.cols);
 		Mat didw;
 		hconcat(temp_IWTx, temp_IWTy, didw);
 		cout << "Matric concatenated" << endl;
 		
+		cout << "Matrix didw" << endl;
+		for (int hh = 0; hh < didw.rows; hh++) {
+			for (int jj = 0; jj < didw.cols; jj++) {
+				cout << didw.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
 		Mat didp = Mat::zeros(n * n, 6, CV_64FC1);
+		//cout << "Dimensions of didp = (" << didp.rows << "," << didp.cols << ")" << endl;
 		double vdidw1, vdidw2, vdwdx1, vdwdx2;
-		for (int pixel_i = 0; pixel_i < n * n; pixel_i++) {
+		for (int pixel_i = 0; pixel_i < didp.rows; pixel_i++) {
 			vdidw1 = didw.at<double>(pixel_i,0);
 			vdidw2 = didw.at<double>(pixel_i,1);
+			//cout << " Values = " << vdidw1 << "," << vdidw2 << endl;
+			//waitKey(2000);
 			for (int j = 0; j < 6; j++) {
-				vdwdx1 = dwdx.at<double>(pixel_i * 2 - 1, j);
-				vdidw2 = dwdx.at<double>(pixel_i * 2, j);
-				didp.at<double>(pixel_i, j) = vdidw1 * vdwdx1 + vdidw2 * vdidw2;
-				
+				vdwdx1 = dwdx.at<double>(pixel_i * 2, j);
+				vdwdx2 = dwdx.at<double>(pixel_i * 2 + 1, j);
+				//cout << " Values = " << vdwdx1 << "," <<  vdwdx2 << endl;
+				//waitKey(2000);
+				didp.at<double>(pixel_i, j) = vdidw1 * vdwdx1 + vdidw2 * vdwdx2;
+				//cout << didp.at<double>(pixel_i, j) << ", ";
+				//waitKey(2000);
 			}
 		} 
+		cout << "Matrix didp" << endl;
+		for (int hh = 0; hh < didp.rows; hh++) {
+			for (int jj = 0; jj < didp.cols; jj++) {
+				//cout << didp.at<double>(hh,jj) << ", ";
+			}
+			//cout << "" << endl;
+			//waitKey(500);
+		}
+		
 		cout << "Hessian about to be calculated" << endl;
 		Mat H = didp.t() * didp;
+		cout << "Hessian calculated " << endl;
+		cout << "Dimensions of hessian = (" << H.rows << "," << H.cols << ")" << endl;
+		for (int hh = 0; hh < H.rows; hh++) {
+			for (int jj = 0; jj < H.cols; jj++) {
+				cout << H.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+			//waitKey(500);
+		}
+		Mat temp_delta_p = didp.t() * (i_R - i);
+		cout << "Delta_p calculated" << endl;
 		
-		Mat delta_p = H.inv() * didp.t() * (i_R - i); // Maybe problem with 
-		W = W + delta_p.reshape(2, 3);
+		
+		Mat delta_p = H.inv() * (didp.t() * (i_R - i)); // Maybe problem with 
+		
+		cout << "Delta_p done" << endl;
+		cout << "Dimensions of delta_p = (" << delta_p.rows << "," << delta_p.cols << ")" << endl;
+		for (int hh = 0; hh < delta_p.rows; hh++) {
+			for (int jj = 0; jj < delta_p.cols; jj++) {
+				cout << delta_p.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+			//waitKey(500);
+		}
+		Mat delta_p_temp = delta_p.reshape(0, 2);
+		cout << "Reshape done" << endl;
+		cout << "Dimensions of delta_p_temp = (" << delta_p_temp.rows << "," << delta_p_temp.cols << ")" << endl;
+		delta_p_temp = delta_p_temp.t();
+		W = W + delta_p_temp; // 2 = W.rows
+		cout << "Matrix W " << endl;
+		for (int hh = 0; hh < W.rows; hh++) {
+			for (int jj = 0; jj < W.cols; jj++) {
+				cout << W.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+			//waitKey(500);
+		}
+		 
 		
 		cout << "delta_p and W obtaiend" << endl;
 		Mat temp_W = W.reshape(W.rows * W.cols, 1);
+		waitKey(3000);
+		
+		cout << "p_hist" << endl;
 		for (int i = 0; i < 6; i++) {
 			p_hist.at<double>(i, iter+1) =  temp_W.at<double>(i,0);
+			cout << p_hist.at<double>(i, iter+1);
 		}
-		
-		
+		waitKey(0);
 		
 	}
 	cout << "W is " << endl;
