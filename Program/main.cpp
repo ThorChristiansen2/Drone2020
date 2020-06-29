@@ -354,6 +354,7 @@ int main ( int argc,char **argv ) {
 	int r_T = 15;
 	int num_iters = 50;
 	Mat W = getSimWarp(10, 6, 0, 1);
+	double lambda = 0.1;
 	
 	
 	/*
@@ -396,7 +397,8 @@ int main ( int argc,char **argv ) {
 	imshow("Image I", I);
 	waitKey(0);
 	cout << "Image warped" << endl;
-	trackKLT(I_R, I, x_T, r_T, num_iters);
+	//trackKLT(I_R, I, x_T, r_T, num_iters);
+	KLT::trackKLTrobustly(I_R, I, x_T, r_T, num_iters, lambda);
 	
 	
 	/*

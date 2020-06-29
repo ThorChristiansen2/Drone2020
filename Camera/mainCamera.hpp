@@ -47,7 +47,7 @@ namespace SIFT {
 
 
 namespace KLT {
-	Mat trackKLTrobustly(Mat I1, Mat I2, Mat keypoints, int r_t, int num_iters, double lambda);
+	Mat trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, double lambda);
 }
 
 
