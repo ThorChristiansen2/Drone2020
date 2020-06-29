@@ -2,6 +2,7 @@
 #include <say-hello/hello.hpp>
 #include "mainCamera.hpp"
 #include <unistd.h>
+#include <tuple> 
 
 // Include directories for raspicam
 #include <ctime>
@@ -18,6 +19,9 @@
  * by main.cpp to treat the images - find features in the images using 
  * Harris corner etc.
  * Project: Bachelor project 2020
+ * Things to look into: 
+ * Is the transpose of the intrinsic camera matrix K correct?
+ * What is the unit of the 3D points? Is it cm? meters? other units?
  * ########################
 */
 
@@ -33,10 +37,10 @@ struct state {
 	/* Si = (Pi, Xi, Ci, Fi, Ti)
 	 * K = Number of keypoints
 	 * Pi = Keypoints 														2 x K
-	 * Xi = 3D landmarks 													2 x K
-	 * Ci = Candidate Keypoints (The most recent observation)				3 x M
+	 * Xi = 3D landmarks 													3 x K
+	 * Ci = Candidate Keypoints (The most recent observation)				2 x M
 	 * Fi = The first ever observation of the keypoint						2 x M
-	 * Ti = The Camera pose at the first ever observation of the keypoint 	6 x M
+	 * Ti = The Camera pose at the first ever observation of the keypoint 	16 x M
 	 */
 	int k;
 	Mat Pi;
@@ -98,7 +102,8 @@ void drawCorners(Mat img, Matrix keypoints, const char* frame_name) {
 
 
 // Initialization part of VO pipeline.
-Mat initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
+//Mat initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
+tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// Transform color images to gray images
 	cv::Mat I_i0_gray, I_i1_gray;
@@ -168,6 +173,7 @@ Mat initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),1);
 		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),2);
 		
+		/*
 		double x = keypoints_I_i1(matches(i,0),1);
 		double y = keypoints_I_i1(matches(i,0),2);
 		double x2 = keypoints_I_i0(matches(i,1),1);
@@ -175,13 +181,21 @@ Mat initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
 		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		*/
 		//pointCorrespondences(0,i) = keypoints_I_i0(matches(i,1),1); // x
 		//pointCorrespondences(1,i) = keypoints_I_i0(matches(i,1),2); // y
 		//pointCorrespondences(2,i) = keypoints_I_i1(matches(i,0),1); // x2
 		//pointCorrespondences(3,i) = keypoints_I_i1(matches(i,0),2); // y2
 	}
-	imshow("Match",I_i1);
-	waitKey(0);
+	//imshow("Match",I_i1);
+	//waitKey(0);
+	
+	
+	// Update State  with regards to keypoints in frame Ii_1
+	Si_1.Pi = points2Mat;
+	
+	
+	
 	/*
 	cout << "Points as vectors: Points1" << endl;
 	for (int i = 0; i < N; i++) {
@@ -200,8 +214,7 @@ Mat initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99); // 1 should be changed ot 3 
 	
 	// Estimate Essential Matrix
-	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);
-	
+	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);	
 	
 	//Mat essential_matrix = (Mat_<double>(3,3) << -0.10579, -0.37558, -0.5162047, 4.39583, 0.25655, 19.99309, 0.4294123, -20.32203997, 0.023287939);
 	// Find the rotation and translation assuming the first frame is taken with the drone on the ground 
@@ -213,7 +226,10 @@ Mat initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		cout << "" << endl;
 	}
 	
-	// Obtain 3D point cloud
+	// Update State with regards to 3D (triangulated points)
+	Mat M1 = K * (Mat_<double>(3,4) << 1,0,0,0, 0,1,0,0, 0,0,1,0);
+	Mat M2 = K * transformation_matrix;
+	Si_1.Xi = linearTriangulation(points1Mat, points2Mat, M1, M2 );
 	
 	
 	// Triangulate initial point cloud
@@ -225,7 +241,8 @@ Mat initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// Should return pose of drone
 	//return 0;
-	return transformation_matrix;
+	//return transformation_matrix;
+	return make_tuple(Si_1, transformation_matrix);
 }
 
 Mat calibrate_matrix(Mat transformation_matrix) {
@@ -242,31 +259,18 @@ Mat calibrate_matrix(Mat transformation_matrix) {
 	return calib_matrix;
 }
 
-// Function to determine data type of image contained in OpenCV Mat object.
-// Example of use for an image I_i0_gray in Opencv Mat Object
-// string ty = type2str(I_i0_gray.type() ); 
-// printf("Matrix: %s %dx%d \n ", ty.c_str(), I_i0_gray.cols, I_i0_gray.rows );
-string type2str(int type) {
-  string r;
+// Process Frame for continuous VO operation 
+/* Arguments: 
+ * Current Image I1
+ * Previous Image Ii-1 (I_{i-1})
+ * Previous State Si_1, which is a struct
+ */
 
-  uchar depth = type & CV_MAT_DEPTH_MASK;
-  uchar chans = 1 + (type >> CV_CN_SHIFT);
-
-  switch ( depth ) {
-    case CV_8U:  r = "8U"; break;
-    case CV_8S:  r = "8S"; break;
-    case CV_16U: r = "16U"; break;
-    case CV_16S: r = "16S"; break;
-    case CV_32S: r = "32S"; break;
-    case CV_32F: r = "32F"; break;
-    case CV_64F: r = "64F"; break;
-    default:     r = "User"; break;
-  }
-
-  r += "C";
-  r += (chans+'0');
-
-  return r;
+tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1) {
+	state Si = Si_1;
+	Mat transformation_matrix;
+	
+	return make_tuple(Si, transformation_matrix); 
 }
 
 
@@ -326,11 +330,36 @@ int main ( int argc,char **argv ) {
 	cout << "State Si_1 before initializaiton" << endl;
 	cout << "Number of keypoints k = " << Si_1.k << endl;
 	
-	Mat transformation_matrix = initializaiton(I_i0, I_i1, K, Si_1);
+	//Mat transformation_matrix = initializaiton(I_i0, I_i1, K, Si_1);
+	Mat transformation_matrix;
+	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	
-	waitKey(0);
 	cout << "State Si_1" << endl;
 	cout << "Number of keypoints k = " << Si_1.k << endl;
+	cout << "Matrix P (attribute of S) = " << Si_1.Pi.rows << "," << Si_1.Pi.cols << endl;
+	cout << "Matrix X (attribute of S) = " << Si_1.Xi.rows << "," << Si_1.Xi.cols << endl;
+	
+	for (int i = 0; i < 5; i++) {
+		cout << Si_1.Xi.at<double>(0,i) << "," << Si_1.Xi.at<double>(1,i) << ","  << Si_1.Xi.at<double>(2,i) << ","  << Si_1.Xi.at<double>(3,i) << endl;
+	}
+	
+	Mat Ii_1 = I_i1;
+	Mat Ii;
+	
+	// Continuous VO operation
+	state Si;
+	while (true) {
+		
+		// Take new image 
+		Camera.grab();
+		Camera.retrieve( Ii );
+		
+		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1);
+		
+		// Resert old values 
+		Ii_1 = Ii;
+		Si_1 = Si;
+	}
 	
 	
 	
@@ -563,6 +592,9 @@ int main ( int argc,char **argv ) {
 	/*
 	// VO-pipeline: 
 	// The VO pipleine is controlled by a flag and if the VO-pipeline suddenly 
+	
+	
+	
 	int flag = 0; // Should be set to 1 - and should be an argument controlled by the main controller
 	int pipelineBroke = 0;
 	
@@ -577,8 +609,7 @@ int main ( int argc,char **argv ) {
 	int num_iters = 100;
 	Mat interest_points = Mat::zeros(1, 2, CV_64FC1);
 	
-	state Si, Si_1;
-	Si_1.k = 0;
+	state Si;
 		
 	while (pipelineBroke != 1 && flag == 1) {
 		Camera.grab();
@@ -620,6 +651,7 @@ int main ( int argc,char **argv ) {
 	}
 	// processFrame()
 	*/
+	
 
 	
 

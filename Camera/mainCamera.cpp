@@ -705,7 +705,7 @@ Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2) {
 
 Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K) {
 	
-	Mat essential_matrix = K.t() * fundamental_matrix * K;
+	Mat essential_matrix = K.t() * fundamental_matrix * K; // Check if the transpose is the right one?
 	
 	return essential_matrix;
 }
@@ -814,7 +814,7 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 			Mat M1 = K * Trans_I1;
 			Mat P_C0 = linearTriangulation(points1Mat, points2Mat, M0, M1);
 			
-			// Projekct in both cameras
+			// Project in both cameras
 			// Only the 3rd dimension is needed, so the matrix is reduced
 			Mat P_C1 = Mat::zeros(1, P_C0.cols, CV_64FC1);
 			int num_points_in_front1 = 0;
