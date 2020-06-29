@@ -13,7 +13,7 @@
 /* ########################
  * Name: mainCamera.cpp
  * Made by: Thor Christiansen - s173949 
- * Date: 2.06.2020
+ * Date: 29.06.2020
  * Objective: The source file mainCamera.cpp contains the functions used
  * by main.cpp to treat the images - find features in the images using 
  * Harris corner etc.
@@ -27,6 +27,24 @@ using namespace cv;
 using namespace std;
 const char* source_window = "Source image"; 
 bool doTestSpeedOnly=false;
+
+// For the continous operation at struct is made. 
+struct state {
+	/* Si = (Pi, Xi, Ci, Fi, Ti)
+	 * K = Number of keypoints
+	 * Pi = Keypoints 														2 x K
+	 * Xi = 3D landmarks 													2 x K
+	 * Ci = Candidate Keypoints (The most recent observation)				3 x M
+	 * Fi = The first ever observation of the keypoint						2 x M
+	 * Ti = The Camera pose at the first ever observation of the keypoint 	6 x M
+	 */
+	int k;
+	Mat Pi;
+	Mat Xi; 
+	Mat Ci; 
+	Mat Fi; 
+	Mat Ti; 
+};
 
 //parse command line
 //returns the index of a command line param in argv. If not found, return -1
@@ -80,7 +98,7 @@ void drawCorners(Mat img, Matrix keypoints, const char* frame_name) {
 
 
 // Initialization part of VO pipeline.
-Mat initializaiton(Mat I_i0, Mat I_i1, Mat K) {
+Mat initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// Transform color images to gray images
 	cv::Mat I_i0_gray, I_i1_gray;
@@ -130,6 +148,8 @@ Mat initializaiton(Mat I_i0, Mat I_i1, Mat K) {
 	
 	
 	int N = matches.dim1();
+	cout << "Number of keypoints N in initializaiton = " << N << endl;
+	Si_1.k = N;
 	// For plotting
 	Matrix pointCorrespondences(4,N);
 	// For efficiency, you should maybe just use vectors instead of creating two new matrices
@@ -250,24 +270,6 @@ string type2str(int type) {
 }
 
 
-// For the continous operation at struct is made. 
-struct state {
-	/* Si = (Pi, Xi, Ci, Fi, Ti)
-	 * K = Number of keypoints
-	 * Pi = Keypoints 														2 x K
-	 * Xi = 3D landmarks 													2 x K
-	 * Ci = Candidate Keypoints (The most recent observation)				3 x M
-	 * Fi = The first ever observation of the keypoint						2 x M
-	 * Ti = The Camera pose at the first ever observation of the keypoint 	6 x M
-	 */
-	int k;
-	Mat Pi;
-	Mat Xi; 
-	Mat Ci; 
-	Mat Fi; 
-	Mat Ti; 
-};
-
 // ####################### Main function #######################
 int main ( int argc,char **argv ) {
 	
@@ -319,8 +321,20 @@ int main ( int argc,char **argv ) {
 	//waitKey(0);
 	
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
-	//Mat transformation_matrix = initializaiton(I_i0, I_i1, K);
+	state Si_1;
+	Si_1.k = 0;
+	cout << "State Si_1 before initializaiton" << endl;
+	cout << "Number of keypoints k = " << Si_1.k << endl;
 	
+	Mat transformation_matrix = initializaiton(I_i0, I_i1, K, Si_1);
+	
+	waitKey(0);
+	cout << "State Si_1" << endl;
+	cout << "Number of keypoints k = " << Si_1.k << endl;
+	
+	
+	
+	/*
 	// Test of KLT
 	Mat I_R = imread("000000.png", IMREAD_UNCHANGED);
 	MatType(I_R);
@@ -349,15 +363,15 @@ int main ( int argc,char **argv ) {
 	imshow("Image shown", I_R);
 	waitKey(0);
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
-	x_T.at<double>(0,0) = 784;
-	x_T.at<double>(0,1) = 100;
+	x_T.at<double>(0,0) = 389;
+	x_T.at<double>(0,1) = 162;
 	int r_T = 15;
 	int num_iters = 50;
 	Mat W = getSimWarp(10, 6, 0, 1);
 	double lambda = 0.1;
 	
 	
-	/*
+	
 	for (int i = 0; i < W.rows; i++) {
 		for (int j = 0; j < W.cols; j++) {
 			cout << W.at<double>(i,j) << ", ";
@@ -365,7 +379,7 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	cout << "Warp obtained" << endl;
-	*/
+	
 	
 	
 	
@@ -380,7 +394,7 @@ int main ( int argc,char **argv ) {
 		}
 		cout << "" << endl;
 	}
-	/*
+	
 	cout << "Resize Image " << endl;
 	Mat outImg; 
 	resize(I, outImg, Size(I.cols * 0.25, I.rows * 0.25), 0, 0, INTER_LINEAR);
@@ -390,7 +404,7 @@ int main ( int argc,char **argv ) {
 		}
 		cout << "" << endl;
 	}
-	*/
+	
 	
 	//waitKey(5000);
 	MatType(I);
@@ -398,7 +412,9 @@ int main ( int argc,char **argv ) {
 	waitKey(0);
 	cout << "Image warped" << endl;
 	//trackKLT(I_R, I, x_T, r_T, num_iters);
-	KLT::trackKLTrobustly(I_R, I, x_T, r_T, num_iters, lambda);
+	Mat answers = KLT::trackKLTrobustly(I_R, I, x_T, r_T, num_iters, lambda);
+	cout << "Coordinates = (" << answers.at<double>(0,0) << "," << answers.at<double>(1,0) << " and keep status = " << answers.at<double>(2,0) << endl;
+	*/
 	
 	
 	/*
@@ -544,19 +560,10 @@ int main ( int argc,char **argv ) {
 	 * Intenisty.val[0]
 	 */
 	
-	
-
-	// Draw rectangle on the image 
-	//rectangle(I_i0_gray, r, Scalar(255), 1, 8, 0);
-	//imshow("Image I_i0_gray w. rectangle", I_i0_gray);
-	//waitKey(0);
-	//cout << "Rectangle drawn" << endl;
-	
-	
 	/*
 	// VO-pipeline: 
 	// The VO pipleine is controlled by a flag and if the VO-pipeline suddenly 
-	int flag = 0; // Should be set to 1 - and hsould be an argument controlled by the main controller
+	int flag = 0; // Should be set to 1 - and should be an argument controlled by the main controller
 	int pipelineBroke = 0;
 	
 	Mat Ii, Ii_1;
@@ -565,9 +572,10 @@ int main ( int argc,char **argv ) {
 	int num_minimum_keypoints = 50; // 
 	
 	// Parameters for KLT
-	int r_t = 15;
+	int r_T = 15;
 	double lambda = 0.1;
 	int num_iters = 100;
+	Mat interest_points = Mat::zeros(1, 2, CV_64FC1);
 	
 	state Si, Si_1;
 	Si_1.k = 0;
@@ -576,8 +584,30 @@ int main ( int argc,char **argv ) {
 		Camera.grab();
 		Camera.retrieve( Ii );
 		
+		int nr_keep = 0; 
+		Mat kpold = Mat::zeros(keypoints.rows, 3, CV_64FC1);
+		for (int i = 0; i < keypoints.rows; i++) {
+			interest_points.at<double>(0,0) = keypoints.at<double>(i,0);
+			interest_points.at<double>(0,1) = keypoints.at<double>(i,1);
+			Mat delta_keypoint = KLT::trackKLTrobustly(Ii_1, Ii, interest_points, r_T, num_iters, lambda);
+			if (delta_keypoint.at<double>(2,0) == 1) {
+				nr_keep++;
+			}
+			kpold.at<double>(i,0) = keypoints.at<double>(i,0) + delta_keypoint.at<double>(0,0);
+			kpold.at<double>(i,1) = keypoints.at<double>(i,1) + delta_keypoint.at<double>(1,0);
+			kpold.at<double>(i,2) = delta_keypoint.at<double>(2,0);
+		}
 		
-		Mat keypoints_i1 = KLT::trackKLTrobustly(Ii_1, Ii, Mat keypoints, r_t, num_iters, lambda);
+		keypoints = Mat::zeros(nr_kepp, 2, CV_64FC1);
+		nr_keep = 0;
+		for (int i = 0; i < kpold.rows, i++) {
+			if (kpold.at<double>(i,2) == 1) {
+				keypoints.at<double>(nr_keep,0) = kpold.at<double>(i,0);
+				keypoints.at<double>(nr_keep,1) = kpold.at<double>(i,1);
+				nr_keep++;
+			}
+		}
+		
 		
 		// = processFrame(Ii_1, Ii, Si_1)
 		Ii = Ii_1;
@@ -590,6 +620,7 @@ int main ( int argc,char **argv ) {
 	}
 	// processFrame()
 	*/
+
 	
 
 

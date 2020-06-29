@@ -1108,17 +1108,12 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 		W = W.t();
 		
 	}
-	cout << "W is " << endl;
-	cout << "Coordinate 1: " << W.at<double>(0,2) << " and Coordinate 2: " << W.at<double>(1,2) << endl;
-	
 	return W;
 }
 
 Mat KLT::trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, double lambda) {
 	
 	Mat W = trackKLT(I_R, I, keypoint, r_T, num_iters);
-	
-	cout << "Dimensions of W = " << W.rows << "," << W.cols << endl;
 	
 	// delta_keypoint contains the y- and x-coordinate of the keypoint as the first and second coordiate
 	// and the third coordiate is a boolean-value, which is either 1 or 0 depending on whether the value is smaller 
@@ -1127,8 +1122,7 @@ Mat KLT::trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, 
 	delta_keypoint.at<double>(0,0) = W.at<double>(0,2);
 	delta_keypoint.at<double>(1,0) = W.at<double>(1,2);
 	
-	cout << "Dimensions of delta_keypoint = " << delta_keypoint.rows << "," << delta_keypoint.cols << endl;
-	cout << "Dimensions of keypoint = " << keypoint.rows << "," << keypoint.cols << endl;
+	// The reverse keypoint that is used to find the backwards warp
 	Mat reverse_keypoint = Mat::zeros(1, 2, CV_64FC1);
 	reverse_keypoint.at<double>(0,0) = keypoint.at<double>(0,0) + delta_keypoint.at<double>(0,0);
 	reverse_keypoint.at<double>(0,1) = keypoint.at<double>(0,1) + delta_keypoint.at<double>(1,0);
@@ -1139,7 +1133,6 @@ Mat KLT::trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, 
 	dkpinv.at<double>(0,0) = Winv.at<double>(0,2);
 	dkpinv.at<double>(1,0) = Winv.at<double>(1,2);
 	
-	cout << "Value compared to lambda = " << sqrt(pow(delta_keypoint.at<double>(0,0) + dkpinv.at<double>(0,0),2.0) + pow(delta_keypoint.at<double>(1,0) + dkpinv.at<double>(1,0),2.0)) << endl;
 	if (sqrt(pow(delta_keypoint.at<double>(0,0) + dkpinv.at<double>(0,0),2.0) + pow(delta_keypoint.at<double>(1,0) + dkpinv.at<double>(1,0),2.0)) < lambda) {
 		delta_keypoint.at<double>(2,0) = 1;
 	}
