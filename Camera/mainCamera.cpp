@@ -1082,8 +1082,9 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 		}
 	}
 	
-	//cout << "Get Warped Patch from I_RT " << endl;
+	cout << "Get Warped Patch from I_RT " << endl;
 	Mat I_RT = getWarpedPatch(I_R, W, x_T, r_T);
+	cout << "We have wapred patch Thor" << endl;
 	
 	/*
 	cout << "We have gotten warped patch" << endl;
@@ -1159,7 +1160,7 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 	kernely.at<double>(2,0) = 1;
 	
 	
-	//cout << "About to begin iteration " << endl;
+	cout << "About to begin iteration " << endl;
 	for (int iter = 0; iter < num_iters; iter++) {
 		Mat big_IWT = getWarpedPatch(I, W, x_T, r_T + 1); // We are here 
 		

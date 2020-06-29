@@ -346,11 +346,11 @@ int main ( int argc,char **argv ) {
 		//cout << "" << endl;
 	}
 	//cout << "Dimensions of I_R = " << I_R.rows << "," << I_R.cols << endl;
-	//imshow("Image shown", I_R);
-	//waitKey(0);
+	imshow("Image shown", I_R);
+	waitKey(0);
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
-	x_T.at<double>(0,0) = 900;
-	x_T.at<double>(0,1) = 291;
+	x_T.at<double>(0,0) = 784;
+	x_T.at<double>(0,1) = 100;
 	int r_T = 15;
 	int num_iters = 50;
 	Mat W = getSimWarp(10, 6, 0, 1);
@@ -368,18 +368,33 @@ int main ( int argc,char **argv ) {
 	
 	
 	
-	Mat I = warpImage(I_R, W);
-	
+	//Mat I = warpImage(I_R, W);
+	Mat I = imread("000001.png", IMREAD_UNCHANGED);
+	I.convertTo(I, CV_64FC1);
+	MatType(I);
+	cout << "Print af billede I " << endl;
 	for (int i = 0; i < 20; i++) {
 		for (int j = 0; j < 20; j++) {
 			cout << I.at<double>(i,j) << ", ";
 		}
 		cout << "" << endl;
 	}
-	waitKey(5000);
+	/*
+	cout << "Resize Image " << endl;
+	Mat outImg; 
+	resize(I, outImg, Size(I.cols * 0.25, I.rows * 0.25), 0, 0, INTER_LINEAR);
+	for (int i = 0; i < 20; i++) {
+		for (int j = 0; j < 20; j++) {
+			cout << outImg.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
+	
+	//waitKey(5000);
 	MatType(I);
-	//imshow("Image I", I);
-	//waitKey(10000);
+	imshow("Image I", I);
+	waitKey(0);
 	cout << "Image warped" << endl;
 	trackKLT(I_R, I, x_T, r_T, num_iters);
 	
