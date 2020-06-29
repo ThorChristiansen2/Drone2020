@@ -354,6 +354,9 @@ int main ( int argc,char **argv ) {
 	int r_T = 15;
 	int num_iters = 50;
 	Mat W = getSimWarp(10, 6, 0, 1);
+	
+	
+	/*
 	for (int i = 0; i < W.rows; i++) {
 		for (int j = 0; j < W.cols; j++) {
 			cout << W.at<double>(i,j) << ", ";
@@ -361,6 +364,10 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	cout << "Warp obtained" << endl;
+	*/
+	
+	
+	
 	Mat I = warpImage(I_R, W);
 	
 	for (int i = 0; i < 20; i++) {

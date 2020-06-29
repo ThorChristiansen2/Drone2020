@@ -170,13 +170,13 @@ Mat selectRegionOfInterest(Mat img, int y1, int x1, int y2, int x2) {
 	/* Make a region of the proper size. 
 	 * Start point in point (x1,y1) width = y2-y1 and height x2-x1. 
 	 */ 
-	cout << "Mistake here 1" << endl;
+	//cout << "Mistake here 1" << endl;
 	Rect region(x1,y1,y2-y1,x2-x1);
 	
 	// Extract the rectangle from the image
-	cout << "Mistake here 2" << endl;
+	//cout << "Mistake here 2" << endl;
 	ROI = img(region);
-	cout << "Mistake here 3" << endl;
+	//cout << "Mistake here 3" << endl;
 	return ROI;
 }
 
@@ -937,13 +937,13 @@ Mat getWarpedPatch(Mat I, Mat W, Mat x_T, int r_T) {
 	// Initialize patch
 	Mat patch = Mat::zeros(2*r_T + 1, 2*r_T + 1, CV_64FC1);
 	cout << "Dimensions of patch = (" << patch.rows << "," << patch.cols << ")" << endl; 
-	waitKey(2000);
+	//waitKey(2000);
 	
 	// Get dimensions of image 
 	cout << "Dimensions of image (" << I.rows << "," << I.cols << ")" << endl;
 	int max_coords_rows = I.rows;
 	int max_coords_cols = I.cols;
-	cout << "Values = " << max_coords_rows << "," << max_coords_cols << endl;
+	//cout << "Values = " << max_coords_rows << "," << max_coords_cols << endl;
 	
 	// Find the transpose
 	Mat WT = W.t();
@@ -1029,22 +1029,23 @@ Mat getWarpedPatch(Mat I, Mat W, Mat x_T, int r_T) {
 		}
 		//cout << "" << endl;
 	}
+	cout << "Mistake before patch" << endl;
 	return patch;
 }
 
 Mat Kroneckerproduct(Mat A, Mat B) {
 	
-	cout << "Inside Kroneckerproduct " << endl;
+	//cout << "Inside Kroneckerproduct " << endl;
 	
 	int rowa = A.rows;
 	int cola = A.cols;
 	int rowb = B.rows;
 	int colb = B.cols;
-	cout << "rowa, cola, rowb, colb = (" << rowa << "," << cola << "," << rowb << "," << colb << ")" << endl;
+	//cout << "rowa, cola, rowb, colb = (" << rowa << "," << cola << "," << rowb << "," << colb << ")" << endl;
 	
 	Mat C = Mat::zeros(rowa * rowb, cola * colb, CV_64FC1);
-	cout << "rows and cols of C = (" << C.rows << "," << C.cols << ")" << endl; 
-	waitKey(2000);
+	//cout << "rows and cols of C = (" << C.rows << "," << C.cols << ")" << endl; 
+	//waitKey(2000);
 	for (int i = 0; i < rowa; i++) {
 		
 		for (int k = 0; k < rowb; k++) {
@@ -1081,15 +1082,22 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 		}
 	}
 	
-	cout << "Get Warped Patch from I_RT " << endl;
+	//cout << "Get Warped Patch from I_RT " << endl;
 	Mat I_RT = getWarpedPatch(I_R, W, x_T, r_T);
+	
+	/*
 	cout << "We have gotten warped patch" << endl;
 	cout << "Dimensions of I_RT = (" << I_RT.rows << "," << I_RT.cols << ")" << endl;
 	cout << "Product = " << I_RT.rows * I_RT.cols << endl;
 	// Reshape matrix 
 	waitKey(2000);
+	*/
+	
+	
 	I_RT = I_RT.t();
 	Mat i_R = I_RT.reshape(0,I_RT.rows * I_RT.cols);
+	
+	/*
 	cout << "Dimensions of i_R = (" << i_R.rows << "," << i_R.cols << ")" << endl;
 	//waitKey(5000);
 	cout << "Print i_R" << endl;
@@ -1098,23 +1106,28 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 		//waitKey(1000);
 	}
 	//waitKey(2000);
+	*/
+	
+	
 	int n = 2*r_T + 1;
 	Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
 	temp_index = 0; 
-	cout << "Print xy1" << endl;
+	//cout << "Print xy1" << endl;
 	for (int i = -r_T; i <= r_T; i++) {
 		for (int j = -r_T; j <= r_T; j++) {
 			xy1.at<double>(temp_index,0) = i;
 			xy1.at<double>(temp_index,1) = j;
 			xy1.at<double>(temp_index,2) = 1;
-			cout << xy1.at<double>(temp_index,0) << "," << xy1.at<double>(temp_index,1) << "," << xy1.at<double>(temp_index,2) << endl;
+			//cout << xy1.at<double>(temp_index,0) << "," << xy1.at<double>(temp_index,1) << "," << xy1.at<double>(temp_index,2) << endl;
 			temp_index++;
 		} 
 		//waitKey(1000);
-		cout << "" << endl;
+		//cout << "" << endl;
 	}
-	waitKey(5000);
+	//waitKey(5000);
 	Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
+	
+	/*
 	cout << "Kroeneckerproduct worked " << endl;
 	for (int i = 0; i < dwdx.rows; i++) {
 		for (int j = 0; j < dwdx.cols; j++) {
@@ -1124,6 +1137,8 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 		//waitKey(1000);
 	}
 	waitKey(1000);
+	*/
+	
 	// 2D filters for convolution
 	Mat kernelx, kernely; 
 	Point anchorx, anchory;
@@ -1144,10 +1159,11 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 	kernely.at<double>(2,0) = 1;
 	
 	
-	cout << "About to begin iteration " << endl;
+	//cout << "About to begin iteration " << endl;
 	for (int iter = 0; iter < num_iters; iter++) {
-		Mat big_IWT = getWarpedPatch(I, W, x_T, r_T + 1);
+		Mat big_IWT = getWarpedPatch(I, W, x_T, r_T + 1); // We are here 
 		
+		/*
 		cout << "Print of big_IWT " << endl;
 		for (int hh = 0; hh < big_IWT.rows; hh++) {
 			for (int jj = 0; jj < big_IWT.cols; jj++) {
@@ -1157,11 +1173,13 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 		}
 		cout << "" << endl;
 		cout << "" << endl;
+		*/
 		
 		Mat IWT_temp, IWT;
 		IWT_temp = selectRegionOfInterest(big_IWT, 1, 1, big_IWT.rows-1, big_IWT.cols-1);
 		IWT_temp.copyTo(IWT);
 		
+		/*
 		cout << "Print of IWT " << endl;
 		for (int hh = 0; hh < IWT.rows; hh++) {
 			for (int jj = 0; jj < IWT.cols; jj++) {
@@ -1170,27 +1188,33 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			cout << "" << endl;
 		}
 		waitKey(1000);
-		cout << "Before reshape " << endl;
-		cout << "IWT rows and cols = (" << IWT.rows << "," << IWT.cols << ") " << endl;
+		*/
+		
+		//cout << "Before reshape " << endl;
+		//cout << "IWT rows and cols = (" << IWT.rows << "," << IWT.cols << ") " << endl;
 		IWT = IWT.t();
 		Mat i = IWT.reshape(0, IWT.rows * IWT.cols);
-		cout << "Dimensions of I = (" << i.rows << "," << i.cols << ")" << endl; 
+		//cout << "Dimensions of I = (" << i.rows << "," << i.cols << ")" << endl; 
 		MatType(I);
+		
+		/*
 		for (int hh = 0; hh < i.rows; hh++) {
 			//cout << i.at<double>(hh,0) << endl;
 			//waitKey(1000);
 		}
+		*/
 		
 		// Getting di/dp 
-		cout << "Getting di/dp" << endl;
+		//cout << "Getting di/dp" << endl;
 		Mat IWTx, IWTy, temp_IWTx, temp_IWTy, temp_IWTx2, temp_IWTy2;
 		temp_IWTx2 = selectRegionOfInterest(big_IWT, 1, 0, big_IWT.cols+1, big_IWT.rows-2); // Maybe check for values
 		temp_IWTy2 = selectRegionOfInterest(big_IWT, 0, 1, big_IWT.cols-2, big_IWT.rows+1);
 		
-		cout << "Not here yet " << endl;
+		//cout << "Not here yet " << endl;
 		temp_IWTx2.copyTo(temp_IWTx);
 		temp_IWTy2.copyTo(temp_IWTy);
 		
+		/*
 		cout << "Print of temp_IWTx " << endl;
 		for (int hh = 0; hh < temp_IWTx.rows; hh++) {
 			for (int jj = 0; jj < temp_IWTx.cols; jj++) {
@@ -1198,7 +1222,9 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			}
 			cout << "" << endl;
 		}
+		*/
 		
+		/*
 		cout << "Print of temp_IWTy " << endl;
 		for (int hh = 0; hh < temp_IWTy.rows; hh++) {
 			for (int jj = 0; jj < temp_IWTy.cols; jj++) {
@@ -1206,12 +1232,14 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			}
 			cout << "" << endl;
 		}
+		*/
 		
 		
 		// Convolve x
 		filter2D(temp_IWTx, IWTx, ddepth, kernelx, anchorx, delta, BORDER_DEFAULT);
 		IWTx = selectRegionOfInterest(IWTx, 0, 1, IWTx.cols-1, IWTx.rows+1);
 		
+		/*
 		//cout << "Print Kernelx" << endl;
 		for (int hh = 0; hh < kernelx.rows; hh++) {
 			for (int jj = 0; jj < kernelx.cols; jj++) {
@@ -1219,7 +1247,9 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			}
 			//cout << "" << endl;
 		}
+		*/
 		
+		/*
 		//cout << "Print of IWTx " << endl;
 		for (int hh = 0; hh < IWTx.rows; hh++) {
 			for (int jj = 0; jj < IWTx.cols; jj++) {
@@ -1227,11 +1257,13 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			}
 			//cout << "" << endl;
 		}
+		*/
 		
 		// Convolve y 
 		filter2D(temp_IWTy, IWTy, ddepth, kernely, anchory, delta, BORDER_DEFAULT);
 		IWTy = selectRegionOfInterest(IWTy, 1, 0, IWTy.cols+1, IWTy.rows-1);
 		
+		/*
 		//cout << "Print kernely" << endl;
 		for (int hh = 0; hh < kernely.rows; hh++) {
 			for (int jj = 0; jj < kernely.cols; jj++) {
@@ -1239,7 +1271,9 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			}
 			//cout << "" << endl;
 		}
+		*/
 		
+		/*
 		//cout << "Print of IWTy " << endl;
 		for (int hh = 0; hh < IWTy.rows; hh++) {
 			for (int jj = 0; jj < IWTy.cols; jj++) {
@@ -1247,6 +1281,7 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			}
 			//cout << "" << endl;
 		}
+		*/
 		
 		// Concatenate vectors 
 		cout << "2D convolution obtained" << endl;
@@ -1259,8 +1294,9 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 		temp_IWTy = IWTy_new.reshape(0, IWTy.rows * IWTy.cols);
 		Mat didw;
 		hconcat(temp_IWTx, temp_IWTy, didw);
-		cout << "Matric concatenated" << endl;
+		//cout << "Matric concatenated" << endl;
 		
+		/*
 		cout << "Matrix didw" << endl;
 		for (int hh = 0; hh < didw.rows; hh++) {
 			for (int jj = 0; jj < didw.cols; jj++) {
@@ -1268,6 +1304,7 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			}
 			cout << "" << endl;
 		}
+		*/
 		
 		Mat didp = Mat::zeros(n * n, 6, CV_64FC1);
 		//cout << "Dimensions of didp = (" << didp.rows << "," << didp.cols << ")" << endl;
@@ -1287,6 +1324,8 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 				//waitKey(2000);
 			}
 		} 
+		
+		/*
 		cout << "Matrix didp" << endl;
 		for (int hh = 0; hh < didp.rows; hh++) {
 			for (int jj = 0; jj < didp.cols; jj++) {
@@ -1295,9 +1334,12 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			//cout << "" << endl;
 			//waitKey(500);
 		}
+		*/
 		
-		cout << "Hessian about to be calculated" << endl;
+		//cout << "Hessian about to be calculated" << endl;
 		Mat H = didp.t() * didp;
+		
+		/*
 		cout << "Hessian calculated " << endl;
 		cout << "Dimensions of hessian = (" << H.rows << "," << H.cols << ")" << endl;
 		for (int hh = 0; hh < H.rows; hh++) {
@@ -1307,12 +1349,14 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			cout << "" << endl;
 			//waitKey(500);
 		}
+		*/
 		Mat temp_delta_p = didp.t() * (i_R - i);
-		cout << "Delta_p calculated" << endl;
+		//cout << "Delta_p calculated" << endl;
 		
 		
 		Mat delta_p = H.inv() * (didp.t() * (i_R - i)); // Maybe problem with 
 		
+		/*
 		cout << "Delta_p done" << endl;
 		cout << "Dimensions of delta_p = (" << delta_p.rows << "," << delta_p.cols << ")" << endl;
 		for (int hh = 0; hh < delta_p.rows; hh++) {
@@ -1322,11 +1366,39 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			cout << "" << endl;
 			//waitKey(500);
 		}
-		Mat delta_p_temp = delta_p.reshape(0, 2);
+		*/
+		Mat delta_p_temp = delta_p.reshape(0, 3);
+		/*
+		for (int hh = 0; hh < delta_p_temp.rows; hh++) {
+			for (int jj = 0; jj < delta_p_temp.cols; jj++) {
+				cout << delta_p_temp.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+			//waitKey(500);
+		}
+		*/
+		/*
 		cout << "Reshape done" << endl;
 		cout << "Dimensions of delta_p_temp = (" << delta_p_temp.rows << "," << delta_p_temp.cols << ")" << endl;
+		*/
+		
 		delta_p_temp = delta_p_temp.t();
+		
+		/*
+		cout << "Transpose of delta_p_temp" << endl;
+		for (int hh = 0; hh < delta_p_temp.rows; hh++) {
+			for (int jj = 0; jj < delta_p_temp.cols; jj++) {
+				cout << delta_p_temp.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+			//waitKey(500);
+		}
+		cout << "Dimensions of W = (" << W.rows << "," << W.cols << ")" << endl;
+		*/
+		
+		
 		W = W + delta_p_temp; // 2 = W.rows
+		/*
 		cout << "Matrix W " << endl;
 		for (int hh = 0; hh < W.rows; hh++) {
 			for (int jj = 0; jj < W.cols; jj++) {
@@ -1335,18 +1407,42 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 			cout << "" << endl;
 			//waitKey(500);
 		}
+		*/
 		 
 		
-		cout << "delta_p and W obtaiend" << endl;
-		Mat temp_W = W.reshape(W.rows * W.cols, 1);
-		waitKey(3000);
+		//cout << "delta_p and W obtaiend" << endl;
+		W = W.t();
+		Mat temp_W = W.reshape(0, W.rows * W.cols);
 		
-		cout << "p_hist" << endl;
-		for (int i = 0; i < 6; i++) {
-			p_hist.at<double>(i, iter+1) =  temp_W.at<double>(i,0);
-			cout << p_hist.at<double>(i, iter+1);
+		/*
+		for (int hh = 0; hh < temp_W.rows; hh++) {
+			for (int jj = 0; jj < temp_W.cols; jj++) {
+				cout << temp_W.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+			//waitKey(500);
 		}
-		waitKey(0);
+		waitKey(2000);
+		*/
+		
+		//cout << "p_hist" << endl;
+		
+		for (int hh = 0; hh < 6; hh++) {
+			p_hist.at<double>(hh, iter+1) =  temp_W.at<double>(hh,0);
+			cout << "Value = " << p_hist.at<double>(hh, iter+1) << endl;
+		}
+		cout << "Done with iteration " << endl;
+		
+		// Transpose W to get the right shape 
+		cout << "Transpose of W " << endl;
+		W = W.t();
+		for (int hh = 0; hh < W.rows; hh++) {
+			for (int jj = 0; jj < W.cols; jj++) {
+				cout << W.at<double>(hh,jj) << ", ";
+			}
+			cout << "" << endl;
+			//waitKey(500);
+		}
 		
 	}
 	cout << "W is " << endl;
