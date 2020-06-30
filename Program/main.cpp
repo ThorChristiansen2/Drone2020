@@ -22,6 +22,8 @@
  * Things to look into: 
  * Is the transpose of the intrinsic camera matrix K correct?
  * What is the unit of the 3D points? Is it cm? meters? other units?
+ * Implementation of ransac  in pose estimation in processFrame function 
+ * Resize the images with a factor of 4 and also the resize the keypoints with a factor of 4 before processFrame to enhance speed
  * ########################
 */
 
@@ -195,27 +197,14 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Si_1.Pi = points2Mat;
 	
 	
-	
-	/*
-	cout << "Points as vectors: Points1" << endl;
-	for (int i = 0; i < N; i++) {
-		cout << points1[i] << ", ";
-	}
-	cout << "" << endl;
-	cout << "Points as vectors: Points2" << endl;
-	for (int i = 0; i < N; i++) {
-		cout << points2[i] << ", ";
-	}
-	cout << "" << endl;
-	*/
-	
 	// Find fudamental matrix 
-	//Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99, 5000);
+	// Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99, 5000);
 	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99); // 1 should be changed ot 3 
 	
 	// Estimate Essential Matrix
 	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);	
 	
+	// Find position and rotation from images
 	//Mat essential_matrix = (Mat_<double>(3,3) << -0.10579, -0.37558, -0.5162047, 4.39583, 0.25655, 19.99309, 0.4294123, -20.32203997, 0.023287939);
 	// Find the rotation and translation assuming the first frame is taken with the drone on the ground 
 	Mat transformation_matrix = findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
@@ -227,21 +216,12 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	}
 	
 	// Update State with regards to 3D (triangulated points)
+	// Triangulate initial point cloud
 	Mat M1 = K * (Mat_<double>(3,4) << 1,0,0,0, 0,1,0,0, 0,0,1,0);
 	Mat M2 = K * transformation_matrix;
 	Si_1.Xi = linearTriangulation(points1Mat, points2Mat, M1, M2 );
 	
-	
-	// Triangulate initial point cloud
-
-	
-	// Find position and rotation from images
-	
-	
-	
-	// Should return pose of drone
-	//return 0;
-	//return transformation_matrix;
+	// return state of drone as well as transformation_matrix;
 	return make_tuple(Si_1, transformation_matrix);
 }
 
@@ -265,9 +245,84 @@ Mat calibrate_matrix(Mat transformation_matrix) {
  * Previous Image Ii-1 (I_{i-1})
  * Previous State Si_1, which is a struct
  */
+tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K, Mat prev_transformation_matrix) {
 
-tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1) {
-	state Si = Si_1;
+	// new state
+	state Si;
+
+	// Variables 
+	int r_T = 15; 
+	int num_iters = 50; 
+	double lambda = 0.1;
+	int nr_keep = 0;
+	Mat kpold = Mat::zeros(3, Si_1.k, CV_64FC1);
+	Mat delta_keypoint;
+	
+	// Track every keypoint - Maybe utilize parallelization 
+	Mat x_T = Mat::zeros(1, 2, CV_64FC1); // Interest point
+	for (int i = 0; i < Si_1.k; i++) {
+		x_T.at<double>(0,0) = Si_1.Pi.at<double>(0,i);
+		x_T.at<double>(0,1) = Si_1.Pi.at<double>(1,i);
+		cout << "x_T is = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ")" << endl;
+		delta_keypoint = KLT::trackKLTrobustly(Ii_1, Ii, x_T, r_T, num_iters, lambda);
+		
+		for (int k = 0; k < delta_keypoint.rows; k++) {
+			cout << "dkp = " << delta_keypoint.at<double>(k,0) << endl;
+		}
+		
+		if (delta_keypoint.at<double>(2,0) == 1) {
+			nr_keep++;
+			kpold.at<double>(2,i) = 1; // The keypoint is reliably matched
+		}
+		kpold.at<double>(0,i) = delta_keypoint.at<double>(0,0) + Si_1.Pi.at<double>(0,i);
+		kpold.at<double>(1,i) = delta_keypoint.at<double>(1,0) + Si_1.Pi.at<double>(1,i);
+		cout << "dkp = (" << kpold.at<double>(0,i) << "," <<  kpold.at<double>(1,i) << ")" << endl;
+	}
+	Mat keypoints = Mat::zeros(2, nr_keep, CV_64FC1);
+	
+	// To find the transformation matrix 
+	vector<Point2f> points1( nr_keep );
+	vector<Point2f> points2( nr_keep );
+	
+	cout << "No abort until here" << endl;
+	
+	nr_keep = 0; 
+	for (int j = 0; j < Si_1.k; j++) {
+		if (kpold.at<double>(2,j) == 1) {
+			keypoints.at<double>(0, nr_keep) = kpold.at<double>(0, j);
+			keypoints.at<double>(1, nr_keep) = kpold.at<double>(1, j);
+			
+			points1[nr_keep] = Point2f(Si_1.Pi.at<double>(0,j) , Si_1.Pi.at<double>(1,j));
+			points2[nr_keep] = Point2f(keypoints.at<double>(0, nr_keep) , keypoints.at<double>(1, nr_keep)); // Maybe 1 and 0 should be switched?
+			
+			cout << "Print of points1 " << endl;
+			cout << "(" << points1[nr_keep] << ")" << endl;
+			cout << "Print of points2 " << endl;
+			cout << "(" << points2[nr_keep] << ")" << endl;
+			
+			nr_keep++;
+		}
+	}
+	
+	// Update keypoints in state 
+	Si.k = keypoints.cols;
+	Si.Pi = keypoints; 
+	
+	cout << "2 No abort until here" << endl;
+	
+	/*
+	// Find transformation matrix 
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
+	
+	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);	
+	
+	Mat transformation_matrix = findRotationAndTranslation(essential_matrix, K, Si_1.Pi, Si.Pi);
+	
+	// Triangulate new points
+	Mat M1 = K * prev_transformation_matrix;
+	Mat M2 = K * transformation_matrix;
+	Si.Xi = linearTriangulation(Si_1.Pi, Si.Pi, M1, M2 );
+	*/
 	Mat transformation_matrix;
 	
 	return make_tuple(Si, transformation_matrix); 
@@ -298,7 +353,6 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	
-	
 	cv::Mat I_i0, I_i1, image;
 	
 	int nCount=getParamVal ( "-nframes",argc,argv, 100 );
@@ -327,13 +381,17 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Si_1.k = 0;
+	
+	/*
 	cout << "State Si_1 before initializaiton" << endl;
 	cout << "Number of keypoints k = " << Si_1.k << endl;
+	*/
 	
 	//Mat transformation_matrix = initializaiton(I_i0, I_i1, K, Si_1);
 	Mat transformation_matrix;
-	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	
+	/*
 	cout << "State Si_1" << endl;
 	cout << "Number of keypoints k = " << Si_1.k << endl;
 	cout << "Matrix P (attribute of S) = " << Si_1.Pi.rows << "," << Si_1.Pi.cols << endl;
@@ -342,24 +400,55 @@ int main ( int argc,char **argv ) {
 	for (int i = 0; i < 5; i++) {
 		cout << Si_1.Xi.at<double>(0,i) << "," << Si_1.Xi.at<double>(1,i) << ","  << Si_1.Xi.at<double>(2,i) << ","  << Si_1.Xi.at<double>(3,i) << endl;
 	}
+	*/
 	
 	Mat Ii_1 = I_i1;
 	Mat Ii;
 	
 	// Continuous VO operation
 	state Si;
-	while (true) {
+	
+	// Test of Continuous VO operation 
+	Mat I_R = imread("000000.png", IMREAD_UNCHANGED);
+	I_R.convertTo(I_R, CV_64FC1);
+	Mat I = imread("000001.png", IMREAD_UNCHANGED);
+	I.convertTo(I, CV_64FC1);
+	
+	Si_1.k = 3;
+	Mat keypoints = Mat::zeros(2, 3, CV_64FC1);
+	keypoints.at<double>(0,0) = 784;
+	keypoints.at<double>(1,0) = 100;
+	keypoints.at<double>(0,1) = 389;
+	keypoints.at<double>(1,1) = 162;
+	keypoints.at<double>(0,2) = 399;
+	keypoints.at<double>(1,2) = 158;
+	
+	Si_1.Pi = keypoints;
+	
+	tie(Si, transformation_matrix) = processFrame(I, I_R, Si_1, K, transformation_matrix);
+	
+	cout << "Print of State Si" << endl;
+	for (int i = 0; i < Si.k; i++) {
+		cout << "(" << Si.Pi.at<double>(0,i) << "," << Si.Pi.at<double>(1,i) << ")" << endl;
+	}
+	
+	
+	/*
+	bool continueVOoperation = true;
+	while (continueVOoperation) {
 		
 		// Take new image 
 		Camera.grab();
 		Camera.retrieve( Ii );
 		
-		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1);
+		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K, transformation_matrix);
 		
 		// Resert old values 
 		Ii_1 = Ii;
 		Si_1 = Si;
+		
 	}
+	*/
 	
 	
 	
