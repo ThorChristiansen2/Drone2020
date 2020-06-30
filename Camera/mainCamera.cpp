@@ -292,7 +292,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	if (display == false) {
 		int nr_corners = 0;
 		
-		int keypoints_limit = 200; // Change to 200
+		int keypoints_limit = 70; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;
@@ -704,8 +704,10 @@ Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2) {
 }
 
 Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K) {
+		
+	Mat M = K.t();
 	
-	Mat essential_matrix = K.t() * fundamental_matrix * K; // Check if the transpose is the right one?
+	Mat essential_matrix = M * fundamental_matrix * K; // Check if the transpose is the right one?
 	
 	return essential_matrix;
 }
@@ -720,6 +722,23 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 	
 	// Translation vector t 
 	
+	cout << "U is " << endl;
+	for (int r = 0; r < U.rows; r++) {
+		for (int c = 0; c < U.cols; c++) {
+			cout << U.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	
+	cout << "VT is " << endl;
+	for (int r = 0; r < VT.rows; r++) {
+		for (int c = 0; c < VT.cols; c++) {
+			cout << VT.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
 	// Find the two possible rotations 
 	Vector t(3);
 	for (int i = 0; i < 3; i++) {
@@ -727,7 +746,13 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 	}
 	
 	Mat W = (Mat_<double>(3,3) << 0, -1, 0, 1, 0, 0, 0, 0, 1);
-	
+	cout << "W is " << endl;
+	for (int r = 0; r < W.rows; r++) {
+		for (int c = 0; c < W.cols; c++) {
+			cout << W.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
 	/*
 	cout << "U" << endl;
 	for (int i = 0; i < U.rows; i++) {
@@ -755,8 +780,24 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 	}
 	*/
 	
-	Mat R1 = U * W * VT.t();
-	Mat R2 = U * W.t() * VT.t();
+	Mat R1 = U * W * VT;
+	cout << "R1 is " << endl;
+	for (int r = 0; r < R1.rows; r++) {
+		for (int c = 0; c < R1.cols; c++) {
+			cout << R1.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	Mat R2 = U * W.t() * VT;
+	
+	cout << "R2 is " << endl;
+	for (int r = 0; r < R2.rows; r++) {
+		for (int c = 0; c < R2.cols; c++) {
+			cout << R2.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
 	
 	if (determinant(R1) < 0) {
 		R1 = -1*R1;
