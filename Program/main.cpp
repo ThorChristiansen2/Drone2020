@@ -342,14 +342,16 @@ int main ( int argc,char **argv ) {
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
-	//imshow("Frame I_i0", I_i0);
+	imshow("Frame I_i0 displayed", I_i0);
 	
-	//waitKey(0);	// Ensures it is sufficiently far away from initial frame
+	waitKey(0);	// Ensures it is sufficiently far away from initial frame
 	// First frame 1 
+	
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
-	//waitKey(0);
+	imshow("Frame I_i1 displayed", I_i1);
+	waitKey(0);
 	
 	/*
 	// Test of function findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
