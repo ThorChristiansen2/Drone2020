@@ -20,6 +20,7 @@
  * Project: Bachelor project 2020
  * 
  * Problems: 
+ * Lær hvordan man SSH'er ind på raspberry pi'en
  * What is the unit of the 3D points? Is it cm? meters? other units?
  * Maybe you fuck up when you try to use KLT in the initialization 
  * See MatLab code week 3 for an efficient way to find Harris Corners 

@@ -1158,7 +1158,192 @@ Mat KLT::trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, 
 	return delta_keypoint;
 }
 
-// ############################# ransacLocalizaiton ############################# 
+// ############################# ransacLocalizaiton #############################
+Mat crossProduct(Mat vector1, Mat vector2) {
+	Mat product = Mat::zeros(3, 1, CV_64FC1);
+	double a1, a2, a3, b1, b2, b3;
+	a1 = vector1.at<double>(0,0);
+	a2 = vector1.at<double>(1,0);
+	a3 = vector1.at<double>(2,0);
+	b1 = vector2.at<double>(0,0);
+	b2 = vector2.at<double>(1,0);
+	b3 = vector2.at<double>(2,0);
+	
+	product.at<double>(0,0) = a2 * b3 - a3 * b2;
+	product.at<double>(1,0) = a3 * b1 - a1 * b3;
+	product.at<double>(2,0) = a1 * b2 - a2 * b1;
+	
+	return product;
+}
+
+ 
+Mat p3p(Mat worldPoints, Mat imageVectors) {
+	
+	/* Copyright (c) 2011, Laurent Kneip, ETH Zürich 
+	 * 
+	 * Insert list of conditions 
+	 * 
+	 */
+	
+	Mat poses = Mat::zeros(3, 16, CV_64FC1);
+	
+	Mat P1 = Mat::zeros(3, 1, CV_64FC1);
+	Mat P2 = Mat::zeros(3, 1, CV_64FC1); 
+	Mat P3 = Mat::zeros(3, 1, CV_64FC1);
+	// Assign values to P1, P2 and P3 
+	for (int i = 0; i < 3; i++) {
+		P1.at<double>(i,0) = worldPoints.at<double>(i,0);
+		P2.at<double>(i,0) = worldPoints.at<double>(i,1);
+		P3.at<double>(i,0) = worldPoints.at<double>(i,2);
+	}
+	
+	Mat vector1 = P2 - P1;
+	Mat vector2 = P3 - P1;
+	
+	Mat crossV = crossProduct(vector1, vector2);
+	if (sqrt(pow(crossV.at<double>(0,0),2.0) + ow(crossV.at<double>(1,0),2.0) + ow(crossV.at<double>(2,0),2.0)) == 0) {
+		return;
+	}
+	
+	Mat f1 = Mat::zeros(3, 1, CV_64FC1);
+	Mat f2 = Mat::zeros(3, 1, CV_64FC1); 
+	Mat f3 = Mat::zeros(3, 1, CV_64FC1);
+	// Assign values to f1, f2 and f3
+	for (int i = 0; i < 3; i++) {
+		f1.at<double>(i,0) = imageVectors.at<double>(i,0);
+		f2.at<double>(i,0) = imageVectors.at<double>(i,1);
+		f3.at<double>(i,0) = imageVectors.at<double>(i,2);
+	}
+	
+	Mat e1 = f1; 
+	Mat e3 = crossProduct(f1,f2);
+	double norm_e3 = sqrt(pow(e3.at<double>(0,0),2.0) + pow(e3.at<double>(1,0),2.0) + pow(e3.at<double>(2,0),2.0));
+	e3.at<double>(0,0) = e3.at<double>(0,0) / norm_e3;
+	e3.at<double>(1,0) = e3.at<double>(1,0) / norm_e3;
+	e3.at<double>(2,0) = e3.at<double>(2,0) / norm_e3;
+	Mat e2 = crossProduct(e3, e1);
+	
+	Mat T = zeros(3, 3, CV_64FC1);
+	// Assign values to matrix T
+	T.at<double>(0,0) = e1.at<double>(0,0);	
+	T.at<double>(0,1) = e1.at<double>(1,0);	
+	T.at<double>(0,2) = e1.at<double>(2,0);	
+	T.at<double>(1,0) = e2.at<double>(0,0);	
+	T.at<double>(1,1) = e2.at<double>(1,0);	
+	T.at<double>(1,2) = e2.at<double>(2,0);	
+	T.at<double>(2,0) = e3.at<double>(0,0);	
+	T.at<double>(2,1) = e3.at<double>(1,0);	
+	T.at<double>(2,2) = e3.at<double>(2,0);	
+	
+	f3 = T * f3;
+	
+	// To reinforce that f3[2] > 0 for having theta in [0;pi]
+	if (f3.at<double>(2,0) > 0) {
+
+		// Assign values to f1, f2 and f3  
+		for (int i = 0; i < 3; i++) {
+			f1.at<double>(i,0) = imageVectors.at<double>(i,1);
+			f2.at<double>(i,0) = imageVectors.at<double>(i,0);
+			f3.at<double>(i,0) = imageVectors.at<double>(i,2);
+		}
+		
+		Mat e1 = f1; 
+		Mat e3 = crossProduct(f1,f2);
+		double norm_e3 = sqrt(pow(e3.at<double>(0,0),2.0) + pow(e3.at<double>(1,0),2.0) + pow(e3.at<double>(2,0),2.0));
+		e3.at<double>(0,0) = e3.at<double>(0,0) / norm_e3;
+		e3.at<double>(1,0) = e3.at<double>(1,0) / norm_e3;
+		e3.at<double>(2,0) = e3.at<double>(2,0) / norm_e3;
+		Mat e2 = crossProduct(e3, e1);
+		
+		Mat T = zeros(3, 3, CV_64FC1);
+		// Assign values to matrix T
+		T.at<double>(0,0) = e1.at<double>(0,0);	
+		T.at<double>(0,1) = e1.at<double>(1,0);	
+		T.at<double>(0,2) = e1.at<double>(2,0);	
+		T.at<double>(1,0) = e2.at<double>(0,0);	
+		T.at<double>(1,1) = e2.at<double>(1,0);	
+		T.at<double>(1,2) = e2.at<double>(2,0);	
+		T.at<double>(2,0) = e3.at<double>(0,0);	
+		T.at<double>(2,1) = e3.at<double>(1,0);	
+		T.at<double>(2,2) = e3.at<double>(2,0);	
+		
+		f3 = T * f3;
+		
+		// Reassign values to P1, P2 and P3 
+		for (int i = 0; i < 3; i++) {
+			P1.at<double>(i,0) = worldPoints.at<double>(i,1);
+			P2.at<double>(i,0) = worldPoints.at<double>(i,0);
+			P3.at<double>(i,0) = worldPoints.at<double>(i,2);
+		}
+		
+	}
+	
+	Mat n1 = P2 - P1; 
+	double norm_n1 = sqrt(pow(n1.at<double>(0,0),2.0) + pow(n1.at<double>(1,0),2.0) + pow(n1.at<double>(2,0),2.0)); 
+	n1.at<double>(0,0) = n1.at<double>(0,0) / norm_n1;
+	n1.at<double>(1,0) = n1.at<double>(1,0) / norm_n1;
+	n1.at<double>(2,0) = n1.at<double>(2,0) / norm_n1;
+	Mat n3 = crossProduct(n1, (P3-P1));
+	double norm_n3 = sqrt(pow(n3.at<double>(0,0),2.0) + pow(n3.at<double>(1,0),2.0) + pow(n3.at<double>(2,0),2.0)); 
+	n3.at<double>(0,0) = n3.at<double>(0,0) / norm_n3;
+	n3.at<double>(1,0) = n3.at<double>(1,0) / norm_n3;
+	n3.at<double>(2,0) = n3.at<double>(2,0) / norm_n3; 
+	Mat n2 = crossProduct(n3, n1);
+	
+	// Matrix N 
+	Mat N = Mat::zeros(3, 3, CV_64FC1);
+	N.at<double>(0,0) = n1.at<double>(0,0);	
+	N.at<double>(0,1) = n1.at<double>(1,0);	
+	N.at<double>(0,2) = n1.at<double>(2,0);	
+	N.at<double>(1,0) = n2.at<double>(0,0);	
+	N.at<double>(1,1) = n2.at<double>(1,0);	
+	N.at<double>(1,2) = n2.at<double>(2,0);	
+	N.at<double>(2,0) = n3.at<double>(0,0);	
+	N.at<double>(2,1) = n3.at<double>(1,0);	
+	N.at<double>(2,2) = n3.at<double>(2,0);	
+	
+	
+	// Extraction of known parameters 
+	P3 = N * (P3 - P1);
+	
+	Mat v = P2 - P1;
+	double d_12 = sqrt(pow(v.at<double>(0,0),2.0) + pow(v.at<double>(1,0),2.0) + pow(v.at<double>(2,0),2.0));
+	double f_1 = f3.at<double>(0,0) / f3.at<double>(2,0);
+	double f_2 = f3.at<double>(1,0) / f3.at<double>(2.0);
+	double p_1 = P3.at<double>(0,0);
+	double p_2 = P3.at<double>(1,0);
+	
+	double cos_beta = f1.t() * f2; // Check this calculation. There might be a mistake. 
+	double b = (1/(1 - pow(cos_beta,2.0)) - 1;
+	
+	if (cos_beta < 0) {
+		b = -sqrt(b);
+	}
+	else {
+		b = sqrt(b);
+	}
+	
+	double f_1_pw2 = pow(f_1, 2.0);
+	double f_2_pw2 = pow(f_2, 2.0);
+	double p_1_pw2 = pow(p_1, 2.0);
+	double p_1_pw3 = p_1_pw2 * p_1;
+	double p_1_pw4 = p_1_pw3 * p_1;
+	double p_2_pw2 = pow(p_2, 2.0);
+	double p_2_pw3 = p_2_pw2 * p_2;
+	double p_2_pw4 = p_2_pw3 * p_2;
+	double d_12_pw2 = pow(d_12, 2.0);
+	double b_pw2 =  po2(b, 2.0);
+	
+	// Factors of the 4th degree polynomial
+	double factor_4 = -f_2_pw2 * p_2_pw4 - p_2_pw4 * f_1_pw2 - p_2_pw4;
+	
+	double factor_3 = 2*p_2_pw3*d_12*b 
+	
+	
+}
+
+
+
 tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_landmarks, Mat K) {
 	// Transformation matrix 
 	Mat transformation_matrix = Mat::zeros(3, 4, CV_64FC1);
@@ -1217,8 +1402,14 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		Mat normalized_bearings = K.inv() * keypoint_sample;
 		
 		for (int ii = 0; ii < 3; ii++) {
-			double vector_norm = sqrt(pow(keypoint_sample.at<double>(0,ii),2.0) + pow(keypoint_sample.at<double>(1,ii),2.0) + 1.0);
+			double vector_norm = sqrt(pow(normalized_bearings.at<double>(0,ii),2.0) + pow(normalized_bearings.at<double>(1,ii),2.0) + pow(normalized_bearings.at<double>(2,ii),2.0));
+			normalized_bearings.at<double>(0,ii) = normalized_bearings.at<double>(0,ii)/vector_norm;
+			normalized_bearings.at<double>(1,ii) = normalized_bearings.at<double>(1,ii)/vector_norm;
+			normalized_bearings.at<double>(2,ii) = normalized_bearings.at<double>(2,ii)/vector_norm;
+		
 		}
+		
+		Mat poses = p3p(landmark_sample, normalized_bearings);
 		
 		
 	}	
