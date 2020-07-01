@@ -2,7 +2,6 @@
 #include <say-hello/hello.hpp>
 #include "mainCamera.hpp"
 #include <unistd.h>
-#include <tuple> 
 
 // Include directories for raspicam
 #include <ctime>
@@ -23,6 +22,7 @@
  * Problems: 
  * What is the unit of the 3D points? Is it cm? meters? other units?
  * Maybe you fuck up when you try to use KLT in the initialization 
+ * See MatLab code week 3 for an efficient way to find Harris Corners 
  * When using KLT: Remember to use gray-scale images and resize the images with a factor of 4 
  * Implementation of ransac  in pose estimation in processFrame function 
  * Resize the images with a factor of 4 and also the resize the keypoints with a factor of 4 before processFrame to enhance speed
@@ -103,9 +103,10 @@ void drawCorners(Mat img, Matrix keypoints, const char* frame_name) {
 
 // ####################### VO Initialization Pipeline #######################
 tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
+	cout << "Begin initialization" << endl;
 	
 	// Transform color images to gray images
-	cv::Mat I_i0_gray, I_i1_gray;
+	Mat I_i0_gray, I_i1_gray;
 	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
 	cvtColor(I_i1, I_i1_gray, COLOR_BGR2GRAY );
 	
@@ -313,7 +314,10 @@ Mat calibrate_matrix(Mat transformation_matrix) {
  * Previous Image Ii-1 (I_{i-1})
  * Previous State Si_1, which is a struct
  */
-tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K, Mat prev_transformation_matrix) {
+tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
+
+	// Turn the images into grayscale 
+
 
 	// new state
 	state Si;
@@ -346,39 +350,39 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K, Mat prev_tra
 		kpold.at<double>(1,i) = delta_keypoint.at<double>(1,0) + Si_1.Pi.at<double>(1,i);
 
 	}
-	Mat keypoints = Mat::zeros(2, nr_keep, CV_64FC1);
+	//Mat keypoints_i_1 = Mat::zeros(2, nr_keep, CV_64FC1);
+	Mat keypoints_i = Mat::zeros(2, nr_keep, CV_64FC1);
 	
-	// To find the transformation matrix 
-	vector<Point2f> points1( nr_keep );
-	vector<Point2f> points2( nr_keep );
+	// corresponding landmarks 
+	Mat corresponding_landmarks = Mat::zeros(3, nr_keep, CV_64FC1);
 	
 	nr_keep = 0; 
 	for (int j = 0; j < Si_1.k; j++) {
 		if (kpold.at<double>(2,j) == 1) {
-			keypoints.at<double>(0, nr_keep) = kpold.at<double>(0, j);
-			keypoints.at<double>(1, nr_keep) = kpold.at<double>(1, j);
+			// Update matched keypoints 
+			keypoints_i.at<double>(0, nr_keep) = kpold.at<double>(0, j);
+			keypoints_i.at<double>(1, nr_keep) = kpold.at<double>(1, j);
 			
-			points1[nr_keep] = Point2f(Si_1.Pi.at<double>(0,j) , Si_1.Pi.at<double>(1,j));
-			points2[nr_keep] = Point2f(keypoints.at<double>(0, nr_keep) , keypoints.at<double>(1, nr_keep)); // Maybe 1 and 0 should be switched?
+			// Update landmarks 
+			corresponding_landmarks.at<double>(0, nr_keep) = Si_1.Xi.at<double>(0, j);
+			corresponding_landmarks.at<double>(1, nr_keep) = Si_1.Xi.at<double>(1, j);
+			corresponding_landmarks.at<double>(2, nr_keep) = Si_1.Xi.at<double>(2, j);
 			
 			nr_keep++;
 		}
 	}
-	
-	// Update keypoints in state 
-	Si.k = keypoints.cols;
-	Si.Pi = keypoints; 
-	
-	/*
-	// Find transformation matrix 
-	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99);
-	
-	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);	
-	
-	Mat transformation_matrix = findRotationAndTranslation(essential_matrix, K, Si_1.Pi, Si.Pi);
-	*/
+	cout << "Number of keypoints left = " << keypoints_i.cols << endl;
 	
 	// Delete landmarks for those points that were not matched 
+	
+	// Update keypoints in state 
+	Si.k = keypoints_i.cols;
+	Si.Pi = keypoints_i; 
+	Si.Xi = corresponding_landmarks;
+	
+	// Estimate the new pose using RANSAC and P3P algorithm 
+	Mat transformation_matrix, best_inlier_mask;
+	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(keypoints_i, corresponding_landmarks, K);
 	
 	
 	/*
@@ -387,8 +391,6 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K, Mat prev_tra
 	Mat M2 = K * transformation_matrix;
 	Si.Xi = linearTriangulation(Si_1.Pi, Si.Pi, M1, M2 );
 	*/
-	
-	Mat transformation_matrix;
 	
 	return make_tuple(Si, transformation_matrix); 
 }
@@ -542,7 +544,7 @@ int main ( int argc,char **argv ) {
 	
 	
 	
-	
+	// ############### VO initializaiton ###############
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Si_1.k = 0;
@@ -605,26 +607,55 @@ int main ( int argc,char **argv ) {
 	*/
 	
 	
-	/*
+	// ############### VO Continuous ###############
 	bool continueVOoperation = true;
 	bool pipelineBroke = false;
-	* bool output_T_ready = true;
+	bool output_T_ready = true;
+	
+	// Needed variables
+	state Si;
+	Mat Ii;
+	Mat Ii_1 = I_i1;
+	
+	// Debug variable
+	int stop = 0;
 	
 	while (continueVOoperation == true && pipelineBroke == false) {
+		cout << "Begin Continuous VO operation " << endl;
 		
 		// Take new image 
 		Camera.grab();
 		Camera.retrieve( Ii );
 		
-		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K, transformation_matrix);
+		imshow("New Frame", Ii);
+		waitKey(0);
+		
+		// Estimate pose 
+		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K);
+		cout << "Print of Transformation Matrix" << endl;
+		for (int r = 0; r < transformation_matrix.rows; r++) {
+			for (int c = 0; c < transformation_matrix.cols; c++) {
+				cout << transformation_matrix.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		output_T_ready = true;
+		
+		// Submit the transformation matrix. Then set the flag low. 
 		output_T_ready = false;
 		
 		// Resert old values 
 		Ii_1 = Ii;
 		Si_1 = Si;
 		
+		// Debug variable
+		stop++;
+		if (stop > 10) {
+			break;
+		}
+		
 	}
-	*/
+	
 	
 	
 	

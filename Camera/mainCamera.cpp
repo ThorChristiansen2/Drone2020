@@ -204,28 +204,6 @@ void nonMaximumSuppression(Mat img, int y1, int x1, int y2, int x2) {
 	img(region) = 0;
 }
 
-// Function to initialize GaussWindow. 
-Mat gaussWindow(int filter_size, float sigma) {
-	
-	float size = filter_size;
-	float norm_const = 246.7938;
-	
-	Mat g = Mat::zeros(Size(filter_size,filter_size),CV_64FC1);
-
-	float x0 = (size+1)/2;
-	float y0 = (size+1)/2;
-	for (float i = -(size-1)/2; i <= (size-1)/2; i++) {
-		for (float j = -(size-1)/2; j <= (size-1)/2; j++) {
-			float x = i + x0;
-			float y = j + y0;
-			int x_coor = x-1;
-			int y_coor = y-1;
-			g.at<double>(y_coor,x_coor) = (exp(-( (x-x0)*(x-x0) + (y-y0)*(y-y0))/(2*sigma*sigma)))/norm_const;
-		}
-	}
-	
-	return g;
-}
 
 
 // Heap operations
@@ -261,7 +239,7 @@ Matrix extractMaxHeap(Matrix Corners, int n) {
 	return Corners;
 }
 
-
+// ############################# Harris ############################# 
 Matrix Harris::corner(Mat src, Mat src_gray) {
 	
 	// Define variables
@@ -292,7 +270,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	if (display == false) {
 		int nr_corners = 0;
 		
-		int keypoints_limit = 70; // Change to 200
+		int keypoints_limit = 150; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;
@@ -405,6 +383,31 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	Matrix emptyArray(1,3);	
 	return emptyArray;
 }
+
+// ############################# SIFT ############################# 
+// Function to initialize GaussWindow. 
+Mat gaussWindow(int filter_size, float sigma) {
+	
+	float size = filter_size;
+	float norm_const = 246.7938;
+	
+	Mat g = Mat::zeros(Size(filter_size,filter_size),CV_64FC1);
+
+	float x0 = (size+1)/2;
+	float y0 = (size+1)/2;
+	for (float i = -(size-1)/2; i <= (size-1)/2; i++) {
+		for (float j = -(size-1)/2; j <= (size-1)/2; j++) {
+			float x = i + x0;
+			float y = j + y0;
+			int x_coor = x-1;
+			int y_coor = y-1;
+			g.at<double>(y_coor,x_coor) = (exp(-( (x-x0)*(x-x0) + (y-y0)*(y-y0))/(2*sigma*sigma)))/norm_const;
+		}
+	}
+	
+	return g;
+}
+
 
 // Part of the SIFT function - Rearrange the histogram, so the max representation is the first element. 
 Matrix circularShift(Matrix histogram) {
@@ -703,6 +706,8 @@ Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2) {
 	return P;
 }
 
+
+// ############################# Eight Point Algorithm ############################# 
 Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K) {
 		
 	Mat M = K.t();
@@ -872,6 +877,9 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 	return transformation_matrix;
 }
 
+
+
+// ############################# KLT ############################# 
 Mat warpImage(Mat I_R, Mat W) {
 	Mat I = Mat::zeros(I_R.rows, I_R.cols, CV_64FC1);
 	
@@ -1150,7 +1158,78 @@ Mat KLT::trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, 
 	return delta_keypoint;
 }
 
-
-
+// ############################# ransacLocalizaiton ############################# 
+tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_landmarks, Mat K) {
+	// Transformation matrix 
+	Mat transformation_matrix = Mat::zeros(3, 4, CV_64FC1);
+	
+	// Method parameter
+	bool adaptive_ransac = false;
+	
+	// Other parameters 
+	double num_iterations;
+	int pixel_tolerance = 10; 
+	int k = 3;
+	
+	if (adaptive_ransac) {
+		num_iterations = 1000;
+	}
+	else {
+		num_iterations = INFINITY;
+	}
+	
+	// Initialize RANSAC
+	Mat best_inlier_mask = Mat::zeros(1, keypoints_i.cols, CV_64FC1);
+	// Switch from (row, col) to (u, v)
+	Mat matched_query_keypoints = Mat::zeros(2, keypoints_i.cols, CV_64FC1);
+	for (int i = 0; i < keypoints_i.cols; i++) {
+		matched_query_keypoints.at<double>(0,i) = keypoints_i.at<double>(1,i);
+		matched_query_keypoints.at<double>(1,i) = keypoints_i.at<double>(0,i);
+	}
+	Mat max_num_inliers_history = Mat::zeros(50, 1, CV_64FC1); // Should probably be changed
+	Mat num_iteration_history = Mat::zeros(50, 1, CV_64FC1); // Should probably be changed to 
+	int max_num_inliers 0;
+	
+	// RANSAC
+	int i = 0;
+	
+	// Needed variables 
+	Mat landmark_sample = Mat::zeros(3, k, CV_64FC1);
+	Mat keypoint_sample = Mat::ones(3, k, CV_64FC1); // To avoid having to set last row to 1's afterwards
+	
+	while ( num_iterations > i ) {
+		int random_nums[corresponding_landmarks.cols];
+		for (int mm = 0; mm < corresponding_landmarks.cols; m++) {
+			random_nums[mm] = mm;
+		}
+		random_shuffle(random_nums, random_nums + corresponding_landmarks.cols);
+		for (int mm = 0; mm < k;  mm++) {
+			// Landmark sample 
+			landmark_sample.at<double>(0,mm) = corresponding_landmarks.at<double>(0, random_nums[mm]);
+			landmark_sample.at<double>(1,mm) = corresponding_landmarks.at<double>(1, random_nums[mm]);
+			landmark_sample.at<double>(2,mm) = corresponding_landmarks.at<double>(2, random_nums[mm]);
+			
+			// Keypoint sample 
+			keypoint_sample.at<double>(0,mm) = matched_query_keypoints.at<double>(0, random_nums[mm]);
+			keypoint_sample.at<double>(1,mm) = matched_query_keypoints.at<double>(1, random_nums[mm]);
+		}
+		
+		Mat normalized_bearings = K.inv() * keypoint_sample;
+		
+		for (int ii = 0; ii < 3; ii++) {
+			double vector_norm = sqrt(pow(keypoint_sample.at<double>(0,ii),2.0) + pow(keypoint_sample.at<double>(1,ii),2.0) + 1.0);
+		}
+		
+		
+	}	
+	
+	
+	
+	
+	
+	
+	
+	return make_tuple(transformation_matrix, best_inlier_mask);
+}
 
 

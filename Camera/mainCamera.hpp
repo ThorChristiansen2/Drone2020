@@ -13,8 +13,10 @@
 // Other libaries
 #include "Matrix.h"
 #include <math.h>
+#include <tuple> 
 
 using namespace cv;
+
 //using namespace Numeric_lib;
 using Matrix = Numeric_lib::Matrix<double,2>;
 using Vector = Numeric_lib::Matrix<double,1>;
@@ -50,6 +52,10 @@ namespace KLT {
 	Mat trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, double lambda);
 }
 
+namespace Localize {
+	std::tuple<Mat, Mat> ransacLocalization(Mat keypoints_i, Mat corresponding_landmarks, Mat K);
+}
+
 
 // Estimate position of camera 
 Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2);
@@ -58,9 +64,9 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 
 
 // For KLT
-Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters);
-Mat getSimWarp(double dx, double dy, double alpha_deg, double lambda);
-Mat warpImage(Mat I_R, Mat W);
+//Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters);
+//Mat getSimWarp(double dx, double dy, double alpha_deg, double lambda);
+//Mat warpImage(Mat I_R, Mat W);
 
 // Helper funcitons
 void MatType( Mat inputMat );

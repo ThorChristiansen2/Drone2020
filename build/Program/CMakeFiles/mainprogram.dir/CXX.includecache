@@ -31,6 +31,8 @@ Matrix.h
 ../Camera/Matrix.h
 math.h
 -
+tuple
+-
 
 ../libfiles/src/say-hello/hello.hpp
 
@@ -42,8 +44,6 @@ say-hello/hello.hpp
 mainCamera.hpp
 /home/pi/GitHub/Drone2020/Program/mainCamera.hpp
 unistd.h
--
-tuple
 -
 ctime
 -
