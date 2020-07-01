@@ -22,6 +22,8 @@
  * 
  * Problems: 
  * What is the unit of the 3D points? Is it cm? meters? other units?
+ * Maybe you fuck up when you try to use KLT in the initialization 
+ * When using KLT: Remember to use gray-scale images and resize the images with a factor of 4 
  * Implementation of ransac  in pose estimation in processFrame function 
  * Resize the images with a factor of 4 and also the resize the keypoints with a factor of 4 before processFrame to enhance speed
  * ########################
@@ -109,13 +111,73 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// Get Feature points
 	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray);
-	const char* text0 = "Detected corners *Thor frame I_i0";
-	drawCorners(I_i0, keypoints_I_i0, text0);
+	//const char* text0 = "Detected corners *Thor frame I_i0";
+	//drawCorners(I_i0, keypoints_I_i0, text0);
+	//waitKey(0);
+	
+	/*
+	// ######################### KLT ######################### 
+	cout << "KLT " << endl;
+	Mat kpold = Mat::zeros(3, keypoints_I_i0.dim1(), CV_64FC1);
+	
+	//cout << "Performing KLT " << endl;
+	int r_T = 15; 
+	int num_iters = 50; 
+	double lambda = 0.1;
+	int nr_keep = 0;
+	Mat delta_keypoint = Mat::zeros(3, 1, CV_64FC1);
+	Mat x_T = Mat::zeros(1, 2, CV_64FC1); // Interest point
+	for (int i = 0; i < keypoints_I_i0.dim1(); i++) {
+		//cout << "New iteration" << endl;
+		x_T.at<double>(0,0) = keypoints_I_i0(i,1);
+		x_T.at<double>(0,1) = keypoints_I_i0(i,2);
+		cout << "Coordinates x_T: (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ")" << endl;
+
+		delta_keypoint = KLT::trackKLTrobustly(I_i0_gray, I_i1_gray, x_T, r_T, num_iters, lambda);
+		
+		if (delta_keypoint.at<double>(2,0) == 1) {
+			nr_keep++;
+			kpold.at<double>(2,i) = 1; // The keypoint is reliably matched
+		}
+		cout << "Mistake " << endl;
+		cout << keypoints_I_i0(i,0);
+		kpold.at<double>(0,i) = delta_keypoint.at<double>(0,0) + keypoints_I_i0(i,1); // x 
+		kpold.at<double>(1,i) = delta_keypoint.at<double>(1,0) + keypoints_I_i0(i,2); // y
+		cout << "kpold: (" << kpold.at<double>(0,i) << "," << kpold.at<double>(1,i) << ") and keep = " << delta_keypoint.at<double>(2,0)  << endl;
+	}
+	cout << "Ready to draw corners" << endl;
+	for (int k = 0; k < kpold.cols; k++) {
+		double x = kpold.at<double>(0,k);
+		double y = kpold.at<double>(1,k);
+		circle (I_i1, Point(y,x), 5, Scalar(200), 2,8,0);
+	}
+	imshow("Corners with outliers", I_i1);
 	waitKey(0);
+	
+	//cout << "Done finding keypoints" << endl;
+	Mat keypoints_I_i1 = Mat::zeros(2, nr_keep, CV_64FC1);
+	Mat keypoints_I_i0_new = Mat::zeros(2, nr_keep, CV_64FC1);
+	
+	nr_keep = 0; 
+	for (int j = 0; j < keypoints_I_i1.cols; j++) {
+		if (kpold.at<double>(2,j) == 1) {
+			keypoints_I_i1.at<double>(0, nr_keep) = kpold.at<double>(0, j);
+			keypoints_I_i1.at<double>(1, nr_keep) = kpold.at<double>(1, j);
+			keypoints_I_i0_new.at<double>(0, nr_keep) = keypoints_I_i0(j,1);
+			keypoints_I_i0_new.at<double>(1, nr_keep) = keypoints_I_i0(j,2);
+			nr_keep++;
+		}
+	}
+	int N = nr_keep--;
+	*/
+	
+	
+	
+	// ######################### SIFT ######################### 
 	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray);
 	const char* text1 = "Detected corners frame I_i1";
-	drawCorners(I_i1, keypoints_I_i1,text1);
-	waitKey(0);
+	//drawCorners(I_i1, keypoints_I_i1,text1);
+	//waitKey(0);
 	//cout << "Done with finding keypoints " << endl;
 	// Find descriptors for Feature Points
 	
@@ -123,10 +185,10 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// Maybe use KLT instead 
 	
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
-	cout << "descriptors_I_i0 dimensions = (" << descriptors_I_i0.dim1() << "," << descriptors_I_i0.dim2() << ")" << endl;
+	//cout << "descriptors_I_i0 dimensions = (" << descriptors_I_i0.dim1() << "," << descriptors_I_i0.dim2() << ")" << endl;
 	
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
-	cout << "descriptors_I_i1 dimensions = (" << descriptors_I_i1.dim1() << "," << descriptors_I_i1.dim2() << ")" << endl;
+	//cout << "descriptors_I_i1 dimensions = (" << descriptors_I_i1.dim1() << "," << descriptors_I_i1.dim2() << ")" << endl;
 	
 	// Match descriptors 
 	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
@@ -135,10 +197,10 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// Points from image 0 in row 1 and row 2 
 	// Points from image 1 in row 3 and row 	
 	int N = matches.dim1();
+	
 	cout << "Number of keypoints N in initializaiton = " << N << endl;
 	Si_1.k = N;
 	// For plotting
-	Matrix pointCorrespondences(4,N);
 	// For efficiency, you should maybe just use vectors instead of creating two new matrices
 	Mat points1Mat = Mat::zeros(2, N, CV_64FC1);
 	Mat points2Mat = Mat::zeros(2, N, CV_64FC1);
@@ -146,6 +208,31 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	vector<Point2f> points1(N);
 	vector<Point2f> points2(N);
 	for (int i = 0; i < N; i++) {
+		
+		
+		// ########## KLT ##########
+		/*
+		points1[i] = Point2f(keypoints_I_i1.at<double>(0,i),keypoints_I_i1.at<double>(1,i));
+		points2[i] = Point2f(keypoints_I_i0_new.at<double>(0,i),keypoints_I_i0_new.at<double>(1,i));
+		
+		points1Mat.at<double>(0,i) = keypoints_I_i1.at<double>(0,i);
+		points1Mat.at<double>(1,i) = keypoints_I_i1.at<double>(1,i); 
+		points2Mat.at<double>(0,i) = keypoints_I_i0_new.at<double>(0,i);
+		points2Mat.at<double>(1,i) = keypoints_I_i0_new.at<double>(1,i);
+		
+		
+		
+		double x = keypoints_I_i1.at<double>(0,i);
+		double y = keypoints_I_i1.at<double>(1,i);
+		double x2 = keypoints_I_i0_new.at<double>(0,i);
+		double y2 = keypoints_I_i0_new.at<double>(1,i);
+		
+		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
+		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
+		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		*/
+	
+		//  #### SIFT #### 
 		// Be aware of differences in x and y
 		points1[i] = Point2f(keypoints_I_i0(matches(i,1),1),keypoints_I_i0(matches(i,1),2));
 		points2[i] = Point2f(keypoints_I_i1(matches(i,0),1),keypoints_I_i1(matches(i,0),2));
@@ -155,7 +242,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),1);
 		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),2);
 		
-		
+	
+		/*
 		double x = keypoints_I_i1(matches(i,0),1);
 		double y = keypoints_I_i1(matches(i,0),2);
 		double x2 = keypoints_I_i0(matches(i,1),1);
@@ -163,10 +251,13 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
 		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		*/
+		
+		
 		
 	}
-	imshow("Match",I_i1);
-	waitKey(0);
+	//imshow("Match",I_i1);
+	//waitKey(0);
 	
 	
 	// Update State  with regards to keypoints in frame Ii_1
@@ -332,26 +423,25 @@ int main ( int argc,char **argv ) {
 	cout<<"Capturing"<<endl;
 	
 	// Initialization
-	Camera.grab(); // You need to take an initial image in order to make the camera work
-	Camera.retrieve( image ); 
-	cout << "Image captured" <<endl;
-	waitKey(1000);
+	//Camera.grab(); // You need to take an initial image in order to make the camera work
+	//Camera.retrieve( image ); 
+	//cout << "Image captured" <<endl;
+	//waitKey(1000);
 	
 	
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
-	imshow("Frame I_i0 displayed", I_i0);
+	//imshow("Frame I_i0 displayed", I_i0);
+	//waitKey(0);	// Ensures it is sufficiently far away from initial frame
 	
-	waitKey(0);	// Ensures it is sufficiently far away from initial frame
 	// First frame 1 
-	
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
-	imshow("Frame I_i1 displayed", I_i1);
-	waitKey(0);
+	//imshow("Frame I_i1 displayed", I_i1);
+	//waitKey(0);
 	
 	/*
 	// Test of function findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
