@@ -2,6 +2,7 @@
 #include "mainCamera.hpp"
 #include <limits> 
 #include <assert.h> 
+//#include <complex.h>
 
 //#include "Matrix.h"
 
@@ -1176,6 +1177,65 @@ Mat crossProduct(Mat vector1, Mat vector2) {
 	return product;
 }
 
+Mat solveQuartic(Mat factors) {
+	Mat roots = Mat::zeros(1, 4, CV_64FC1);
+	
+	double A = factors.at<double>(0,0);
+	double B = factors.at<double>(0,1);
+	double C = factors.at<double>(0,2);
+	double D = factors.at<double>(0,3);
+	double E = factors.at<double>(0,4);
+	
+	cout << "Factors = " << A << "," << B << "," << C << "," << D << "," << E << endl;
+	
+	double A_pw2 = A*A;
+	double B_pw2 = B*B; 
+	double A_pw3 = A_pw2*A;
+	double B_pw3 = B_pw2*B;
+	double A_pw4 = A_pw3*A;
+	double B_pw4 = B_pw3*B;
+	
+	cout << "Values = " << A_pw2 << "," << B_pw2 << "," << A_pw3 << "," << B_pw3 << "," << A_pw4 << "," << B_pw4 << endl;
+	
+	double alpha = -3*B_pw2/(8*A_pw2) + C/A;
+	double beta = B_pw3/(8*A_pw3) - B*C/(2*A_pw2) + D/A;
+	double gamma = -3*B_pw4/(256*A_pw4) + B_pw2*C/(16*A_pw3) - B*D/(4*A_pw2) + E/A;
+	
+	cout << "Values 2 = " << alpha << "," << beta << "," << gamma << endl;
+	
+	double alpha_pw2 = alpha * alpha; 
+	double alpha_pw3 = alpha_pw2 * alpha;
+	
+	cout << "Values 3 = " << alpha_pw2 << "," << alpha_pw3 << endl;
+	
+	double P = -alpha_pw2/12 - gamma;
+	double Q = -alpha_pw3/108 + alpha*gamma/3 - pow(beta,2.0)/8;
+	double R = -Q/2 + sqrt(pow(Q,2.0)/4 + pow(P,3.0)/27);
+	double U = pow(R,(1.0/3.0));
+	
+	cout << "Values 4 = " << P << "," << Q <<  "," << R << "," << U << endl;
+	
+	double y;
+	if (U == 0) {
+		y = -5*alpha/6 - pow(Q,(1/3));
+	} 
+	else {
+		y = -5*alpha/6 - P/(3*U) + U;
+	}
+	cout << "Value y = " << y << endl;
+	
+	double w = sqrt(alpha+2*y);
+	
+	cout << "w = " << w << endl;
+	
+	roots.at<double>(0,0) = real(-B/(4.0*A) + 0.5*(w + sqrt(-(3.0*alpha+2.0*y+2.0*beta/w))));
+	roots.at<double>(0,1) = -B/(4.0*A) + 0.5*(w - sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
+	roots.at<double>(0,2) = -B/(4.0*A) + 0.5*(-w + sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
+	roots.at<double>(0,3) = -B/(4.0*A) + 0.5*(-w - sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
+	
+	return roots;
+}
+
  
 Mat p3p(Mat worldPoints, Mat imageVectors) {
 	
@@ -1201,8 +1261,9 @@ Mat p3p(Mat worldPoints, Mat imageVectors) {
 	Mat vector2 = P3 - P1;
 	
 	Mat crossV = crossProduct(vector1, vector2);
-	if (sqrt(pow(crossV.at<double>(0,0),2.0) + ow(crossV.at<double>(1,0),2.0) + ow(crossV.at<double>(2,0),2.0)) == 0) {
-		return;
+	if (sqrt(pow(crossV.at<double>(0,0),2.0) + pow(crossV.at<double>(1,0),2.0) + pow(crossV.at<double>(2,0),2.0)) == 0) {
+		Mat emptyMatrix;
+		return emptyMatrix;
 	}
 	
 	Mat f1 = Mat::zeros(3, 1, CV_64FC1);
@@ -1223,7 +1284,7 @@ Mat p3p(Mat worldPoints, Mat imageVectors) {
 	e3.at<double>(2,0) = e3.at<double>(2,0) / norm_e3;
 	Mat e2 = crossProduct(e3, e1);
 	
-	Mat T = zeros(3, 3, CV_64FC1);
+	Mat T = Mat::zeros(3, 3, CV_64FC1);
 	// Assign values to matrix T
 	T.at<double>(0,0) = e1.at<double>(0,0);	
 	T.at<double>(0,1) = e1.at<double>(1,0);	
@@ -1255,7 +1316,6 @@ Mat p3p(Mat worldPoints, Mat imageVectors) {
 		e3.at<double>(2,0) = e3.at<double>(2,0) / norm_e3;
 		Mat e2 = crossProduct(e3, e1);
 		
-		Mat T = zeros(3, 3, CV_64FC1);
 		// Assign values to matrix T
 		T.at<double>(0,0) = e1.at<double>(0,0);	
 		T.at<double>(0,1) = e1.at<double>(1,0);	
@@ -1313,8 +1373,9 @@ Mat p3p(Mat worldPoints, Mat imageVectors) {
 	double p_1 = P3.at<double>(0,0);
 	double p_2 = P3.at<double>(1,0);
 	
-	double cos_beta = f1.t() * f2; // Check this calculation. There might be a mistake. 
-	double b = (1/(1 - pow(cos_beta,2.0)) - 1;
+	//double cos_beta = f1.t() * f2; // Check this calculation. There might be a mistake. 
+	double cos_beta = f1.at<double>(0,0) * f2.at<double>(0,0) + f1.at<double>(1,0) * f2.at<double>(1,0) + f1.at<double>(2,0) * f2.at<double>(2,0);
+	double b = (1/(1 - pow(cos_beta,2.0))) - 1;
 	
 	if (cos_beta < 0) {
 		b = -sqrt(b);
@@ -1332,14 +1393,28 @@ Mat p3p(Mat worldPoints, Mat imageVectors) {
 	double p_2_pw3 = p_2_pw2 * p_2;
 	double p_2_pw4 = p_2_pw3 * p_2;
 	double d_12_pw2 = pow(d_12, 2.0);
-	double b_pw2 =  po2(b, 2.0);
+	double b_pw2 =  pow(b, 2.0);
 	
 	// Factors of the 4th degree polynomial
-	double factor_4 = -f_2_pw2 * p_2_pw4 - p_2_pw4 * f_1_pw2 - p_2_pw4;
+	Mat factors = Mat::zeros(1, 5, CV_64FC1);
+	factors.at<double>(0,0) = -f_2_pw2 * p_2_pw4 - p_2_pw4 * f_1_pw2 - p_2_pw4;
 	
-	double factor_3 = 2*p_2_pw3*d_12*b 
+	factors.at<double>(0,1)= 2*p_2_pw3*d_12*b + 2*f_2_pw2*p_2_pw3*d_12*b - 2*f_2*p_2_pw3*f_1*d_12;
 	
+	factors.at<double>(0,2) = -f_2_pw2*p_2_pw2*p_1_pw2 - f_2_pw2*p_2_pw2*d_12_pw2*b_pw2 - f_2_pw2*p_2_pw2*d_12_pw2;
+	factors.at<double>(0,2) = factors.at<double>(0,2) + f_2_pw2*p_2_pw4 + p_2_pw4*f_1_pw2 + 2*p_1*p_2_pw2*d_12;
+	factors.at<double>(0,2) = factors.at<double>(0,2) + 2*f_1*f_2*p_1*p_2_pw2*d_12*b - p_2_pw2*p_1_pw2*f_1_pw2;
+	factors.at<double>(0,2) = factors.at<double>(0,2) + 2*p_1*p_2_pw2*f_2_pw2*d_12 - p_2_pw2*d_12_pw2*b_pw2 - 2*p_1_pw2*p_2_pw2;
 	
+	factors.at<double>(0,3) = 2*p_1_pw2*p_2*d_12*b + 2*f_2*p_2_pw3*f_1*d_12 - 2*f_2_pw2*p_2_pw3*d_12*b - 2*p_1*p_2*d_12_pw2*b;
+	
+	factors.at<double>(0,4) = -2*f_2*p_2_pw2*f_1*p_1*d_12*b + f_2_pw2*p_2_pw2*d_12_pw2 + 2*p_1_pw3*d_12 - p_1_pw2*d_12_pw2 + f_2_pw2*p_2_pw2*p_1_pw2 - p_1_pw4;
+	factors.at<double>(0,4) = factors.at<double>(0,4) - 2*f_2_pw2*p_2_pw2*p_1*d_12 + p_2_pw2*f_1_pw2*p_1_pw2 + f_2_pw2*p_2_pw2*d_12_pw2*b_pw2;
+	
+	// Computation of roots 
+	Mat x = solveQuartic( factors );
+	
+	return poses;
 }
 
 
@@ -1373,7 +1448,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	}
 	Mat max_num_inliers_history = Mat::zeros(50, 1, CV_64FC1); // Should probably be changed
 	Mat num_iteration_history = Mat::zeros(50, 1, CV_64FC1); // Should probably be changed to 
-	int max_num_inliers 0;
+	int max_num_inliers = 0;
 	
 	// RANSAC
 	int i = 0;
@@ -1384,7 +1459,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	
 	while ( num_iterations > i ) {
 		int random_nums[corresponding_landmarks.cols];
-		for (int mm = 0; mm < corresponding_landmarks.cols; m++) {
+		for (int mm = 0; mm < corresponding_landmarks.cols; mm++) {
 			random_nums[mm] = mm;
 		}
 		random_shuffle(random_nums, random_nums + corresponding_landmarks.cols);

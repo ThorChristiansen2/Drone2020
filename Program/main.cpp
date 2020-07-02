@@ -542,9 +542,26 @@ int main ( int argc,char **argv ) {
 	}
 	*/
 	
+	// Test of solveQuartic function 
+	Mat factors = Mat::zeros(1, 4, CV_64FC1);
+	factors.at<double>(0,0) = -107244.2653067081;
+	factors.at<double>(0,1) = 403760.1352762820;
+	factors.at<double>(0,2) = -495973.8974478040;
+	factors.at<double>(0,3) = 187754.8091568;
+	factors.at<double>(0,4) = 7865.0218773934;
+	
+	Mat x = solveQuartic(factors);
+	
+	for (int r = 0; r < x.rows; r++) {
+		for (int c = 0; c < x.cols; c++) {
+			cout << x.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
 	
 	
 	
+	/*
 	// ############### VO initializaiton ###############
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
@@ -558,6 +575,7 @@ int main ( int argc,char **argv ) {
 		}
 		cout << "" << endl;
 	}
+	*/
 	
 	/*
 	cout << "State Si_1 before initializaiton" << endl;
@@ -607,7 +625,7 @@ int main ( int argc,char **argv ) {
 	}
 	*/
 	
-	
+	/*
 	// ############### VO Continuous ###############
 	bool continueVOoperation = true;
 	bool pipelineBroke = false;
@@ -656,6 +674,7 @@ int main ( int argc,char **argv ) {
 		}
 		
 	}
+	*/
 	
 	
 	

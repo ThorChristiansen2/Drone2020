@@ -67,6 +67,7 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 //Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters);
 //Mat getSimWarp(double dx, double dy, double alpha_deg, double lambda);
 //Mat warpImage(Mat I_R, Mat W);
+Mat solveQuartic(Mat factors);
 
 // Helper funcitons
 void MatType( Mat inputMat );
