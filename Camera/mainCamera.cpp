@@ -2,7 +2,8 @@
 #include "mainCamera.hpp"
 #include <limits> 
 #include <assert.h> 
-//#include <complex.h>
+#include <complex.h>
+#include <algorithm>
 
 //#include "Matrix.h"
 
@@ -882,7 +883,7 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 
 // ############################# KLT ############################# 
 Mat warpImage(Mat I_R, Mat W) {
-	Mat I = Mat::zeros(I_R.rows, I_R.cols, CV_64FC1);
+	Mat I_warped = Mat::zeros(I_R.rows, I_R.cols, CV_64FC1);
 	
 	for (int x = 0; x < I_R.cols; x++) {
 		for (int y = 0; y < I_R.rows; y++) {
@@ -897,12 +898,12 @@ Mat warpImage(Mat I_R, Mat W) {
 					
 					uchar m = I_R.at<double>(floor(warped.at<double>(0,1)),floor(warped.at<double>(0,0)));
 					
-					I.at<double>(y,x) = I_R.at<double>(floor(warped.at<double>(0,1)),floor(warped.at<double>(0,0)));
+					I_warped.at<double>(y,x) = I_R.at<double>(floor(warped.at<double>(0,1)),floor(warped.at<double>(0,0)));
 				}
 			}
 		}
 	} 
-	return I;
+	return I_warped;
 }
 
 
@@ -923,14 +924,14 @@ Mat getSimWarp(double dx, double dy, double alpha_deg, double lambda) {
 }
 
 // Get the patch
-Mat getWarpedPatch(Mat I, Mat W, Mat x_T, int r_T) {
+Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 	
 	// Initialize patch
 	Mat patch = Mat::zeros(2*r_T + 1, 2*r_T + 1, CV_64FC1);
 	
 	// Get dimensions of image 
-	int max_coords_rows = I.rows;
-	int max_coords_cols = I.cols;
+	int max_coords_rows = I_new.rows;
+	int max_coords_cols = I_new.cols;
 	
 	// Find the transpose
 	Mat WT = W.t();
@@ -959,9 +960,9 @@ Mat getWarpedPatch(Mat I, Mat W, Mat x_T, int r_T) {
 					double a = weights.at<double>(0,0);
 					double b = weights.at<double>(0,1);
 					
-					double intensity = (1-b) * ((1-a) * I.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) + a * I.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)));
+					double intensity = (1-b) * ((1-a) * I_new.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) + a * I_new.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)));
 					
-					intensity = intensity + b * ((1-a) * I.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)-1) + a * I.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)));
+					intensity = intensity + b * ((1-a) * I_new.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)-1) + a * I_new.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)));
 					
 					patch.at<double>(y + r_T, x + r_T) = intensity;
 				}	
@@ -996,7 +997,7 @@ Mat Kroneckerproduct(Mat A, Mat B) {
 }
 
 // Track KLT
-Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
+Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 	Mat p_hist = Mat::zeros(6, num_iters+1, CV_64FC1);
 	Mat W = getSimWarp(0, 0, 0, 1);
 	
@@ -1049,7 +1050,7 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 	
 	// About to begin iteration 
 	for (int iter = 0; iter < num_iters; iter++) {
-		Mat big_IWT = getWarpedPatch(I, W, x_T, r_T + 1); // We are here 
+		Mat big_IWT = getWarpedPatch(I_new, W, x_T, r_T + 1); // We are here 
 		
 		
 		Mat IWT_temp, IWT;
@@ -1130,9 +1131,9 @@ Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters) {
 	return W;
 }
 
-Mat KLT::trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, double lambda) {
+Mat KLT::trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, int r_T, int num_iters, double lambda) {
 	
-	Mat W = trackKLT(I_R, I, keypoint, r_T, num_iters);
+	Mat W = trackKLT(I_R, I_new, keypoint, r_T, num_iters);
 	
 	// delta_keypoint contains the y- and x-coordinate of the keypoint as the first and second coordiate
 	// and the third coordiate is a boolean-value, which is either 1 or 0 depending on whether the value is smaller 
@@ -1146,7 +1147,7 @@ Mat KLT::trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, 
 	reverse_keypoint.at<double>(0,0) = keypoint.at<double>(0,0) + delta_keypoint.at<double>(0,0);
 	reverse_keypoint.at<double>(0,1) = keypoint.at<double>(0,1) + delta_keypoint.at<double>(1,0);
 	
-	Mat Winv = trackKLT(I, I_R, reverse_keypoint, r_T, num_iters);
+	Mat Winv = trackKLT(I_new, I_R, reverse_keypoint, r_T, num_iters);
 	
 	Mat dkpinv = Mat::zeros(2, 1, CV_64FC1);
 	dkpinv.at<double>(0,0) = Winv.at<double>(0,2);
@@ -1176,6 +1177,29 @@ Mat crossProduct(Mat vector1, Mat vector2) {
 	
 	return product;
 }
+
+Mat projectPoints(Mat points_3d, Mat K) {
+	Mat projected_points;
+	
+	Mat D = Mat::zeros(4, 1, CV_64FC1);
+	
+	int num_points = points_3d.cols;
+	
+	Mat x_y_points = Mat::ones(3, num_points, CV_64FC1);
+	for (int i = 0; i < num_points; i++) {
+		x_y_points.at<double>(0,i) = points_3d.at<double>(0,i) / points_3d.at<double>(2,i); 
+		x_y_points.at<double>(1,i) = points_3d.at<double>(1,i) / points_3d.at<double>(2,i); 
+	}
+	
+	// Not necessary to apply distortion 
+	
+	// Convert to pixel coordinates 
+	projected_points = K * x_y_points;
+	vconcat(projected_points.row(0), projected_points.row(1), projected_points);
+	
+	return projected_points;
+}
+
 
 Mat solveQuartic(Mat factors) {
 	Mat roots = Mat::zeros(1, 4, CV_64FC1);
@@ -1228,11 +1252,40 @@ Mat solveQuartic(Mat factors) {
 	
 	cout << "w = " << w << endl;
 	
-	roots.at<double>(0,0) = real(-B/(4.0*A) + 0.5*(w + sqrt(-(3.0*alpha+2.0*y+2.0*beta/w))));
-	roots.at<double>(0,1) = -B/(4.0*A) + 0.5*(w - sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
-	roots.at<double>(0,2) = -B/(4.0*A) + 0.5*(-w + sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
-	roots.at<double>(0,3) = -B/(4.0*A) + 0.5*(-w - sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
+	//std::complex<double> a (-B/(4.0*A) + 0.5*w, 0.5*sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
+	//std::complex<double> b (-B/(4.0*A) - 0.5*w, -0.5*sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
 	
+	if ( -(3.0*alpha+2.0*y+2.0*beta/w) < 0) {
+		std::complex<double> a (-B/(4.0*A) + 0.5*w, 0.5*sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
+		std::complex<double> b (-B/(4.0*A) + 0.5*w, -0.5*sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
+		roots.at<double>(0,0) = real(a);
+		roots.at<double>(0,1) = real(b);
+	}
+	else {
+		roots.at<double>(0,0) = -B/(4.0*A) + 0.5*(w + sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
+		roots.at<double>(0,1) = -B/(4.0*A) + 0.5*(w - sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
+		
+	}
+	if ( -(3.0*alpha+2.0*y-2.0*beta/w) < 0) {
+		std::complex<double> c (-B/(4.0*A) - 0.5*w, 0.5*sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
+		std::complex<double> d (-B/(4.0*A) - 0.5*w, -0.5*sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
+		roots.at<double>(0,2) = real(c);
+		roots.at<double>(0,3) = real(d);
+	}
+	else {
+		roots.at<double>(0,2) = real(-B/(4.0*A) + 0.5*(-w + sqrt(-(3.0*alpha+2.0*y-2.0*beta/w))));
+		roots.at<double>(0,3) = real(-B/(4.0*A) + 0.5*(-w - sqrt(-(3.0*alpha+2.0*y-2.0*beta/w))));
+	}
+	
+	/*
+	roots.at<double>(0,0) = -B/(4.0*A) + 0.5*(w + sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
+	roots.at<double>(0,1) = -B/(4.0*A) + 0.5*(w - sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
+	roots.at<double>(0,2) = real(-B/(4.0*A) + 0.5*(-w + sqrt(-(3.0*alpha+2.0*y-2.0*beta/w))));
+	roots.at<double>(0,3) = real(-B/(4.0*A) + 0.5*(-w - sqrt(-(3.0*alpha+2.0*y-2.0*beta/w))));
+	*/
+	cout << "Roots = " << roots.at<double>(0,0) << ", " << roots.at<double>(0,1) << ", " << roots.at<double>(0,2) << ", " << roots.at<double>(0,3) << endl;
+	//cout << "a = " << real(a) << endl;
+	//cout << "b = " << real(b) << endl;
 	return roots;
 }
 
@@ -1414,6 +1467,55 @@ Mat p3p(Mat worldPoints, Mat imageVectors) {
 	// Computation of roots 
 	Mat x = solveQuartic( factors );
 	
+	for (int i = 0; i < 4; i++) {
+		double cot_alpha = (-f_1*p_1/f_2 - x.at<double>(0,i)*p_2+d_12*b)/(-f_1*x.at<double>(0,i)*p_2/f_2 + p_1-d_12);
+		
+		double cos_theta = x.at<double>(0, i);
+		double sin_theta = sqrt( 1 - pow(x.at<double>(0, i),2.0) );
+		double sin_alpha = sqrt( 1/(pow(cot_alpha,2.0) +1) ); 
+		double cos_alpha = sqrt( 1 - pow(sin_alpha,2.0) );	
+		
+		if (cot_alpha < 0) {
+			cos_alpha = -cos_alpha;  // Check this for potential mistake 
+		}
+			
+		Mat C = Mat::zeros(3, 1, CV_64FC1);
+		C.at<double>(0,0) = d_12*cos_alpha*(sin_alpha*b+cos_alpha);
+		C.at<double>(1,0) = cos_theta*d_12*sin_alpha*(sin_alpha*b + cos_alpha);
+		C.at<double>(2,0) = sin_theta*d_12*sin_alpha*(sin_alpha*b + cos_alpha);
+		
+		C  = P1 + N.t() * C; // Be aware of transpose of N here 
+		
+		Mat R = Mat::zeros(3, 3, CV_64FC1);
+		R.at<double>(0,0) = -cos_alpha;
+		R.at<double>(0,1) = -sin_alpha*cos_theta;
+		R.at<double>(0,2) = -sin_alpha*sin_theta;
+		R.at<double>(1,0) = sin_alpha;
+		R.at<double>(1,1) = -cos_alpha*cos_theta;
+		R.at<double>(1,2) = -cos_alpha*sin_theta;
+		R.at<double>(2,1) = -sin_theta; 
+		R.at<double>(2,2) = cos_theta;
+		
+		R = N.t() * R.t() * T; 	// Be aware of transpose here
+
+		// Update poses 
+		poses.at<double>(0,i*4) = C.at<double>(0,0);
+		poses.at<double>(1,i*4) = C.at<double>(1,0);
+		poses.at<double>(2,i*4) = C.at<double>(2,0);
+		
+		// Insert values from matrix R
+		poses.at<double>(0,i*4+1) = R.at<double>(0,0);
+		poses.at<double>(1,i*4+1) = R.at<double>(1,0);
+		poses.at<double>(2,i*4+1) = R.at<double>(2,0);
+		
+		poses.at<double>(0,i*4+2) = R.at<double>(0,1);
+		poses.at<double>(1,i*4+2) = R.at<double>(1,1);
+		poses.at<double>(2,i*4+2) = R.at<double>(2,1);
+		
+		poses.at<double>(0,i*4+3) = R.at<double>(0,2);
+		poses.at<double>(1,i*4+3) = R.at<double>(1,2);
+		poses.at<double>(2,i*4+3) = R.at<double>(2,2);
+	}
 	return poses;
 }
 
@@ -1429,7 +1531,8 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	// Other parameters 
 	double num_iterations;
 	int pixel_tolerance = 10; 
-	int k = 3;
+	double k = 3.0;
+	int min_inlier_count = 30; // This parameter should be tuned for the implementation
 	
 	if (adaptive_ransac) {
 		num_iterations = 1000;
@@ -1457,6 +1560,14 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	Mat landmark_sample = Mat::zeros(3, k, CV_64FC1);
 	Mat keypoint_sample = Mat::ones(3, k, CV_64FC1); // To avoid having to set last row to 1's afterwards
 	
+	// Initialization of matrices 
+	Mat normalized_bearings, poses, points, projected_points, difference, errors, is_inlier, alternative_is_inlier;
+	Mat best_R_C_W, best_t_C_W;
+	Mat R_C_W_guess = Mat::zeros(3, 3, CV_64FC1);
+	Mat t_C_W_guess = Mat::zeros(3, 1, CV_64FC1);
+	Mat R_W_C = Mat::zeros(3, 3, CV_64FC1);
+	Mat t_W_C = Mat::zeros(3, 1, CV_64FC1);
+	
 	while ( num_iterations > i ) {
 		int random_nums[corresponding_landmarks.cols];
 		for (int mm = 0; mm < corresponding_landmarks.cols; mm++) {
@@ -1474,7 +1585,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			keypoint_sample.at<double>(1,mm) = matched_query_keypoints.at<double>(1, random_nums[mm]);
 		}
 		
-		Mat normalized_bearings = K.inv() * keypoint_sample;
+		normalized_bearings = K.inv() * keypoint_sample;
 		
 		for (int ii = 0; ii < 3; ii++) {
 			double vector_norm = sqrt(pow(normalized_bearings.at<double>(0,ii),2.0) + pow(normalized_bearings.at<double>(1,ii),2.0) + pow(normalized_bearings.at<double>(2,ii),2.0));
@@ -1484,16 +1595,88 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		
 		}
 		
-		Mat poses = p3p(landmark_sample, normalized_bearings);
+		poses = p3p(landmark_sample, normalized_bearings);
+		
+		// Decode the p3p output 
+		// Four possible rotations and four possible translations 
+		//Mat R_C_W_guess = Mat::zeros(3, 3, CV_64FC1);
+		//Mat t_C_W_guess = Mat::zeros(3, 1, CV_64FC1);
+
+		
+		// First guess 
+		//Mat R_W_C = Mat::zeros(3, 3, CV_64FC1);
+		//Mat t_W_C = Mat::zeros(3, 1, CV_64FC1);
+		for (int k = 0; k < 3; k++) {
+			R_W_C.at<double>(0,k) = poses.at<double>(0,k+1);
+			R_W_C.at<double>(1,k) = poses.at<double>(1,k+1);
+			R_W_C.at<double>(2,k) = poses.at<double>(2,k+1);
+			t_W_C.at<double>(k,0) = poses.at<double>(k,0);
+		}
+		// From frame W_C til C_W
+		R_C_W_guess = R_W_C.t(); // Be aware of tranpose 
+		t_C_W_guess = -R_W_C.t()*t_W_C;
+		
+		points = R_C_W_guess * corresponding_landmarks + repeat(t_C_W_guess, 1, corresponding_landmarks.cols);
+		
+		projected_points = projectPoints(points, K);
+		difference = keypoints_i - projected_points;
+		errors = difference.mul(difference);
+		errors = errors.row(0) + errors.row(1);
+		is_inlier = errors < pow(pixel_tolerance,2.0); // Remember this matrix is of type uchar 
+		
+		if (countNonZero(is_inlier) > max_num_inliers && countNonZero(is_inlier) >= min_inlier_count) {
+			best_R_C_W = R_C_W_guess;
+			best_t_C_W = t_C_W_guess;
+		}
+		
+		for (int alt_idx = 1; alt_idx <= 3; alt_idx++) {
+			for (int k = 0; k < 3; k++) {
+				R_W_C.at<double>(0,k) = poses.at<double>(0,k+1 + alt_idx*4);
+				R_W_C.at<double>(1,k) = poses.at<double>(1,k+1 + alt_idx*4);
+				R_W_C.at<double>(2,k) = poses.at<double>(2,k+1 + alt_idx*4);
+				t_W_C.at<double>(k,0) = poses.at<double>(k, alt_idx*4);
+			}
+			R_C_W_guess = R_W_C.t();
+			t_C_W_guess = -R_W_C.t()*t_W_C;
+			points = R_C_W_guess * corresponding_landmarks + repeat(t_C_W_guess, 1, corresponding_landmarks.cols);
+			difference = keypoints_i - projected_points;
+			errors = difference.mul(difference);
+			errors = errors.row(0) + errors.row(1);
+			alternative_is_inlier = errors < pow(pixel_tolerance,2.0);
+			
+			if (countNonZero(alternative_is_inlier) > countNonZero(is_inlier) ) {
+				is_inlier = alternative_is_inlier;
+			} 
+			if (countNonZero(is_inlier) > max_num_inliers && countNonZero(is_inlier) >= min_inlier_count) {
+				best_R_C_W = R_C_W_guess;
+				best_t_C_W = t_C_W_guess;
+			}
+			
+		}
 		
 		
+		if (countNonZero(is_inlier) > max_num_inliers && countNonZero(is_inlier) >= min_inlier_count) {
+			max_num_inliers = countNonZero(is_inlier);
+			best_inlier_mask = is_inlier;
+		}
+		
+		double outlier_ratio = 1 - max_num_inliers / is_inlier.cols;
+		
+		double confidence = 0.95; 
+		double upper_bound_on_outlier_ratio = 0.90;
+		outlier_ratio = min(upper_bound_on_outlier_ratio, outlier_ratio);
+		num_iterations = log( 1 - confidence)/log(1-pow((1-outlier_ratio),k)); 
+		
+		double v = 15000;
+		num_iterations = min(v, num_iterations);
+		
+		i++;
 	}	
 	
 	
-	
-	
-	
-	
+	if (max_num_inliers != 0) {
+		hconcat(best_R_C_W, best_t_C_W, transformation_matrix);
+	}
 	
 	return make_tuple(transformation_matrix, best_inlier_mask);
 }

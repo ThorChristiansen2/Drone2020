@@ -21,6 +21,7 @@
  * 
  * Problems: 
  * Lær hvordan man SSH'er ind på raspberry pi'en
+ * Units seem to be meters 
  * What is the unit of the 3D points? Is it cm? meters? other units?
  * Maybe you fuck up when you try to use KLT in the initialization 
  * See MatLab code week 3 for an efficient way to find Harris Corners 
@@ -446,120 +447,70 @@ int main ( int argc,char **argv ) {
 	//imshow("Frame I_i1 displayed", I_i1);
 	//waitKey(0);
 	
+
+	// Test of repmat 
+	Mat A = Mat::zeros(3, 1, CV_64FC1);
+	A.at<double>(1,0) = 1; 
+	A.at<double>(2,0) = 2;
+	for (int r = 0; r < A.rows; r++) {
+		for (int c = 0; c < A.cols; c++) {
+			cout << A.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	Mat B = repeat(A, 1, 10);
+	for (int r = 0; r < B.rows; r++) {
+		for (int c = 0; c < B.cols; c++) {
+			cout << B.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	for (int r = 0; r < B.rows; r++) {
+		for (int c = 0; c < B.cols; c++) {
+			cout << B.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	Mat C = B.row(2);
+	for (int r = 0; r < C.rows; r++) {
+		for (int c = 0; c < C.cols; c++) {
+			cout << C.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "B mul" << endl;
+	B = B.mul(B);
+	for (int r = 0; r < B.rows; r++) {
+		for (int c = 0; c < B.cols; c++) {
+			cout << B.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "Before hej" << endl;
+	Mat hej = B.row(0) < 19;
+	MatType(hej);
+	for (int r = 0; r < hej.rows; r++) {
+		for (int c = 0; c < hej.cols; c++) {
+			double v = hej.at<uchar>(r,c);
+			cout << v << ", ";
+		}
+		cout << "" << endl;
+	}
+	double q = sum(hej)[0];
+	cout << "q is = " << q << endl;
+	cout << "nnz = " << countNonZero(hej) << endl;
+	
+	
 	/*
-	// Test of function findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
-	Mat E = Mat::zeros(3, 3, CV_64FC1);
-	E.at<double>(0,0) = 0.0181;
-	E.at<double>(0,1) = -0.1960;
-	E.at<double>(0,2) = 0.0947;
-	E.at<double>(1,0) = 4.0793;
-	E.at<double>(1,1) = 0.0231;
-	E.at<double>(1,2) = 19.2757;
-	E.at<double>(2,0) = -0.1954;
-	E.at<double>(2,1) = -19.6784;
-	E.at<double>(2,2) = 0.0096;
-	
-	cout << "E matrix " << endl;
-	for (int r = 0; r < E.rows; r++) {
-		for (int c = 0; c < E.cols; c++) {
-			cout << E.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	
-	Mat K1 = Mat::zeros(3, 3, CV_64FC1);
-	K1.at<double>(0,0) = 1379.7;
-	K1.at<double>(1,1) = 1382.1;
-	K1.at<double>(2,2) = 1;
-	K1.at<double>(0,2) = 760.35;
-	K1.at<double>(1,2) = 503.41;
-	
-	cout << "K1 matrix " << endl;
-	for (int r = 0; r < K1.rows; r++) {
-		for (int c = 0; c < K1.cols; c++) {
-			cout << K1.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	
-	
-	
-	string myText;
-	
-	ifstream MyReadFile("matches0001.txt");
-	
-	Mat points1 = Mat::zeros(2, 84, CV_64FC1);
-	Mat points2 = Mat::zeros(2, 84, CV_64FC1);
-	
-	if (MyReadFile.is_open()) {
-		for (int i = 0; i < 168; i++) {
-			if (i < 84) {
-				MyReadFile >> points1.at<double>(0,i);
-			}
-			else   {
-				MyReadFile >> points1.at<double>(1,i-84);
-			}
-		}
-	}
-	for (int r = 0; r < points1.rows; r++) {
-		for (int c = 0; c < points1.cols; c++) {
-			cout << points1.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-		cout << "" << endl;
-	}
-	
-	ifstream MyReadFile2("matches0002.txt");
-	if (MyReadFile2.is_open()) {
-		for (int i = 0; i < 168; i++) {
-			if (i < 84) {
-				MyReadFile2 >> points2.at<double>(0,i);
-			}
-			else   {
-				MyReadFile2 >> points2.at<double>(1,i-84);
-			}
-		}
-	}
-	for (int r = 0; r < points2.rows; r++) {
-		for (int c = 0; c < points2.cols; c++) {
-			cout << points2.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-		cout << "" << endl;
-	}
-	
-		
-	MyReadFile.close();
-	MyReadFile2.close();
-	
-	Mat transformation_matrix = findRotationAndTranslation(E, K1, points1, points2);
-	cout << "Transformation matrix " << endl;
-	for (int r = 0; r < transformation_matrix.rows; r++) {
-		for (int c = 0; c < transformation_matrix.cols; c++) {
-			cout << transformation_matrix.at<double>(r,c) << ", ";
+	B = B.row(0) + B.row(2);
+	for (int r = 0; r < B.rows; r++) {
+		for (int c = 0; c < B.cols; c++) {
+			cout << B.at<double>(r,c) << ", ";
 		}
 		cout << "" << endl;
 	}
 	*/
-	
-	// Test of solveQuartic function 
-	Mat factors = Mat::zeros(1, 4, CV_64FC1);
-	factors.at<double>(0,0) = -107244.2653067081;
-	factors.at<double>(0,1) = 403760.1352762820;
-	factors.at<double>(0,2) = -495973.8974478040;
-	factors.at<double>(0,3) = 187754.8091568;
-	factors.at<double>(0,4) = 7865.0218773934;
-	
-	Mat x = solveQuartic(factors);
-	
-	for (int r = 0; r < x.rows; r++) {
-		for (int c = 0; c < x.cols; c++) {
-			cout << x.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	
-	
+
 	
 	/*
 	// ############### VO initializaiton ###############

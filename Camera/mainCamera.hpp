@@ -68,6 +68,7 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 //Mat getSimWarp(double dx, double dy, double alpha_deg, double lambda);
 //Mat warpImage(Mat I_R, Mat W);
 Mat solveQuartic(Mat factors);
+Mat p3p(Mat worldPoints, Mat imageVectors);
 
 // Helper funcitons
 void MatType( Mat inputMat );

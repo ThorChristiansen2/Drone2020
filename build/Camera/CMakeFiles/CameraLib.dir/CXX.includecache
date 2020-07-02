@@ -21,6 +21,10 @@ limits
 -
 assert.h
 -
+complex.h
+-
+algorithm
+-
 
 /home/pi/GitHub/Drone2020/Camera/mainCamera.hpp
 opencv2/highgui.hpp
