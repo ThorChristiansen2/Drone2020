@@ -2,8 +2,14 @@
 #include "mainCamera.hpp"
 #include <limits> 
 #include <assert.h> 
-#include <complex.h>
+//#include <complex.h>
+#include <complex>
+#include <iomanip>
 #include <algorithm>
+#include <unistd.h>
+#include <fstream>
+#include <sstream>
+#include <cmath> 
 
 //#include "Matrix.h"
 
@@ -22,6 +28,7 @@
 */
 
 using namespace std;
+using namespace std::complex_literals;
 //using namespace Numeric_lib;
 
 // Match SIFT Descriptors 
@@ -1210,7 +1217,7 @@ Mat solveQuartic(Mat factors) {
 	double D = factors.at<double>(0,3);
 	double E = factors.at<double>(0,4);
 	
-	cout << "Factors = " << A << "," << B << "," << C << "," << D << "," << E << endl;
+	//cout << "Factors = " << A << "," << B << "," << C << "," << D << "," << E << endl;
 	
 	double A_pw2 = A*A;
 	double B_pw2 = B*B; 
@@ -1219,38 +1226,134 @@ Mat solveQuartic(Mat factors) {
 	double A_pw4 = A_pw3*A;
 	double B_pw4 = B_pw3*B;
 	
-	cout << "Values = " << A_pw2 << "," << B_pw2 << "," << A_pw3 << "," << B_pw3 << "," << A_pw4 << "," << B_pw4 << endl;
+	//cout << "Values = " << A_pw2 << "," << B_pw2 << "," << A_pw3 << "," << B_pw3 << "," << A_pw4 << "," << B_pw4 << endl;
 	
 	double alpha = -3*B_pw2/(8*A_pw2) + C/A;
 	double beta = B_pw3/(8*A_pw3) - B*C/(2*A_pw2) + D/A;
 	double gamma = -3*B_pw4/(256*A_pw4) + B_pw2*C/(16*A_pw3) - B*D/(4*A_pw2) + E/A;
 	
-	cout << "Values 2 = " << alpha << "," << beta << "," << gamma << endl;
+	//cout << "Values 2 = " << alpha << "," << beta << "," << gamma << endl;
 	
 	double alpha_pw2 = alpha * alpha; 
 	double alpha_pw3 = alpha_pw2 * alpha;
 	
-	cout << "Values 3 = " << alpha_pw2 << "," << alpha_pw3 << endl;
+	//cout << "Values 3 = " << alpha_pw2 << "," << alpha_pw3 << endl;
 	
 	double P = -alpha_pw2/12 - gamma;
 	double Q = -alpha_pw3/108 + alpha*gamma/3 - pow(beta,2.0)/8;
-	double R = -Q/2 + sqrt(pow(Q,2.0)/4 + pow(P,3.0)/27);
-	double U = pow(R,(1.0/3.0));
 	
-	cout << "Values 4 = " << P << "," << Q <<  "," << R << "," << U << endl;
 	
-	double y;
+	std::complex<double> H, HH, i_value;
+	double v = 0.7;
+	HH = 1i;
+	i_value = 1i;
+	H = 10/5. + v*HH;
+	
+	cout << "H = " << H << endl;
+	cout << "H*H = " << pow(H,2.0) << endl;
+	cout << "H*1/3 = " << pow(H,1.0/3.0) << endl;
+	double qq = 10.0/5.0 + 11.0;
+	H = qq + 1i;
+	cout << "H = " << H + qq << endl;
+	
+	H = 2. + 3i;
+	//H = 4./(3.*H);
+	double qqq = 17;
+	H = qqq/(H);
+	//H = H*3.;
+	cout << "New Value = " << H << endl;
+	
+	H = 2. + 3i;
+	H = 0.5 * H;
+	cout << " New H = " << H << endl;
+	
+	std::complex<double> R, U, y, w, null_v;
+	double real_value, imaginary_value;
+	if (pow(Q,2.0)/4 + pow(P,3.0)/27 < 0) {
+		imaginary_value = sqrt(-(pow(Q,2.0)/4 + pow(P,3.0)/27));
+		real_value = (-Q/2.0);
+		R = real_value + imaginary_value*i_value;
+	}
+	else {
+		real_value = -Q/2.0 + sqrt(pow(Q,2.0)/4 + pow(P,3.0)/27);
+		R = real_value + 0i; 
+	}
+	U = pow(R, 1.0/3.0);
+	
+	null_v = 0. + 0i;
+	real_value = -5.0*alpha/6.0;
+	if (U == null_v) {
+		y = real_value - pow(Q, 1.0/3.0);
+	}
+	else {
+		y = real_value - P/(3.*U) + U;
+	}
+	
+	w = pow(alpha+2.*y, 1.0/2.0);
+	
+	std::complex<double> temp0, temp1, temp2, temp3;
+	real_value = -B/(4*A);
+	
+	temp0 = real_value + 0.5*(w + pow( -(3*alpha+2.*y+2.*beta/w), 1.0/2.0));
+	temp1 = real_value + 0.5*(w - pow( -(3*alpha+2.*y+2.*beta/w), 1.0/2.0));
+	temp2 = real_value + 0.5*(-w + pow( -(3*alpha+2.*y-2.*beta/w), 1.0/2.0));
+	temp3 = real_value + 0.5*(-w - pow( -(3*alpha+2.*y-2.*beta/w), 1.0/2.0));
+	
+	roots.at<double>(0,0) = real(temp0);
+	roots.at<double>(0,1) = real(temp1);
+	roots.at<double>(0,0) = real(temp2);
+	roots.at<double>(0,1) = real(temp3);
+	
+	
+	
+	/*
+	std::complex<double> U, R;
+	if (pow(Q,2.0)/4 + pow(P,3.0)/27 < 0) {
+		R = (-Q/2, sqrt(pow(Q,2.0)/4 + pow(P,3.0)/27)); 
+		U = pow(R, 1.0/3.0);
+	}
+	else {
+		R = (-Q/2 + sqrt(pow(Q,2.0)/4 + pow(P,3.0)/27), 0); 
+		U = pow(R, 1.0/3.0);
+	}
+	
+	//double R = -Q/2 + sqrt(pow(Q,2.0)/4 + pow(P,3.0)/27);
+	//double U = pow(R,(1.0/3.0));
+	
+	//cout << "Values 4 = " << P << "," << Q <<  "," << R << "," << U << endl;
+
+	
+	//double y;
+	std::complex<double> y;
 	if (U == 0) {
-		y = -5*alpha/6 - pow(Q,(1/3));
+		if (Q < 0) {
+			y (-5*alpha/6, - pow(Q,(1.0/3.0)));
+		}
+		else {
+			y (-5*alpha/6 - pow(Q,(1.0/3.0)), 0);
+		}
+		//y = -5*alpha/6 - pow(Q,(1.0/3.0));
 	} 
 	else {
-		y = -5*alpha/6 - P/(3*U) + U;
+		//std::complex<double> y = -5*alpha/6 - P/(3*U) + U
+		
+		if (Q < 0) {
+			y (-5*alpha/6, - pow(Q,(1.0/3.0)));
+			y = y + U;
+		}
+		else {
+			y (-5*alpha/6 - pow(Q,(1.0/3.0)), 0);
+			y = y + U;
+		}
 	}
-	cout << "Value y = " << y << endl;
+	//cout << "Value y = " << y << endl;
 	
-	double w = sqrt(alpha+2*y);
+	//double w = sqrt(alpha+2*y);
+	std::complex<double> w = pow(alpha+2*y, 1.0/2.0);
 	
-	cout << "w = " << w << endl;
+	
+	
+	//cout << "w = " << w << endl;
 	
 	//std::complex<double> a (-B/(4.0*A) + 0.5*w, 0.5*sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
 	//std::complex<double> b (-B/(4.0*A) - 0.5*w, -0.5*sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
@@ -1273,16 +1376,21 @@ Mat solveQuartic(Mat factors) {
 		roots.at<double>(0,3) = real(d);
 	}
 	else {
-		roots.at<double>(0,2) = real(-B/(4.0*A) + 0.5*(-w + sqrt(-(3.0*alpha+2.0*y-2.0*beta/w))));
-		roots.at<double>(0,3) = real(-B/(4.0*A) + 0.5*(-w - sqrt(-(3.0*alpha+2.0*y-2.0*beta/w))));
+		roots.at<double>(0,2) = -B/(4.0*A) + 0.5*(-w + sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
+		roots.at<double>(0,3) = -B/(4.0*A) + 0.5*(-w - sqrt(-(3.0*alpha+2.0*y-2.0*beta/w)));
 	}
-	
-	/*
-	roots.at<double>(0,0) = -B/(4.0*A) + 0.5*(w + sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
-	roots.at<double>(0,1) = -B/(4.0*A) + 0.5*(w - sqrt(-(3.0*alpha+2.0*y+2.0*beta/w)));
-	roots.at<double>(0,2) = real(-B/(4.0*A) + 0.5*(-w + sqrt(-(3.0*alpha+2.0*y-2.0*beta/w))));
-	roots.at<double>(0,3) = real(-B/(4.0*A) + 0.5*(-w - sqrt(-(3.0*alpha+2.0*y-2.0*beta/w))));
+	if (isnan(roots.at<double>(0,0)) || isnan(roots.at<double>(0,1)) || isnan(roots.at<double>(0,2)) || isnan(roots.at<double>(0,3))) {
+		cout << "Roots = " << roots.at<double>(0,0) << ", " << roots.at<double>(0,1) << ", " << roots.at<double>(0,2) << ", " << roots.at<double>(0,3) << endl;
+		waitKey(0);
+		cout << "Factors = " << A << "," << B << "," << C << "," << D << "," << E << endl;
+		waitKey(0);
+	}
 	*/
+	
+
+	
+	
+	//Mat roots = Mat::zeros(1, 4, CV_64FC1);
 	cout << "Roots = " << roots.at<double>(0,0) << ", " << roots.at<double>(0,1) << ", " << roots.at<double>(0,2) << ", " << roots.at<double>(0,3) << endl;
 	//cout << "a = " << real(a) << endl;
 	//cout << "b = " << real(b) << endl;
@@ -1526,14 +1634,15 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	Mat transformation_matrix = Mat::zeros(3, 4, CV_64FC1);
 	
 	// Method parameter
-	bool adaptive_ransac = false;
+	bool adaptive_ransac = true;
 	
 	// Other parameters 
 	double num_iterations;
 	int pixel_tolerance = 10; 
 	double k = 3.0;
 	int min_inlier_count = 30; // This parameter should be tuned for the implementation
-	
+	double record_inlier = 0;
+		
 	if (adaptive_ransac) {
 		num_iterations = 1000;
 	}
@@ -1569,6 +1678,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	Mat t_W_C = Mat::zeros(3, 1, CV_64FC1);
 	
 	while ( num_iterations > i ) {
+	//while (1 > i) {
 		int random_nums[corresponding_landmarks.cols];
 		for (int mm = 0; mm < corresponding_landmarks.cols; mm++) {
 			random_nums[mm] = mm;
@@ -1596,7 +1706,63 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		}
 		
 		poses = p3p(landmark_sample, normalized_bearings);
+		cout << "Poses " << endl;
+		for (int r = 0; r < poses.rows; r++) {
+			for (int c = 0; c < poses.cols; c++) {
+				cout << poses.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		for (int r = 0; r < poses.rows; r++) {
+			for (int c = 0; c < poses.cols; c++) {
+				if (isnan(poses.at<double>(r,c))) {
+					cout << "Nan Value detected" << endl;
+					cout << "landmark_sample" << endl;
+					for (int r = 0; r < landmark_sample.rows; r++) {
+						for (int c = 0; c < landmark_sample.cols; c++) {
+							cout << landmark_sample.at<double>(r,c) << ", ";
+						}
+						cout << "" << endl;
+					}
+					cout << "normalized_bearings" << endl;
+					for (int r = 0; r < normalized_bearings.rows; r++) {
+						for (int c = 0; c < normalized_bearings.cols; c++) {
+							cout << normalized_bearings.at<double>(r,c) << ", ";
+						}
+						cout << "" << endl;
+					}
+					
+					
+					Mat empty = Mat::zeros(3, 3, CV_64FC1);
+					return make_tuple(empty, empty);
+				}
+			}
+		}
 		
+		//Mat poses = Mat::zeros(3, 16, CV_64FC1);
+		
+		/*
+		ifstream MyReadFile2("new_poses.txt");
+		
+		if (MyReadFile2.is_open()) {
+			for (int i = 0; i < 16; i++) {
+					MyReadFile2 >> poses.at<double>(0,i);
+					MyReadFile2 >> poses.at<double>(1,i);
+					MyReadFile2 >> poses.at<double>(2,i);
+				
+			}
+		}
+		for (int r = 0; r < poses.rows; r++) {
+			for (int c = 0; c < poses.cols; c++) {
+				cout << poses.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+			cout << "" << endl;
+		}
+
+		MyReadFile2.close();
+		*/
+			
 		// Decode the p3p output 
 		// Four possible rotations and four possible translations 
 		//Mat R_C_W_guess = Mat::zeros(3, 3, CV_64FC1);
@@ -1615,18 +1781,90 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		// From frame W_C til C_W
 		R_C_W_guess = R_W_C.t(); // Be aware of tranpose 
 		t_C_W_guess = -R_W_C.t()*t_W_C;
+		cout << "R_C_W_guess" << endl;
+		for (int r = 0; r < R_C_W_guess.rows; r++) {
+			for (int c = 0; c < R_C_W_guess.cols; c++) {
+				cout << R_C_W_guess.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "t_C_W_guess" << endl;
+		for (int r = 0; r < t_C_W_guess.rows; r++) {
+			for (int c = 0; c < t_C_W_guess.cols; c++) {
+				cout << t_C_W_guess.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
 		
 		points = R_C_W_guess * corresponding_landmarks + repeat(t_C_W_guess, 1, corresponding_landmarks.cols);
 		
 		projected_points = projectPoints(points, K);
+		cout << "projected_points" << endl;
+		for (int r = 0; r < projected_points.rows; r++) {
+			for (int c = 0; c < projected_points.cols; c++) {
+				cout << projected_points.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "keypoints_i" << endl;
+		for (int r = 0; r < keypoints_i.rows; r++) {
+			for (int c = 0; c < keypoints_i.cols; c++) {
+				cout << keypoints_i.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
 		difference = keypoints_i - projected_points;
+		cout << "difference" << endl;
+		for (int r = 0; r < difference.rows; r++) {
+			for (int c = 0; c < difference.cols; c++) {
+				cout << difference.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "" << endl;
 		errors = difference.mul(difference);
 		errors = errors.row(0) + errors.row(1);
+		cout << "errors" << endl;
+		for (int r = 0; r < errors.rows; r++) {
+			for (int c = 0; c < errors.cols; c++) {
+				cout << errors.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "" << endl;
 		is_inlier = errors < pow(pixel_tolerance,2.0); // Remember this matrix is of type uchar 
+		cout << "is_inlier" << endl;
+		for (int r = 0; r < is_inlier.rows; r++) {
+			for (int c = 0; c < is_inlier.cols; c++) {
+				double v = is_inlier.at<uchar>(r,c);
+				cout << v << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "" << endl;
 		
-		if (countNonZero(is_inlier) > max_num_inliers && countNonZero(is_inlier) >= min_inlier_count) {
+		if (countNonZero(is_inlier) > record_inlier && countNonZero(is_inlier) >= min_inlier_count) {
+			record_inlier = countNonZero(is_inlier);
 			best_R_C_W = R_C_W_guess;
 			best_t_C_W = t_C_W_guess;
+			cout << "best_R_C_W" << endl;
+			for (int r = 0; r < best_R_C_W.rows; r++) {
+				for (int c = 0; c < best_R_C_W.cols; c++) {
+					cout << best_R_C_W.at<double>(r,c) << ", ";
+				}
+				cout << "" << endl;
+			}
+			cout << "" << endl;
+			cout << "best_t_C_W" << endl;
+			for (int r = 0; r < best_t_C_W.rows; r++) {
+				for (int c = 0; c < best_t_C_W.cols; c++) {
+					cout << best_t_C_W.at<double>(r,c) << ", ";
+				}
+				cout << "" << endl;
+			}
+			cout << "" << endl;
+		
 		}
 		
 		for (int alt_idx = 1; alt_idx <= 3; alt_idx++) {
@@ -1636,9 +1874,38 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 				R_W_C.at<double>(2,k) = poses.at<double>(2,k+1 + alt_idx*4);
 				t_W_C.at<double>(k,0) = poses.at<double>(k, alt_idx*4);
 			}
+			cout << "R_W_C" << endl;
+			for (int r = 0; r < R_W_C.rows; r++) {
+				for (int c = 0; c < R_W_C.cols; c++) {
+					cout << R_W_C.at<double>(r,c) << ", ";
+				}
+				cout << "" << endl;
+			}
 			R_C_W_guess = R_W_C.t();
+			cout << "R_C_W_guess" << endl;
+			for (int r = 0; r < R_C_W_guess.rows; r++) {
+				for (int c = 0; c < R_C_W_guess.cols; c++) {
+					cout << R_C_W_guess.at<double>(r,c) << ", ";
+				}
+				cout << "" << endl;
+			}
 			t_C_W_guess = -R_W_C.t()*t_W_C;
+			cout << "t_C_W_guess" << endl;
+			for (int r = 0; r < t_C_W_guess.rows; r++) {
+				for (int c = 0; c < t_C_W_guess.cols; c++) {
+					cout << t_C_W_guess.at<double>(r,c) << ", ";
+				}
+				cout << "" << endl;
+			}
 			points = R_C_W_guess * corresponding_landmarks + repeat(t_C_W_guess, 1, corresponding_landmarks.cols);
+			projected_points = projectPoints(points, K);
+			cout << "projected_points" << endl;
+			for (int r = 0; r < projected_points.rows; r++) {
+				for (int c = 0; c < projected_points.cols; c++) {
+					cout << projected_points.at<double>(r,c) << ", ";
+				}
+				cout << "" << endl;
+			}
 			difference = keypoints_i - projected_points;
 			errors = difference.mul(difference);
 			errors = errors.row(0) + errors.row(1);
@@ -1647,9 +1914,26 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			if (countNonZero(alternative_is_inlier) > countNonZero(is_inlier) ) {
 				is_inlier = alternative_is_inlier;
 			} 
-			if (countNonZero(is_inlier) > max_num_inliers && countNonZero(is_inlier) >= min_inlier_count) {
+			if (countNonZero(is_inlier) > record_inlier && countNonZero(is_inlier) >= min_inlier_count) {
+				record_inlier = countNonZero(is_inlier);
 				best_R_C_W = R_C_W_guess;
 				best_t_C_W = t_C_W_guess;
+				cout << "best_R_C_W" << endl;
+				for (int r = 0; r < best_R_C_W.rows; r++) {
+					for (int c = 0; c < best_R_C_W.cols; c++) {
+						cout << best_R_C_W.at<double>(r,c) << ", ";
+					}
+					cout << "" << endl;
+				}
+				cout << "" << endl;
+				cout << "best_t_C_W" << endl;
+				for (int r = 0; r < best_t_C_W.rows; r++) {
+					for (int c = 0; c < best_t_C_W.cols; c++) {
+						cout << best_t_C_W.at<double>(r,c) << ", ";
+					}
+					cout << "" << endl;
+				}
+				cout << "" << endl;
 			}
 			
 		}
@@ -1660,15 +1944,19 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			best_inlier_mask = is_inlier;
 		}
 		
-		double outlier_ratio = 1 - max_num_inliers / is_inlier.cols;
-		
-		double confidence = 0.95; 
-		double upper_bound_on_outlier_ratio = 0.90;
-		outlier_ratio = min(upper_bound_on_outlier_ratio, outlier_ratio);
-		num_iterations = log( 1 - confidence)/log(1-pow((1-outlier_ratio),k)); 
-		
-		double v = 15000;
-		num_iterations = min(v, num_iterations);
+		if (adaptive_ransac) {
+			double outlier_ratio = 1 - max_num_inliers / is_inlier.cols;
+			cout << "oulier ratio = "  << outlier_ratio << endl;
+			
+			double confidence = 0.95; 
+			double upper_bound_on_outlier_ratio = 0.90;
+			outlier_ratio = min(upper_bound_on_outlier_ratio, outlier_ratio);
+			num_iterations = log( 1 - confidence)/log(1-pow((1-outlier_ratio),k)); 
+			cout << "num_iterations = " << num_iterations << endl;
+			
+			double v = 15000;
+			num_iterations = min(v, num_iterations);
+		}
 		
 		i++;
 	}	

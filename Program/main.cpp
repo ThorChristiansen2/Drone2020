@@ -511,6 +511,100 @@ int main ( int argc,char **argv ) {
 	}
 	*/
 
+
+	// Test of ranSac Localizaiton 
+	ifstream MyReadFile("matched_query_keypoints.txt");
+	
+	Mat matched_keypoints = Mat::zeros(2, 271, CV_64FC1);
+	
+	if (MyReadFile.is_open()) {
+		for (int i = 0; i < 271; i++) {
+				MyReadFile >> matched_keypoints.at<double>(1,i);
+				MyReadFile >> matched_keypoints.at<double>(0,i);
+			
+		}
+	}
+	for (int r = 0; r < matched_keypoints.rows; r++) {
+		for (int c = 0; c < matched_keypoints.cols; c++) {
+			cout << matched_keypoints.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+		cout << "" << endl;
+	}
+
+	MyReadFile.close();
+	
+	ifstream MyReadFile2("corresponding_landmarks.txt");
+	
+	Mat c_landmarks = Mat::zeros(3, 271, CV_64FC1);
+	
+	if (MyReadFile2.is_open()) {
+		for (int i = 0; i < 271; i++) {
+				MyReadFile2 >> c_landmarks.at<double>(0,i);
+				MyReadFile2 >> c_landmarks.at<double>(1,i);
+				MyReadFile2 >> c_landmarks.at<double>(2,i);
+			
+		}
+	}
+	for (int r = 0; r < c_landmarks.rows; r++) {
+		for (int c = 0; c < c_landmarks.cols; c++) {
+			cout << c_landmarks.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+		cout << "" << endl;
+	}
+
+	MyReadFile2.close();
+	
+	
+	Mat K2 = Mat::zeros(3, 3, CV_64FC1);
+	K2.at<double>(0,0) = 718.8560;
+	K2.at<double>(1,1) = 718.8560; 
+	K2.at<double>(2,2) = 1;
+	K2.at<double>(0,2) = 607.1928;
+	K2.at<double>(1,2) = 185.2157;
+	for (int r = 0; r < K2.rows; r++) {
+		for (int c = 0; c < K2.cols; c++) {
+			cout << K2.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	Mat transformation_matrix, best_inlier_mask;
+	//tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(matched_keypoints, c_landmarks, K2);
+	for (int r = 0; r < transformation_matrix.rows; r++) {
+		for (int c = 0; c < transformation_matrix.cols; c++) {
+			cout << transformation_matrix.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+		cout << "" << endl;
+	}
+
+
+	Mat MP = Mat::zeros(3, 3, CV_64FC1);
+	MP.at<double>(0,0) = -10.677;
+	MP.at<double>(0,0) = -10.677;
+	MP.at<double>(0,0) = -10.677;
+	MP.at<double>(0,0) = -10.677;
+	Mat nm = Mat::zeros(3, 3, CV_64FC1);
+
+	// Test of solve Quartic funciton 
+	Mat vv = Mat::zeros(1, 5, CV_64FC1);
+	vv.at<double>(0,0) = -545617;
+	vv.at<double>(0,1) = 358534;
+	vv.at<double>(0,2) = 472780;
+	vv.at<double>(0,3) = -342696;
+	vv.at<double>(0,4) = 55243.9;
+	
+	Mat testQuartic = solveQuartic( vv );
+	cout << " Write testQuartic" << endl;
+	for (int r = 0; r < testQuartic.rows; r++) {
+		for (int c = 0; c < testQuartic.cols; c++) {
+			cout << testQuartic.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+		cout << "" << endl;
+	}
+
 	
 	/*
 	// ############### VO initializaiton ###############

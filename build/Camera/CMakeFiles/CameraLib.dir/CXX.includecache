@@ -21,9 +21,19 @@ limits
 -
 assert.h
 -
-complex.h
+complex
+-
+iomanip
 -
 algorithm
+-
+unistd.h
+-
+fstream
+-
+sstream
+-
+cmath
 -
 
 /home/pi/GitHub/Drone2020/Camera/mainCamera.hpp
