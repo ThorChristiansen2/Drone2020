@@ -573,8 +573,8 @@ int main ( int argc,char **argv ) {
 	// Fejl i hvordan det loades ind 
 	if (MyReadFile.is_open()) {
 		for (int i = 0; i < 271; i++) {
-				MyReadFile >> matched_keypoints.at<double>(1,i);
 				MyReadFile >> matched_keypoints.at<double>(0,i);
+				MyReadFile >> matched_keypoints.at<double>(1,i);
 			
 		}
 	}

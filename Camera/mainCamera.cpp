@@ -1858,16 +1858,19 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	Mat R_W_C = Mat::zeros(3, 3, CV_64FC1);
 	Mat t_W_C = Mat::zeros(3, 1, CV_64FC1);
 	
+	
 	Mat random_test = Mat::zeros(3,3,CV_64FC1);
-	random_test.at<double>(0,0) = 92-1; 
-	random_test.at<double>(0,1) = 44-1;
-	random_test.at<double>(0,2) = 214-1;
-	random_test.at<double>(1,0) = 85-1;
-	random_test.at<double>(1,1) = 143-1;
-	random_test.at<double>(1,2) = 45-1;
-	random_test.at<double>(2,0) = 164-1;
-	random_test.at<double>(2,1) = 72-1;
-	random_test.at<double>(2,2) = 176-1;
+	random_test.at<double>(0,0) = 187-1; 
+	random_test.at<double>(0,1) = 203-1;
+	random_test.at<double>(0,2) = 122-1;
+	random_test.at<double>(1,0) = 23-1;
+	random_test.at<double>(1,1) = 62-1;
+	random_test.at<double>(1,2) = 246-1;
+	random_test.at<double>(2,0) = 42-1;
+	random_test.at<double>(2,1) = 223-1;
+	random_test.at<double>(2,2) = 145-1;
+	
+	
 
 	
 	while ( num_iterations-1 > i ) {
@@ -1879,6 +1882,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		}
 		random_shuffle(random_nums, random_nums + corresponding_landmarks.cols);
 		for (int mm = 0; mm < k;  mm++) {
+			cout << "Random number = " << random_nums[mm] << endl;
 			// Landmark sample 
 			landmark_sample.at<double>(0,mm) = corresponding_landmarks.at<double>(0, random_nums[mm]);
 			landmark_sample.at<double>(1,mm) = corresponding_landmarks.at<double>(1, random_nums[mm]);
@@ -1888,14 +1892,34 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			keypoint_sample.at<double>(0,mm) = matched_query_keypoints.at<double>(0, random_nums[mm]);
 			keypoint_sample.at<double>(1,mm) = matched_query_keypoints.at<double>(1, random_nums[mm]);
 		}
+		
+		cout << "Print of landmark-sample" << endl;
+		for (int r = 0; r < landmark_sample.rows; r++) {
+			for (int c = 0; c < landmark_sample.cols; c++) {
+				cout << landmark_sample.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "Print of keypoint-sample" << endl;
+		for (int r = 0; r < keypoint_sample.rows; r++) {
+			for (int c = 0; c < keypoint_sample.cols; c++) {
+				cout << keypoint_sample.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		//waitKey(5000);
 		*/
+		
+		
+		
+		
 		for (int qq = 0; qq < 3; qq++) {
 			cout << "random_test point = " << random_test.at<double>(i,qq) << endl;
 			landmark_sample.at<double>(0,qq) = corresponding_landmarks.at<double>(0, random_test.at<double>(i,qq));
 			landmark_sample.at<double>(1,qq) = corresponding_landmarks.at<double>(1, random_test.at<double>(i,qq)); 
 			landmark_sample.at<double>(2,qq) = corresponding_landmarks.at<double>(2, random_test.at<double>(i,qq));
-			keypoint_sample.at<double>(0,qq) = matched_query_keypoints.at<double>(1, random_test.at<double>(i,qq));
-			keypoint_sample.at<double>(1,qq) = matched_query_keypoints.at<double>(0, random_test.at<double>(i,qq));
+			keypoint_sample.at<double>(0,qq) = matched_query_keypoints.at<double>(0, random_test.at<double>(i,qq));
+			keypoint_sample.at<double>(1,qq) = matched_query_keypoints.at<double>(1, random_test.at<double>(i,qq));
 		}
 		cout << "Print of landmark-sample" << endl;
 		for (int r = 0; r < landmark_sample.rows; r++) {
@@ -1912,6 +1936,8 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			cout << "" << endl;
 		}
 		//waitKey(10000);
+		
+		
 		
 		normalized_bearings = K.inv() * keypoint_sample;
 		
@@ -2027,7 +2053,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		
 		projected_points = projectPoints(points, K);
 		
-		/*
+		
 		cout << "projected_points" << endl;
 		for (int r = 0; r < projected_points.rows; r++) {
 			for (int c = 0; c < projected_points.cols; c++) {
@@ -2042,9 +2068,9 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			}
 			cout << "" << endl;
 		}
-		*/
 		
-		difference = keypoints_i - projected_points;
+		
+		difference = matched_query_keypoints - projected_points;
 		
 		/*
 		cout << "difference" << endl;
@@ -2086,9 +2112,10 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
 		//waitKey(5000);
 		if (countNonZero(is_inlier) > record_inlier && countNonZero(is_inlier) >= min_inlier_count) {
+			//waitKey(5000);
 			record_inlier = countNonZero(is_inlier);
-			best_R_C_W = R_C_W_guess;
-			best_t_C_W = t_C_W_guess;
+			R_C_W_guess.copyTo(best_R_C_W);
+			t_C_W_guess.copyTo(best_t_C_W);
 			cout << "best_R_C_W" << endl;
 			for (int r = 0; r < best_R_C_W.rows; r++) {
 				for (int c = 0; c < best_R_C_W.cols; c++) {
@@ -2143,11 +2170,11 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			cout << "projected_points" << endl;
 			for (int r = 0; r < projected_points.rows; r++) {
 				for (int c = 0; c < projected_points.cols; c++) {
-					cout << projected_points.at<double>(r,c) << ", ";
+					//cout << projected_points.at<double>(r,c) << ", ";
 				}
-				cout << "" << endl;
+				//cout << "" << endl;
 			}
-			difference = keypoints_i - projected_points;
+			difference = matched_query_keypoints - projected_points;
 			errors = difference.mul(difference);
 			errors = errors.row(0) + errors.row(1);
 			alternative_is_inlier = errors < pow(pixel_tolerance,2.0);
@@ -2156,20 +2183,22 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			cout << " countNonZero(alternative_is_inlier) = " << countNonZero(alternative_is_inlier) << endl;
 			cout << "Before if countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
 			if (countNonZero(alternative_is_inlier) > countNonZero(is_inlier) ) {
-				is_inlier = alternative_is_inlier;
+				//is_inlier = alternative_is_inlier;
+				alternative_is_inlier.copyTo(is_inlier);
 			} 
 			cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
 			cout << "Test if it is a pointer" << endl;
-			alternative_is_inlier = Mat::zeros(1, alternative_is_inlier.cols, CV_64FC1);
-			alternative_is_inlier = errors < pow(2,2.0);
+			//alternative_is_inlier = Mat::zeros(1, alternative_is_inlier.cols, CV_64FC1);
+			//alternative_is_inlier = errors < pow(2,2.0);
 			cout << " countNonZero(alternative_is_inlier) = " << countNonZero(alternative_is_inlier) << endl;
 			cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
 			
 			//waitKey(5000);
 			if (countNonZero(is_inlier) > record_inlier && countNonZero(is_inlier) >= min_inlier_count) {
+				//waitKey(5000);
 				record_inlier = countNonZero(is_inlier);
-				best_R_C_W = R_C_W_guess;
-				best_t_C_W = t_C_W_guess;
+				R_C_W_guess.copyTo(best_R_C_W);
+				t_C_W_guess.copyTo(best_t_C_W);
 				cout << "best_R_C_W" << endl;
 				for (int r = 0; r < best_R_C_W.rows; r++) {
 					for (int c = 0; c < best_R_C_W.cols; c++) {
@@ -2200,24 +2229,45 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			best_inlier_mask = is_inlier;
 		}
 		
+		cout << "Before adaptive_ransac " << endl;
+		cout << "max_num_inliers = " << max_num_inliers << endl;
+		cout << "is_inlier.cols = " << is_inlier.cols << endl;
 		if (adaptive_ransac) {
-			double outlier_ratio = 1 - max_num_inliers / is_inlier.cols;
+			float division = (float) max_num_inliers/ (float) is_inlier.cols;
+			cout << "division = " << division << endl;
+			float outlier_ratio = 1. - division;
 			cout << "max_num_inliers " << max_num_inliers << endl;
 			cout << "oulier ratio = "  << outlier_ratio << endl;
 			
-			double confidence = 0.95; 
-			double upper_bound_on_outlier_ratio = 0.90;
+			float confidence = 0.95; 
+			float upper_bound_on_outlier_ratio = 0.90;
 			outlier_ratio = min(upper_bound_on_outlier_ratio, outlier_ratio);
 			num_iterations = log( 1 - confidence)/log(1-pow((1-outlier_ratio),k)); 
 			cout << "num_iterations = " << num_iterations << endl;
 			
 			double v = 15000;
 			num_iterations = min(v, num_iterations);
+			cout << "num iterations after min-operation = " << num_iterations << endl;
 		}
 		
 		i++;
 	}	
-	
+	cout << "best_R_C_W" << endl;
+				for (int r = 0; r < best_R_C_W.rows; r++) {
+					for (int c = 0; c < best_R_C_W.cols; c++) {
+						cout << best_R_C_W.at<double>(r,c) << ", ";
+					}
+					cout << "" << endl;
+				}
+				cout << "" << endl;
+				cout << "best_t_C_W" << endl;
+				for (int r = 0; r < best_t_C_W.rows; r++) {
+					for (int c = 0; c < best_t_C_W.cols; c++) {
+						cout << best_t_C_W.at<double>(r,c) << ", ";
+					}
+					cout << "" << endl;
+				}
+				cout << "" << endl;
 	
 	if (max_num_inliers != 0) {
 		hconcat(best_R_C_W, best_t_C_W, transformation_matrix);
