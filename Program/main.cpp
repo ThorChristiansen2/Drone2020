@@ -447,8 +447,59 @@ int main ( int argc,char **argv ) {
 	//imshow("Frame I_i1 displayed", I_i1);
 	//waitKey(0);
 	
+	/*
+	// Test of p3p
+	Mat L = Mat::zeros(3, 3, CV_64FC1);
+	L.at<double>(0,0) = 1.919;
+	L.at<double>(0,1) = 6.8529;
+	L.at<double>(0,2) = 0.083223;
+	L.at<double>(1,0) = 1.5495; 
+	L.at<double>(1,1) = -1.0994;
+	L.at<double>(1,2) = 1.6112;
+	L.at<double>(2,0) = 13.961;
+	L.at<double>(2,1) = 24.532;
+	L.at<double>(2,2) = 8.7885;
+	
+	cout << "Landmarks " << endl;
+	for (int r = 0; r < L.rows; r++) {
+		for (int c = 0; c < L.cols; c++) {
+			cout << L.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	
+	Mat NM = Mat::zeros(3, 3, CV_64FC1);
+	NM.at<double>(0,0) = -0.352544;
+	NM.at<double>(0,1) = -0.428752;
+	NM.at<double>(0,2) = -0.310786;
+	NM.at<double>(1,0) = 0.554502; 
+	NM.at<double>(1,1) = 0.596396;
+	NM.at<double>(1,2) = 0.48941;
+	NM.at<double>(2,0) = 0.753818;
+	NM.at<double>(2,1) = 0.67859;
+	NM.at<double>(2,2) = 0.814794;
+	
+	cout << "normal bearings " << endl;
+	for (int r = 0; r < NM.rows; r++) {
+		for (int c = 0; c < NM.cols; c++) {
+			cout << NM.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	Mat poses = p3p(L, NM);
+	cout << "Poses " << endl;
+	for (int r = 0; r < poses.rows; r++) {
+		for (int c = 0; c < poses.cols; c++) {
+			cout << poses.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
 
 	// Test of repmat 
+	/*
 	Mat A = Mat::zeros(3, 1, CV_64FC1);
 	A.at<double>(1,0) = 1; 
 	A.at<double>(2,0) = 2;
@@ -499,6 +550,7 @@ int main ( int argc,char **argv ) {
 	double q = sum(hej)[0];
 	cout << "q is = " << q << endl;
 	cout << "nnz = " << countNonZero(hej) << endl;
+	*/
 	
 	
 	/*
@@ -511,12 +563,14 @@ int main ( int argc,char **argv ) {
 	}
 	*/
 
-
+	
 	// Test of ranSac Localizaiton 
 	ifstream MyReadFile("matched_query_keypoints.txt");
 	
 	Mat matched_keypoints = Mat::zeros(2, 271, CV_64FC1);
 	
+	
+	// Fejl i hvordan det loades ind 
 	if (MyReadFile.is_open()) {
 		for (int i = 0; i < 271; i++) {
 				MyReadFile >> matched_keypoints.at<double>(1,i);
@@ -570,7 +624,7 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	Mat transformation_matrix, best_inlier_mask;
-	//tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(matched_keypoints, c_landmarks, K2);
+	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(matched_keypoints, c_landmarks, K2);
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
 			cout << transformation_matrix.at<double>(r,c) << ", ";
@@ -578,7 +632,10 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 		cout << "" << endl;
 	}
+	
 
+
+	/*
 
 	Mat MP = Mat::zeros(3, 3, CV_64FC1);
 	MP.at<double>(0,0) = -10.677;
@@ -595,6 +652,8 @@ int main ( int argc,char **argv ) {
 	vv.at<double>(0,3) = -342696;
 	vv.at<double>(0,4) = 55243.9;
 	
+	
+	
 	Mat testQuartic = solveQuartic( vv );
 	cout << " Write testQuartic" << endl;
 	for (int r = 0; r < testQuartic.rows; r++) {
@@ -604,6 +663,7 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 		cout << "" << endl;
 	}
+	*
 
 	
 	/*
