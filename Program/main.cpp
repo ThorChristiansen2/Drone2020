@@ -20,6 +20,7 @@
  * Project: Bachelor project 2020
  * 
  * Problems: 
+ * OVERSkyggende problem: Det ser ud til, at der er et problem med matricen K, som skal kalibreres.
  * Lær hvordan man SSH'er ind på raspberry pi'en
  * Units seem to be meters 
  * What is the unit of the 3D points? Is it cm? meters? other units?
@@ -114,9 +115,9 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// Get Feature points
 	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray);
-	//const char* text0 = "Detected corners *Thor frame I_i0";
-	//drawCorners(I_i0, keypoints_I_i0, text0);
-	//waitKey(0);
+	const char* text0 = "Detected corners in frame I_i0";
+	drawCorners(I_i0, keypoints_I_i0, text0);
+	waitKey(0);
 	
 	/*
 	// ######################### KLT ######################### 
@@ -174,13 +175,20 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	int N = nr_keep--;
 	*/
 	
+	cout << "Matrix K " << endl;
+	for (int r = 0; r < K.rows; r++) {
+		for (int c = 0; c < K.cols; c++) {
+			cout << K.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
 	
 	
 	// ######################### SIFT ######################### 
 	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray);
-	const char* text1 = "Detected corners frame I_i1";
-	//drawCorners(I_i1, keypoints_I_i1,text1);
-	//waitKey(0);
+	const char* text1 = "Detected corners in frame I_i1";
+	drawCorners(I_i1, keypoints_I_i1,text1);
+	waitKey(0);
 	//cout << "Done with finding keypoints " << endl;
 	// Find descriptors for Feature Points
 	
@@ -215,6 +223,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		
 		// ########## KLT ##########
 		/*
+		 * 
 		points1[i] = Point2f(keypoints_I_i1.at<double>(0,i),keypoints_I_i1.at<double>(1,i));
 		points2[i] = Point2f(keypoints_I_i0_new.at<double>(0,i),keypoints_I_i0_new.at<double>(1,i));
 		
@@ -234,7 +243,9 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
 		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
 		*/
-	
+		
+		
+		// Config1
 		//  #### SIFT #### 
 		// Be aware of differences in x and y
 		points1[i] = Point2f(keypoints_I_i0(matches(i,1),1),keypoints_I_i0(matches(i,1),2));
@@ -246,7 +257,30 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),2);
 		
 	
+		double x = keypoints_I_i1(matches(i,0),1);
+		double y = keypoints_I_i1(matches(i,0),2);
+		double x2 = keypoints_I_i0(matches(i,1),1);
+		double y2 = keypoints_I_i0(matches(i,1),2);
+		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
+		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
+		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		
+		// SIFT but switching the order of points 
+		
+		
 		/*
+		// Config2
+		//  #### SIFT #### 
+		// Be aware of differences in x and y
+		points1[i] = Point2f(keypoints_I_i0(matches(i,1),2),keypoints_I_i0(matches(i,1),1));
+		points2[i] = Point2f(keypoints_I_i1(matches(i,0),2),keypoints_I_i1(matches(i,0),1));
+		
+		points1Mat.at<double>(0,i) = keypoints_I_i0(matches(i,1),1);
+		points1Mat.at<double>(1,i) = keypoints_I_i0(matches(i,1),2); 
+		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),1);
+		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),2);
+		
+	
 		double x = keypoints_I_i1(matches(i,0),1);
 		double y = keypoints_I_i1(matches(i,0),2);
 		double x2 = keypoints_I_i0(matches(i,1),1);
@@ -257,19 +291,94 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		*/
 		
 		
+		/*
+		// Config3
+		//  #### SIFT #### 
+		// Be aware of differences in x and y
+		points1[i] = Point2f(keypoints_I_i0(matches(i,1),1),keypoints_I_i0(matches(i,1),2));
+		points2[i] = Point2f(keypoints_I_i1(matches(i,0),1),keypoints_I_i1(matches(i,0),2));
+		
+		points1Mat.at<double>(0,i) = keypoints_I_i0(matches(i,1),2);
+		points1Mat.at<double>(1,i) = keypoints_I_i0(matches(i,1),1); 
+		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),2);
+		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),1);
+		
+	
+		double x = keypoints_I_i1(matches(i,0),1);
+		double y = keypoints_I_i1(matches(i,0),2);
+		double x2 = keypoints_I_i0(matches(i,1),1);
+		double y2 = keypoints_I_i0(matches(i,1),2);
+		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
+		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
+		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		*/
+		
+		
+		// Config4
+		/*
+		//  #### SIFT #### 
+		// Be aware of differences in x and y
+		points1[i] = Point2f(keypoints_I_i0(matches(i,1),2),keypoints_I_i0(matches(i,1),1));
+		points2[i] = Point2f(keypoints_I_i1(matches(i,0),2),keypoints_I_i1(matches(i,0),1));
+		
+		points1Mat.at<double>(0,i) = keypoints_I_i0(matches(i,1),2);
+		points1Mat.at<double>(1,i) = keypoints_I_i0(matches(i,1),1); 
+		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),2);
+		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),1);
+		
+	
+		double x = keypoints_I_i1(matches(i,0),1);
+		double y = keypoints_I_i1(matches(i,0),2);
+		double x2 = keypoints_I_i0(matches(i,1),1);
+		double y2 = keypoints_I_i0(matches(i,1),2);
+		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
+		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
+		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		*/
+		
+		
+		// SIFT but switching the order of points 
+		
+		
+		
 		
 	}
-	//imshow("Match",I_i1);
-	//waitKey(0);
+	imshow("Match",I_i1);
+	waitKey(0);
+	
+	cout << "Print of points1Mat - til test" << endl;
+	for (int r = 0; r < points1Mat.rows; r++) {
+		for (int c = 0; c < points1Mat.cols; c++) {
+			cout << points1Mat.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	cout << "Print of points1Mat - til test" << endl;
+	for (int r = 0; r < points2Mat.rows; r++) {
+		for (int c = 0; c < points2Mat.cols; c++) {
+			cout << points2Mat.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 	
 	
 	// Update State  with regards to keypoints in frame Ii_1
 	Si_1.Pi = points2Mat;
 	
+	cout << "Print of Si_1 Keypoints " << endl;
+	for (int r = 0; r < Si_1.Pi.rows; r++) {
+		for (int c = 0; c < Si_1.Pi.cols; c++) {
+			cout << Si_1.Pi.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 	
 	// Find fudamental matrix 
 	// Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99, 5000);
-	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99, 5000, noArray()); // 1 should be changed ot 3 
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 1, 0.95, 5000, noArray()); // 1 should be changed ot 3 
 	
 	// Estimate Essential Matrix
 	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);	
@@ -289,7 +398,17 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// Triangulate initial point cloud
 	Mat M1 = K * (Mat_<double>(3,4) << 1,0,0,0, 0,1,0,0, 0,0,1,0);
 	Mat M2 = K * transformation_matrix;
-	Si_1.Xi = linearTriangulation(points1Mat, points2Mat, M1, M2 );
+	Si_1.Xi = linearTriangulation(points1Mat, points2Mat, M1, M2);
+	
+	cout << "Print of 3D landmarks " << endl;
+	for (int r = 0; r < Si_1.Xi.rows; r++) {
+		for (int c = 0; c < Si_1.Xi.cols; c++) {
+			cout << Si_1.Xi.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+		cout << "" << endl;
+	}
+	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	
 	// return state of drone as well as transformation_matrix;
 	return make_tuple(Si_1, transformation_matrix);
@@ -379,8 +498,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	// Update keypoints in state 
 	Si.k = keypoints_i.cols;
-	Si.Pi = keypoints_i; 
-	Si.Xi = corresponding_landmarks;
+	keypoints_i.copyTo(Si.Pi); 
+	corresponding_landmarks.copyTo(Si.Xi);
 	
 	// Estimate the new pose using RANSAC and P3P algorithm 
 	Mat transformation_matrix, best_inlier_mask;
@@ -412,7 +531,7 @@ int main ( int argc,char **argv ) {
 	cout<<"Connected to camera ="<<Camera.getId() <<endl;
 	
 	// Calibrate camera to get intrinsic parameters K 
-	Mat K = (Mat_<double>(3,3) << 769.893, 0, 2.5, 0,1613.3,4, 0, 0, 1);
+	Mat K = (Mat_<double>(3,3) << 769.893, 0, 2.5, 0,1613.3, 4, 0, 0, 1);
 	cout << "K (intrinsic matrix)" << endl;
 	for (int i = 0; i < 3; i++) {
 		for (int j = 0; j < 3; j++) {
@@ -427,12 +546,14 @@ int main ( int argc,char **argv ) {
 	cout<<"Capturing"<<endl;
 	
 	// Initialization
-	//Camera.grab(); // You need to take an initial image in order to make the camera work
-	//Camera.retrieve( image ); 
+	Camera.grab(); // You need to take an initial image in order to make the camera work
+	Camera.retrieve( image ); 
 	//cout << "Image captured" <<endl;
-	//waitKey(1000);
+	waitKey(1000);
 	
 	
+	
+	/*
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
@@ -445,7 +566,181 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
 	//imshow("Frame I_i1 displayed", I_i1);
-	//waitKey(0);
+	//waitKey(0
+	*/
+	
+	
+	
+	I_i0 = imread("0001.jpg", IMREAD_UNCHANGED);
+	//I_i0.convertTo(I_i0, CV_64FC1);
+	I_i1 = imread("0002.jpg", IMREAD_UNCHANGED);
+	//I_i1.convertTo(I_i1, CV_64FC1);
+	
+	Mat K2 = Mat::zeros(3, 3, CV_64FC1);
+	K2.at<double>(0,0) = 1379.74;
+	K2.at<double>(0,2) = 760.35;
+	K2.at<double>(1,1) = 1382.08;
+	K2.at<double>(1,2) = 503.41;
+	K2.at<double>(2,2) = 1;
+	
+	
+	
+	/*
+	// Test of different initialization functions
+	state Si_1;
+	
+	int N = 84;
+	vector<Point2f> points1(N);
+	vector<Point2f> points2(N);
+	
+	Mat points1Mat = Mat::zeros(2, N, CV_64FC1); 
+	Mat points2Mat = Mat::zeros(2, N, CV_64FC1); 
+	
+	ifstream MyReadFile("p1.txt");	
+	// Fejl i hvordan det loades ind 
+	if (MyReadFile.is_open()) {
+		for (int i = 0; i < N; i++) {
+			MyReadFile >> points1Mat.at<double>(0,i);
+			MyReadFile >> points1Mat.at<double>(1,i);	
+		}
+	}
+	MyReadFile.close();
+	cout << "points1Mat" << endl;
+	for (int i = 0; i < points1Mat.rows; i++) {
+		for (int j = 0; j < points1Mat.cols; j++) {
+			cout << points1Mat.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	
+	ifstream MyRead2File("p2.txt");	
+	// Fejl i hvordan det loades ind 
+	if (MyRead2File.is_open()) {
+		for (int i = 0; i < N; i++) {
+			MyRead2File >> points2Mat.at<double>(0,i);
+			MyRead2File >> points2Mat.at<double>(1,i);	
+		}
+	}
+	MyRead2File.close();
+	cout << "points2Mat" << endl;
+	for (int i = 0; i < points2Mat.rows; i++) {
+		for (int j = 0; j < points2Mat.cols; j++) {
+			cout << points2Mat.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	
+	
+	for (int i = 0; i < N; i++) {
+		points1[i] = Point2f(points1Mat.at<double>(0,i),points1Mat.at<double>(1,i));
+		points2[i] = Point2f(points2Mat.at<double>(0,i),points2Mat.at<double>(1,i));
+	}
+	
+	cout << "2D points points1" << endl;
+	for (int i = 0; i < N; i++) {
+		cout << points1[i] << ", ";
+	}
+	
+	cout << "2D points points2" << endl;
+	for (int i = 0; i < N; i++) {
+		cout << points2[i] << ", ";
+	}
+	
+	
+	Mat K2 = Mat::zeros(3, 3, CV_64FC1);
+	K2.at<double>(0,0) = 1379.74;
+	K2.at<double>(0,2) = 760.35;
+	K2.at<double>(1,1) = 1382.08;
+	K2.at<double>(1,2) = 503.41;
+	K2.at<double>(2,2) = 1;
+	
+	cout << "K2 " << endl;
+	for (int i = 0; i < K2.rows; i++) {
+		for (int j = 0; j < K2.cols; j++) {
+			cout << K2.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 1, 0.95, 5000, noArray());
+	cout << "fundamental_matrix" << endl;
+	for (int i = 0; i < fundamental_matrix.rows; i++) {
+		for (int j = 0; j < fundamental_matrix.cols; j++) {
+			cout << fundamental_matrix.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	
+	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K2);
+	cout << "essential_matrix " << endl;
+	for (int i = 0; i < essential_matrix.rows; i++) {
+		for (int j = 0; j < essential_matrix.cols; j++) {
+			cout << essential_matrix.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	Mat E_test = Mat::zeros(3, 3, CV_64FC1);
+	E_test.at<double>(0,0) = -0.0452;
+	E_test.at<double>(0,1) = 0.5806;
+	E_test.at<double>(0,2) = -0.2378;
+	E_test.at<double>(1,0) = 3.4493;
+	E_test.at<double>(1,1) = -0.1351;
+	E_test.at<double>(1,2) = 19.8660999999;
+	E_test.at<double>(2,0) = 0.1405;
+	E_test.at<double>(2,1) = -20.2810999999;
+	E_test.at<double>(2,2) = 0.0178;
+	cout << "E_test " << endl;
+	for (int i = 0; i < E_test.rows; i++) {
+		for (int j = 0; j < E_test.cols; j++) {
+			cout << E_test.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	Mat transformation_matrix = findRotationAndTranslation(E_test, K2, points1Mat, points2Mat);
+	for (int i = 0; i < transformation_matrix.rows; i++) {
+		for (int j = 0; j < transformation_matrix.cols; j++) {
+			cout << transformation_matrix.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	Mat M1 = K2 * (Mat_<double>(3,4) << 1,0,0,0, 0,1,0,0, 0,0,1,0);
+	cout << "M1 " << endl;
+	for (int i = 0; i < M1.rows; i++) {
+		for (int j = 0; j < M1.cols; j++) {
+			cout << M1.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	Mat M2 = K2 * transformation_matrix;
+	cout << "M2 " << endl;
+	for (int i = 0; i < M2.rows; i++) {
+		for (int j = 0; j < M2.cols; j++) {
+			cout << M2.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	
+	Si_1.Xi = linearTriangulation(points1Mat, points2Mat, M1, M2);
+	cout << "" << endl;
+	cout << "Si_1.Xi" << endl;
+	cout << "" << endl;
+	for (int i = 0; i < Si_1.Xi.rows; i++) {
+		for (int j = 0; j < Si_1.Xi.cols; j++) {
+			cout << Si_1.Xi.at<double>(i,j) << ", ";
+		}
+		cout << "" << endl;
+		cout << "" << endl;
+	}
+	*/
+	
+	
 	
 	/*
 	// Test of p3p
@@ -562,8 +857,10 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	*/
+	
 
 	
+	/*
 	// Test of ranSac Localizaiton 
 	ifstream MyReadFile("matched_query_keypoints.txt");
 	
@@ -632,6 +929,7 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 		cout << "" << endl;
 	}
+	*/
 	
 
 
@@ -663,16 +961,17 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 		cout << "" << endl;
 	}
-	*
-
+	*/
 	
-	/*
+	// ADVARSEL: POTENTIEL FEJL MED HVORDAN KEYPOINTS ER STRUKTURERET PÅ. mÅSEK SKAL DER BYTTES OM PÅ RÆKKER. 
+	
 	// ############### VO initializaiton ###############
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Si_1.k = 0;
 	Mat transformation_matrix;
-	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K2, Si_1);
+	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
@@ -680,7 +979,8 @@ int main ( int argc,char **argv ) {
 		}
 		cout << "" << endl;
 	}
-	*/
+	
+	
 	
 	/*
 	cout << "State Si_1 before initializaiton" << endl;
@@ -744,7 +1044,7 @@ int main ( int argc,char **argv ) {
 	// Debug variable
 	int stop = 0;
 	
-	while (continueVOoperation == true && pipelineBroke == false) {
+	while (continueVOoperation == true && pipelineBroke == false && stop < 0) {
 		cout << "Begin Continuous VO operation " << endl;
 		
 		// Take new image 
@@ -779,7 +1079,10 @@ int main ( int argc,char **argv ) {
 		}
 		
 	}
+	
+	cout << "VO-pipeline terminated" << endl;
 	*/
+	
 	
 	
 	
