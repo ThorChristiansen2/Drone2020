@@ -1912,6 +1912,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		
 		
 		
+		
 		/*
 		for (int qq = 0; qq < 3; qq++) {
 			cout << "random_test point = " << random_test.at<double>(i,qq) << endl;
@@ -1937,6 +1938,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		}
 		//waitKey(10000);
 		*/
+		
 		
 		
 		
