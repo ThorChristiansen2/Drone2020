@@ -505,6 +505,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat transformation_matrix, best_inlier_mask;
 	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(keypoints_i, corresponding_landmarks, K);
 	
+	// Remove points that are determined as outliers from best_inlier_mask 
 	
 	/*
 	// Triangulate new points
@@ -553,13 +554,14 @@ int main ( int argc,char **argv ) {
 	
 	
 	
-	/*
+	
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
 	//imshow("Frame I_i0 displayed", I_i0);
 	//waitKey(0);	// Ensures it is sufficiently far away from initial frame
+	waitKey(5000);
 	
 	// First frame 1 
 	Camera.grab();
@@ -567,10 +569,10 @@ int main ( int argc,char **argv ) {
 	cout << "Frame I_i1 captured" <<endl;
 	//imshow("Frame I_i1 displayed", I_i1);
 	//waitKey(0
-	*/
 	
 	
 	
+	/*
 	I_i0 = imread("0001.jpg", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
 	I_i1 = imread("0002.jpg", IMREAD_UNCHANGED);
@@ -582,6 +584,7 @@ int main ( int argc,char **argv ) {
 	K2.at<double>(1,1) = 1382.08;
 	K2.at<double>(1,2) = 503.41;
 	K2.at<double>(2,2) = 1;
+	*/
 	
 	
 	
@@ -970,8 +973,8 @@ int main ( int argc,char **argv ) {
 	state Si_1;
 	Si_1.k = 0;
 	Mat transformation_matrix;
-	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K2, Si_1);
-	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K2, Si_1);
+	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
