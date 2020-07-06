@@ -1875,7 +1875,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	
 	while ( num_iterations-1 > i ) {
 	//while (1 > i) {
-		/*
+		
 		int random_nums[corresponding_landmarks.cols];
 		for (int mm = 0; mm < corresponding_landmarks.cols; mm++) {
 			random_nums[mm] = mm;
@@ -1908,11 +1908,11 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			cout << "" << endl;
 		}
 		//waitKey(5000);
-		*/
 		
 		
 		
 		
+		/*
 		for (int qq = 0; qq < 3; qq++) {
 			cout << "random_test point = " << random_test.at<double>(i,qq) << endl;
 			landmark_sample.at<double>(0,qq) = corresponding_landmarks.at<double>(0, random_test.at<double>(i,qq));
@@ -1936,6 +1936,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			cout << "" << endl;
 		}
 		//waitKey(10000);
+		*/
 		
 		
 		
@@ -2032,7 +2033,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		R_C_W_guess = R_W_C.t(); // Be aware of tranpose 
 		t_C_W_guess = -R_W_C.t()*t_W_C;
 		
-		
+		/*
 		cout << "R_C_W_guess" << endl;
 		for (int r = 0; r < R_C_W_guess.rows; r++) {
 			for (int c = 0; c < R_C_W_guess.cols; c++) {
@@ -2047,13 +2048,14 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			}
 			cout << "" << endl;
 		}
+		*/
 		
 		
 		points = R_C_W_guess * corresponding_landmarks + repeat(t_C_W_guess, 1, corresponding_landmarks.cols);
 		
 		projected_points = projectPoints(points, K);
 		
-		
+		/*
 		cout << "projected_points" << endl;
 		for (int r = 0; r < projected_points.rows; r++) {
 			for (int c = 0; c < projected_points.cols; c++) {
@@ -2068,6 +2070,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			}
 			cout << "" << endl;
 		}
+		*/
 		
 		
 		difference = matched_query_keypoints - projected_points;
@@ -2108,14 +2111,16 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		}
 		cout << "" << endl;
 		*/
-		cout << "First iter" << endl;
-		cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
+		//cout << "First iter" << endl;
+		//cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
 		//waitKey(5000);
 		if (countNonZero(is_inlier) > record_inlier && countNonZero(is_inlier) >= min_inlier_count) {
 			//waitKey(5000);
 			record_inlier = countNonZero(is_inlier);
 			R_C_W_guess.copyTo(best_R_C_W);
 			t_C_W_guess.copyTo(best_t_C_W);
+			
+			/*
 			cout << "best_R_C_W" << endl;
 			for (int r = 0; r < best_R_C_W.rows; r++) {
 				for (int c = 0; c < best_R_C_W.cols; c++) {
@@ -2132,6 +2137,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 				cout << "" << endl;
 			}
 			cout << "" << endl;
+			*/
 		
 		}
 		
@@ -2142,6 +2148,8 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 				R_W_C.at<double>(2,k) = poses.at<double>(2,k+1 + alt_idx*4);
 				t_W_C.at<double>(k,0) = poses.at<double>(k, alt_idx*4);
 			}
+			
+			/*
 			cout << "R_W_C" << endl;
 			for (int r = 0; r < R_W_C.rows; r++) {
 				for (int c = 0; c < R_W_C.cols; c++) {
@@ -2149,7 +2157,9 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 				}
 				cout << "" << endl;
 			}
+			*/
 			R_C_W_guess = R_W_C.t();
+			/*
 			cout << "R_C_W_guess" << endl;
 			for (int r = 0; r < R_C_W_guess.rows; r++) {
 				for (int c = 0; c < R_C_W_guess.cols; c++) {
@@ -2157,7 +2167,10 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 				}
 				cout << "" << endl;
 			}
+			*/
 			t_C_W_guess = -R_W_C.t()*t_W_C;
+			
+			/*
 			cout << "t_C_W_guess" << endl;
 			for (int r = 0; r < t_C_W_guess.rows; r++) {
 				for (int c = 0; c < t_C_W_guess.cols; c++) {
@@ -2165,8 +2178,12 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 				}
 				cout << "" << endl;
 			}
+			*/
+			
 			points = R_C_W_guess * corresponding_landmarks + repeat(t_C_W_guess, 1, corresponding_landmarks.cols);
 			projected_points = projectPoints(points, K);
+			
+			/*
 			cout << "projected_points" << endl;
 			for (int r = 0; r < projected_points.rows; r++) {
 				for (int c = 0; c < projected_points.cols; c++) {
@@ -2174,24 +2191,25 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 				}
 				//cout << "" << endl;
 			}
+			*/
 			difference = matched_query_keypoints - projected_points;
 			errors = difference.mul(difference);
 			errors = errors.row(0) + errors.row(1);
 			alternative_is_inlier = errors < pow(pixel_tolerance,2.0);
 			
-			cout << "Inside the three other rotations" << endl;
-			cout << " countNonZero(alternative_is_inlier) = " << countNonZero(alternative_is_inlier) << endl;
-			cout << "Before if countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
+			//cout << "Inside the three other rotations" << endl;
+			//cout << " countNonZero(alternative_is_inlier) = " << countNonZero(alternative_is_inlier) << endl;
+			//cout << "Before if countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
 			if (countNonZero(alternative_is_inlier) > countNonZero(is_inlier) ) {
 				//is_inlier = alternative_is_inlier;
 				alternative_is_inlier.copyTo(is_inlier);
 			} 
-			cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
-			cout << "Test if it is a pointer" << endl;
+			//cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
+			//cout << "Test if it is a pointer" << endl;
 			//alternative_is_inlier = Mat::zeros(1, alternative_is_inlier.cols, CV_64FC1);
 			//alternative_is_inlier = errors < pow(2,2.0);
-			cout << " countNonZero(alternative_is_inlier) = " << countNonZero(alternative_is_inlier) << endl;
-			cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
+			//cout << " countNonZero(alternative_is_inlier) = " << countNonZero(alternative_is_inlier) << endl;
+			//cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
 			
 			//waitKey(5000);
 			if (countNonZero(is_inlier) > record_inlier && countNonZero(is_inlier) >= min_inlier_count) {
@@ -2199,6 +2217,8 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 				record_inlier = countNonZero(is_inlier);
 				R_C_W_guess.copyTo(best_R_C_W);
 				t_C_W_guess.copyTo(best_t_C_W);
+				
+				/*
 				cout << "best_R_C_W" << endl;
 				for (int r = 0; r < best_R_C_W.rows; r++) {
 					for (int c = 0; c < best_R_C_W.cols; c++) {
@@ -2215,12 +2235,13 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 					cout << "" << endl;
 				}
 				cout << "" << endl;
+				*/
 			}
 			
 		}
 		
-		cout << "Update max_num_inliers " << endl;
-		cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
+		//cout << "Update max_num_inliers " << endl;
+		//cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
 		//waitKey(5000);
 	
 		
@@ -2229,25 +2250,25 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			best_inlier_mask = is_inlier;
 		}
 		
-		cout << "Before adaptive_ransac " << endl;
-		cout << "max_num_inliers = " << max_num_inliers << endl;
-		cout << "is_inlier.cols = " << is_inlier.cols << endl;
+		//cout << "Before adaptive_ransac " << endl;
+		//cout << "max_num_inliers = " << max_num_inliers << endl;
+		//cout << "is_inlier.cols = " << is_inlier.cols << endl;
 		if (adaptive_ransac) {
 			float division = (float) max_num_inliers/ (float) is_inlier.cols;
-			cout << "division = " << division << endl;
+			//cout << "division = " << division << endl;
 			float outlier_ratio = 1. - division;
-			cout << "max_num_inliers " << max_num_inliers << endl;
-			cout << "oulier ratio = "  << outlier_ratio << endl;
+			//cout << "max_num_inliers " << max_num_inliers << endl;
+			//cout << "oulier ratio = "  << outlier_ratio << endl;
 			
 			float confidence = 0.95; 
 			float upper_bound_on_outlier_ratio = 0.90;
 			outlier_ratio = min(upper_bound_on_outlier_ratio, outlier_ratio);
 			num_iterations = log( 1 - confidence)/log(1-pow((1-outlier_ratio),k)); 
-			cout << "num_iterations = " << num_iterations << endl;
+			//cout << "num_iterations = " << num_iterations << endl;
 			
 			double v = 15000;
 			num_iterations = min(v, num_iterations);
-			cout << "num iterations after min-operation = " << num_iterations << endl;
+			//cout << "num iterations after min-operation = " << num_iterations << endl;
 		}
 		
 		i++;
