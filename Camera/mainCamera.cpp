@@ -279,7 +279,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	if (display == false) {
 		int nr_corners = 0;
 		
-		int keypoints_limit = 50; // Change to 200
+		int keypoints_limit = 200; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;
