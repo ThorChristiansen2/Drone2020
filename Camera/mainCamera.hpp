@@ -9,6 +9,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/types.hpp>
 #include <opencv2/calib3d.hpp>
+#include <opencv2/opencv.hpp>
 
 // Other libaries
 #include "Matrix.h"

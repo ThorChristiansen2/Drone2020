@@ -279,7 +279,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	if (display == false) {
 		int nr_corners = 0;
 		
-		int keypoints_limit = 200; // Change to 200
+		int keypoints_limit = 300; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;
@@ -1821,7 +1821,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	double num_iterations;
 	int pixel_tolerance = 10; 
 	double k = 3.0;
-	int min_inlier_count = 30; // This parameter should be tuned for the implementation
+	int min_inlier_count = 5; // This parameter should be tuned for the implementation
 	double record_inlier = 0;
 		
 	if (adaptive_ransac) {

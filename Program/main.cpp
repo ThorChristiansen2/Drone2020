@@ -10,6 +10,7 @@
 #include <sstream>
 #include <raspicam/raspicam_cv.h>
 
+
 /* ########################
  * Name: mainCamera.cpp
  * Made by: Thor Christiansen - s173949 
@@ -495,8 +496,10 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1); // Interest point
 	cout << "Si_1.k = " << Si_1.k << endl;
 	for (int i = 0; i < Si_1.k; i++) {
-		x_T.at<double>(0,0) = Si_1.Pi.at<double>(1,i);
-		x_T.at<double>(0,1) = Si_1.Pi.at<double>(0,i);
+		//x_T.at<double>(0,0) = Si_1.Pi.at<double>(1,i); To debug this point point configuration with VO reference solution 
+		//x_T.at<double>(0,1) = Si_1.Pi.at<double>(0,i);
+		x_T.at<double>(0,0) = Si_1.Pi.at<double>(0,i); 
+		x_T.at<double>(0,1) = Si_1.Pi.at<double>(1,i);
 		cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
 
 		delta_keypoint = KLT::trackKLTrobustly(Ii_1, Ii, x_T, r_T, num_iters, lambda);
@@ -524,8 +527,10 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	for (int j = 0; j < Si_1.k; j++) {
 		if (kpold.at<double>(2,j) == 1) {
 			// Update matched keypoints 
-			keypoints_i.at<double>(0, nr_keep) = kpold.at<double>(0, j);
-			keypoints_i.at<double>(1, nr_keep) = kpold.at<double>(1, j);
+			// keypoints_i.at<double>(0, nr_keep) = kpold.at<double>(0, j); // This is for debugging 
+			// keypoints_i.at<double>(1, nr_keep) = kpold.at<double>(1, j);
+			keypoints_i.at<double>(0, nr_keep) = kpold.at<double>(1, j);
+			keypoints_i.at<double>(1, nr_keep) = kpold.at<double>(0, j);
 			
 			// Update landmarks 
 			corresponding_landmarks.at<double>(0, nr_keep) = Si_1.Xi.at<double>(0, j);
@@ -554,8 +559,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		cout << "" << endl;		
 	}
 	cout << "" << endl;	
-	//waitKey(5000);
-	//waitKey(0);
+	waitKey(5000);
+	waitKey(0);
 	
 	
 	// Delete landmarks for those points that were not matched 
@@ -624,30 +629,49 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
 	//I_i0.convertTo(I_i0, CV_64FC1);
-	//imshow("Frame I_i0 displayed", I_i0);
-	//waitKey(0);	// Ensures it is sufficiently far away from initial frame
+	imshow("Frame I_i0 displayed", I_i0);
+	imwrite("cam0.png", I_i0);
+	waitKey(0);	// Ensures it is sufficiently far away from initial frame
 	waitKey(5000);
 	
-	// First frame 1 
+	// First frame 1
+	cout << "Prepare to take image 1" << endl; 
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
-	//I_i1.convertTo(I_i1, CV_64FC1);
-	//imshow("Frame I_i1 displayed", I_i1);
-	//waitKey(0);
+	imshow("Frame I_i1 displayed", I_i1);
+	imwrite("cam1.png", I_i1);
+	waitKey(0);
+	waitKey(5000);
+	
+	Mat I_i2;
+	// First frame 1
+	cout << "Prepare to take image 1" << endl; 
+	Camera.grab();
+	Camera.retrieve ( I_i2 ); // Frame 1 
+	cout << "Frame I_i1 captured" <<endl;
+	imshow("Frame I_i1 displayed", I_i2);
+	imwrite("cam1.png", I_i2);
+	waitKey(0);
+	waitKey(5000);
 	*/
 	
 	
+	
+	
+	
 	// Test billeder
-	I_i0 = imread("cam1.png", IMREAD_UNCHANGED);
+	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
 	imshow("Frame I_i0 displayed", I_i0);
 	waitKey(0);
 	
-	I_i1 = imread("cam2.png", IMREAD_UNCHANGED);
+	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
+	
+	
 	
 	
 	// ADVARSEL: POTENTIEL FEJL MED HVORDAN KEYPOINTS ER STRUKTURERET PÅ. mÅSEK SKAL DER BYTTES OM PÅ RÆKKER. 
@@ -896,7 +920,7 @@ int main ( int argc,char **argv ) {
 	Mat Ii_1 = I_i1;
 	
 	// Debug variable
-	int stop = 1;
+	int stop = 0;
 	
 	
 	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
@@ -912,8 +936,16 @@ int main ( int argc,char **argv ) {
 		//waitKey(0);
 		*/
 		
-		Ii = imread("0002.jpg", IMREAD_UNCHANGED);
+		Ii = imread("cam1.png", IMREAD_UNCHANGED);
+		imshow("Continous operation frame", Ii);
+		waitKey(0);
 		//Ii.convertTo(Ii, CV_64FC1);
+		for (int r = 0; r < K.rows; r++) {
+			for (int c = 0; c < K.cols; c++) {
+				cout << K.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
 		
 		// Estimate pose 
 		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K);
