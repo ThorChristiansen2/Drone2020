@@ -23,7 +23,7 @@
  * OVERSkyggende problem: Det ser ud til, at der er et problem med matricen K, som skal kalibreres.
  * Lær hvordan man SSH'er ind på raspberry pi'en
  * Units seem to be meters 
- * What is the unit of the 3D points? Is it cm? meters? other units?
+ * The units are in meters.
  * Maybe you fuck up when you try to use KLT in the initialization 
  * See MatLab code week 3 for an efficient way to find Harris Corners 
  * When using KLT: Remember to use gray-scale images and resize the images with a factor of 4 
@@ -623,6 +623,7 @@ int main ( int argc,char **argv ) {
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
 	cout << "Frame I_i0 captured" <<endl;
+	//I_i0.convertTo(I_i0, CV_64FC1);
 	//imshow("Frame I_i0 displayed", I_i0);
 	//waitKey(0);	// Ensures it is sufficiently far away from initial frame
 	waitKey(5000);
@@ -631,34 +632,32 @@ int main ( int argc,char **argv ) {
 	Camera.grab();
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
+	//I_i1.convertTo(I_i1, CV_64FC1);
 	//imshow("Frame I_i1 displayed", I_i1);
-	//waitKey(0)
+	//waitKey(0);
 	*/
 	
-	// Test of System
-	I_i0 = imread("0001.jpg", IMREAD_UNCHANGED);
+	
+	// Test billeder
+	I_i0 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
-	I_i1 = imread("0002.jpg", IMREAD_UNCHANGED);
+	imshow("Frame I_i0 displayed", I_i0);
+	waitKey(0);
+	
+	I_i1 = imread("cam2.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
-	
-	Mat K2 = Mat::zeros(3, 3, CV_64FC1);
-	K2.at<double>(0,0) = 1379.74;
-	K2.at<double>(0,2) = 760.35;
-	K2.at<double>(1,1) = 1382.08;
-	K2.at<double>(1,2) = 503.41;
-	K2.at<double>(2,2) = 1;
-	
+	imshow("Frame I_i1 displayed", I_i1);
+	waitKey(0);
 	
 	
 	// ADVARSEL: POTENTIEL FEJL MED HVORDAN KEYPOINTS ER STRUKTURERET PÅ. mÅSEK SKAL DER BYTTES OM PÅ RÆKKER. 
 	
-	/*
+	
 	// ############### VO initializaiton ###############
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Mat transformation_matrix;
-	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K2, Si_1);
-	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K2, Si_1);
+	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
@@ -678,7 +677,21 @@ int main ( int argc,char **argv ) {
 	for (int i = 0; i < 5; i++) {
 		cout << Si_1.Xi.at<double>(0,i) << "," << Si_1.Xi.at<double>(1,i) << ","  << Si_1.Xi.at<double>(2,i) << ","  << Si_1.Xi.at<double>(3,i) << endl;
 	}
-	*/
+	
+	
+	/*
+	// Test of System
+	I_i0 = imread("0001.jpg", IMREAD_UNCHANGED);
+	//I_i0.convertTo(I_i0, CV_64FC1);
+	I_i1 = imread("0002.jpg", IMREAD_UNCHANGED);
+	//I_i1.convertTo(I_i1, CV_64FC1);
+	
+	Mat K2 = Mat::zeros(3, 3, CV_64FC1);
+	K2.at<double>(0,0) = 1379.74;
+	K2.at<double>(0,2) = 760.35;
+	K2.at<double>(1,1) = 1382.08;
+	K2.at<double>(1,2) = 503.41;
+	K2.at<double>(2,2) = 1;
 	
 	state Si_1;
 	
@@ -868,6 +881,7 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
+	*/
 	
 	
 	
@@ -882,7 +896,7 @@ int main ( int argc,char **argv ) {
 	Mat Ii_1 = I_i1;
 	
 	// Debug variable
-	int stop = 0;
+	int stop = 1;
 	
 	
 	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
@@ -902,7 +916,7 @@ int main ( int argc,char **argv ) {
 		//Ii.convertTo(Ii, CV_64FC1);
 		
 		// Estimate pose 
-		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K2);
+		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K);
 		cout << "Print of Transformation Matrix" << endl;
 		for (int r = 0; r < transformation_matrix.rows; r++) {
 			for (int c = 0; c < transformation_matrix.cols; c++) {
