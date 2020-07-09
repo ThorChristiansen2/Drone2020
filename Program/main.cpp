@@ -670,13 +670,13 @@ int main ( int argc,char **argv ) {
 	// Test billeder
 	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
-	imshow("Frame I_i0 displayed", I_i0);
-	waitKey(0);
+	//imshow("Frame I_i0 displayed", I_i0);
+	//waitKey(0);
 	
 	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
-	imshow("Frame I_i1 displayed", I_i1);
-	waitKey(0);
+	//imshow("Frame I_i1 displayed", I_i1);
+	//waitKey(0);
 	
 	
 	
@@ -687,7 +687,7 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Mat transformation_matrix;
-	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
@@ -698,7 +698,7 @@ int main ( int argc,char **argv ) {
 	
 	
 	
-	
+	/*
 	cout << "State Si_1 before initializaiton" << endl;
 	cout << "Number of keypoints k = " << Si_1.k << endl;
 	cout << "State Si_1" << endl;
@@ -708,7 +708,7 @@ int main ( int argc,char **argv ) {
 	for (int i = 0; i < 5; i++) {
 		cout << Si_1.Xi.at<double>(0,i) << "," << Si_1.Xi.at<double>(1,i) << ","  << Si_1.Xi.at<double>(2,i) << ","  << Si_1.Xi.at<double>(3,i) << endl;
 	}
-	
+	*/
 	
 	
 	/*
@@ -932,7 +932,7 @@ int main ( int argc,char **argv ) {
 	
 	
 	// Debug variable
-	int stop = 0;
+	int stop = 1;
 	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
 	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
@@ -996,12 +996,12 @@ int main ( int argc,char **argv ) {
 	Camera.release();
 	
 	
-	/*
+	
 	// Test of KLT
 	cout << "Test of KLT in Main function" << endl;
 	Mat I1, I2, I1_gray, I2_gray;
 	I1 = imread("cam1.png", IMREAD_UNCHANGED);
-	I2 = imread("cam1.png", IMREAD_UNCHANGED);
+	I2 = imread("cam2.png", IMREAD_UNCHANGED);
 	cvtColor(I1, I1_gray, COLOR_BGR2GRAY );
 	cvtColor(I2, I2_gray, COLOR_BGR2GRAY );
 	
@@ -1014,18 +1014,18 @@ int main ( int argc,char **argv ) {
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1); 
 	//x_T.at<double>(0,0) = 1023; 
 	//x_T.at<double>(0,1) = 316;
-	x_T.at<double>(0,0) = 1027; 
-	x_T.at<double>(0,1) = 275;
-	circle (I1, Point(1027,275), 5,  Scalar(0,0,255), 2,8,0);
+	x_T.at<double>(0,0) = 1023; 
+	x_T.at<double>(0,1) = 316;
+	circle (I1, Point(1023,316), 5,  Scalar(0,0,255), 2,8,0);
 	imshow("frame I1", I1);
 	imshow("frame I1_gray", I1_gray);
 	waitKey(0);
 	//waitKey(5000);
 	
-	delta_keypoint = KLT::trackKLTrobustly(I2_gray, I1_gray, x_T, r_T, num_iters, lambda);
+	delta_keypoint = KLT::trackKLTrobustly(I1_gray, I2_gray, x_T, r_T, num_iters, lambda);
 	
 	cout << "Match = " << delta_keypoint.at<double>(2,0) << " at point = (" << delta_keypoint.at<double>(0,0) << "," << delta_keypoint.at<double>(1,0) << ")" << endl;
-	*/
+	
 	
 	
 	

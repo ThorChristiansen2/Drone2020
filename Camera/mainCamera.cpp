@@ -951,8 +951,24 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 	// Find the transpose
 	Mat WT = W.t();
 	
+	/*
+	int hej = 0;
+	if (WT.at<double>(0,0) > 1) {
+		hej = 1;
+	}
+	if (hej == 1) {
+		cout << "WT " << endl;
+		for (int r = 0; r < WT.rows; r++) {
+				for (int c = 0; c < WT.cols; c++) {
+					cout << WT.at<double>(r,c) << ", ";
+				}
+				cout << "" << endl;
+			}
+			waitKey(0);
+	}
 	//cout << "Inside getwarpedPatch" << endl;
 	//waitKey(10000);
+	*/
 	
 	Mat pre_warp = Mat::zeros(1, 3, CV_64FC1);
 	for (int x = -r_T; x <= r_T; x++) {
@@ -961,29 +977,32 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 			pre_warp.at<double>(0,1) = y;
 			pre_warp.at<double>(0,2) = 1;
 
-			
-			//cout << "Print of pre_warp" << endl;
-			
 			/*
-			for (int r = 0; r < pre_warp.rows; r++) {
-				for (int c = 0; c < pre_warp.cols; c++) {
-					cout << pre_warp.at<double>(r,c) << ", ";
+			if (hej == 1) {
+				cout << "pre_warp" << endl;
+				for (int r = 0; r < pre_warp.rows; r++) {
+					for (int c = 0; c < pre_warp.cols; c++) {
+						cout << pre_warp.at<double>(r,c) << ", ";
 				}
 				cout << "" << endl;
+				}
+				waitKey(0);
 			}
-			//waitKey(2000);
 			*/
 			
 			Mat warped = x_T + pre_warp * WT;
 			
 			/*
-			for (int r = 0; r < warped.rows; r++) {
-				for (int c = 0; c < warped.cols; c++) {
-					cout << warped.at<double>(r,c) << ", ";
+			if (hej == 1) {
+				cout << "warped" << endl;
+				for (int r = 0; r < warped.rows; r++) {
+					for (int c = 0; c < warped.cols; c++) {
+						cout << warped.at<double>(r,c) << ", ";
 				}
 				cout << "" << endl;
+				}
+				waitKey(0);
 			}
-			//waitKey(2000);
 			*/
 			
 			if (warped.at<double>(0,0) < max_coords_cols && warped.at<double>(0,1) < max_coords_rows) {
@@ -1001,6 +1020,17 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 					}
 					
 					/*
+					if (hej == 1) {
+						cout << "floors " << endl;
+						for (int r = 0; r < floors.rows; r++) {
+							for (int c = 0; c < floors.cols; c++) {
+								cout << floors.at<double>(r, c) << ", ";
+							}
+						}
+					}
+					*/
+					
+					/*
 					cout << "floors " << endl;
 					for (int r = 0; r < floors.rows; r++) {
 						for (int c = 0; c < floors.cols; c++) {
@@ -1012,6 +1042,17 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 					*/
 					
 					Mat weights = warped - floors;
+					
+					/*
+					if (hej == 1) {
+						cout << "weights " << endl;
+						for (int r = 0; r < weights.rows; r++) {
+							for (int c = 0; c < weights.cols; c++) {
+								cout << weights.at<double>(r, c) << ", ";
+							}
+						}
+					}
+					*/
 					
 					/*
 					cout << "weights " << endl;
@@ -1027,6 +1068,15 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 					double a = weights.at<double>(0,0);
 					double b = weights.at<double>(0,1);
 					
+					/*
+					if (hej == 1) {
+						cout << "a and b " << endl;
+						cout << "a = " << a;
+						cout << "b = " << b;
+						cout << "" << endl;
+					}
+					*/
+					
 					//cout << "a = " << a << " and b = " << b << endl;
 					
 					//cout << "floors.at<double>(0,1)-1 = " << floors.at<double>(0,1)-1 << endl;
@@ -1039,19 +1089,51 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 					
 					//cout << "Image intensity 1 = " << I_new.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)) << endl;
 					
-					double intensity = (1-b) * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) + a * I_new.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)));
+					/*
+					if (hej == 1) {
+						cout << "First image index = " << I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) << endl;
+						cout << "Second image index = " << I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)) << endl;
+						cout << "index 1 = " << floors.at<double>(0,1)-1 << endl; // Should be one less
+						cout << "index 2 = " << floors.at<double>(0,0)-1 << endl;
+						cout << "index 3 = " << floors.at<double>(0,1)-1 << endl;
+						cout << "index 4 = " << floors.at<double>(0,0) << endl;
+					}
+					*/
+					
+					double intensity = (1-b) * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) + a * I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)));
+					
+					/*
+					if (hej == 1) {
+						cout << "temp_intensity = " << intensity << endl;
+					}
+					*/
 					
 					//cout << "temp-intensity = " << intensity << endl;
 					
-					intensity = intensity + b * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1),floors.at<double>(0,0)-1) + a * I_new.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)));
+					intensity = intensity + b * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1),floors.at<double>(0,0)-1) + a * I_new.at<uchar>(floors.at<double>(0,1),floors.at<double>(0,0)));
 					
+					/*
 					if (intensity == 0) {
 						waitKey(0);
 					}
+					*/
+					/*
+					if (hej == 1) {
+						cout << "intensity = " << intensity << endl; 
+					}
+					*/
+					
+					
 					
 					//cout << "Intensity = " << intensity << endl;;
 					
 					patch.at<double>(y + r_T, x + r_T) = intensity;
+					
+					/*
+					if (hej == 1) {
+						cout << "patch value = " << patch.at<double>(y + r_T, x + r_T) << endl;
+					}
+					*/
 					
 					//cout << "y + r_T, x+r_T = (" << y + r_T << "," << x + r_T << ")" << endl;
 					
@@ -1129,8 +1211,9 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 		}
 		cout << "" << endl;
 	}
-	//waitKey(0);
+	waitKey(0);
 	*/
+	
 	
 	I_RT = I_RT.t();
 	Mat i_R = I_RT.reshape(0,I_RT.rows * I_RT.cols);
@@ -1172,7 +1255,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 	// About to begin iteration 
 	for (int iter = 0; iter < num_iters; iter++) {
 		Mat big_IWT = getWarpedPatch(I_new, W, x_T, r_T + 1); // We are here 
-		/*
+		
 		cout << "big_IWT" << endl;
 		for (int r = 0; r < big_IWT.rows; r++) {
 			for (int c = 0; c < big_IWT.cols; c++) {
@@ -1180,8 +1263,9 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 			}
 			cout << "" << endl;
 		}
-		waitKey(0);
-		*/
+		//waitKey(0);
+		
+		
 		
 		Mat IWT_temp, IWT;
 		IWT_temp = selectRegionOfInterest(big_IWT, 1, 1, big_IWT.rows-1, big_IWT.cols-1);
@@ -1234,6 +1318,8 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 		// Hessian matrix 
 		Mat H = didp.t() * didp;
 		
+		// Hessian matrix check
+		
 		Mat temp_delta_p = didp.t() * (i_R - i);
 		
 		// Calculate delta_p 
@@ -1256,6 +1342,15 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 		
 		// Transpose W to get the right shape for the next iteration - C++ is different from Matlab
 		W = W.t();
+		
+		cout << "W" << endl;
+		for (int r = 0; r < W.rows; r++) {
+			for (int c = 0; c < W.cols; c++) {
+				cout << W.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		//waitKey(0);
 		
 	}
 	return W;
