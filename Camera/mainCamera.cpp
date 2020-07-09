@@ -936,8 +936,8 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 	//imshow("I_new", I_new);
 	//waitKey(0);
 	
-	cout << "Type of image" << endl;
-	MatType(I_new);
+	//cout << "Type of image" << endl;
+	//MatType(I_new);
 	
 	// Initialize patch
 	Mat patch = Mat::zeros(2*r_T + 1, 2*r_T + 1, CV_64FC1);
@@ -946,12 +946,12 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 	int max_coords_rows = I_new.rows;
 	int max_coords_cols = I_new.cols;
 	
-	cout << "Dimensions of image = (" << max_coords_rows << "," << max_coords_cols << ")" << endl;
+	//cout << "Dimensions of image = (" << max_coords_rows << "," << max_coords_cols << ")" << endl;
 	
 	// Find the transpose
 	Mat WT = W.t();
 	
-	cout << "Inside getwarpedPatch" << endl;
+	//cout << "Inside getwarpedPatch" << endl;
 	//waitKey(10000);
 	
 	Mat pre_warp = Mat::zeros(1, 3, CV_64FC1);
@@ -962,9 +962,9 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 			pre_warp.at<double>(0,2) = 1;
 
 			
-			cout << "Print of pre_warp" << endl;
+			//cout << "Print of pre_warp" << endl;
 			
-			
+			/*
 			for (int r = 0; r < pre_warp.rows; r++) {
 				for (int c = 0; c < pre_warp.cols; c++) {
 					cout << pre_warp.at<double>(r,c) << ", ";
@@ -972,9 +972,11 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 				cout << "" << endl;
 			}
 			//waitKey(2000);
+			*/
 			
 			Mat warped = x_T + pre_warp * WT;
 			
+			/*
 			for (int r = 0; r < warped.rows; r++) {
 				for (int c = 0; c < warped.cols; c++) {
 					cout << warped.at<double>(r,c) << ", ";
@@ -982,19 +984,23 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 				cout << "" << endl;
 			}
 			//waitKey(2000);
+			*/
 			
 			if (warped.at<double>(0,0) < max_coords_cols && warped.at<double>(0,1) < max_coords_rows) {
 				if (warped.at<double>(0,0) > 0 && warped.at<double>(0,1) > 0) { // It should be greater than 0 (C++ 0-indexing)
 					
-					cout << "Inside if-statements" << endl;
+					//cout << "Inside if-statements" << endl;
 
 					Mat floors = Mat::zeros(warped.rows, warped.cols, CV_64FC1);
+					
+					
 					for (int r = 0; r < floors.rows; r++) {
 						for (int c = 0; c < floors.cols; c++) {
 							floors.at<double>(r, c) = floor(warped.at<double>(r, c));
 						}
 					}
 					
+					/*
 					cout << "floors " << endl;
 					for (int r = 0; r < floors.rows; r++) {
 						for (int c = 0; c < floors.cols; c++) {
@@ -1003,9 +1009,11 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 						cout << "" << endl;
 					}
 					//waitKey(2000);
+					*/
 					
 					Mat weights = warped - floors;
 					
+					/*
 					cout << "weights " << endl;
 					for (int r = 0; r < weights.rows; r++) {
 						for (int c = 0; c < weights.cols; c++) {
@@ -1014,15 +1022,16 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 						cout << "" << endl;
 					}
 					//waitKey(2000);
+					*/
 					
 					double a = weights.at<double>(0,0);
 					double b = weights.at<double>(0,1);
 					
-					cout << "a = " << a << " and b = " << b << endl;
+					//cout << "a = " << a << " and b = " << b << endl;
 					
-					cout << "floors.at<double>(0,1)-1 = " << floors.at<double>(0,1)-1 << endl;
+					//cout << "floors.at<double>(0,1)-1 = " << floors.at<double>(0,1)-1 << endl;
 					
-					cout << "floors.at<double>(0,0)-1) = " << floors.at<double>(0,0)-1 << endl;
+					//cout << "floors.at<double>(0,0)-1) = " << floors.at<double>(0,0)-1 << endl;
 					
 					//cout << "Image intensity 1 = " <<  I_new.at<uchar>((int) floors.at<double>(0,1)-1,(int) floors.at<double>(0,0)-1) << endl;
 					
@@ -1032,17 +1041,21 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 					
 					double intensity = (1-b) * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) + a * I_new.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)));
 					
-					cout << "temp-intensity = " << intensity << endl;
+					//cout << "temp-intensity = " << intensity << endl;
 					
 					intensity = intensity + b * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1),floors.at<double>(0,0)-1) + a * I_new.at<double>(floors.at<double>(0,1),floors.at<double>(0,0)));
 					
-					cout << "Intensity = " << intensity << endl;;
+					if (intensity == 0) {
+						waitKey(0);
+					}
+					
+					//cout << "Intensity = " << intensity << endl;;
 					
 					patch.at<double>(y + r_T, x + r_T) = intensity;
 					
-					cout << "y + r_T, x+r_T = (" << y + r_T << "," << x + r_T << ")" << endl;
+					//cout << "y + r_T, x+r_T = (" << y + r_T << "," << x + r_T << ")" << endl;
 					
-					cout << "patch = " << patch.at<double>(y + r_T, x + r_T) << endl;
+					//cout << "patch = " << patch.at<double>(y + r_T, x + r_T) << endl;
 				}	
 			}
 		}
@@ -1090,6 +1103,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 	// Get the warped patch
 	Mat I_RT = getWarpedPatch(I_R, W, x_T, r_T);
 	
+	/*
 	// Output for debug 
 	cout << "r_T = " << r_T << endl;
 	cout << "W" << endl;
@@ -1116,6 +1130,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 		cout << "" << endl;
 	}
 	//waitKey(0);
+	*/
 	
 	I_RT = I_RT.t();
 	Mat i_R = I_RT.reshape(0,I_RT.rows * I_RT.cols);
@@ -1131,6 +1146,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 			temp_index++;
 		} 
 	}
+	
 	// Find the Kroeneckerproduct 
 	Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
 	
@@ -1156,7 +1172,16 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 	// About to begin iteration 
 	for (int iter = 0; iter < num_iters; iter++) {
 		Mat big_IWT = getWarpedPatch(I_new, W, x_T, r_T + 1); // We are here 
-		
+		/*
+		cout << "big_IWT" << endl;
+		for (int r = 0; r < big_IWT.rows; r++) {
+			for (int c = 0; c < big_IWT.cols; c++) {
+				cout << big_IWT.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		waitKey(0);
+		*/
 		
 		Mat IWT_temp, IWT;
 		IWT_temp = selectRegionOfInterest(big_IWT, 1, 1, big_IWT.rows-1, big_IWT.cols-1);
