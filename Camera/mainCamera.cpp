@@ -943,12 +943,28 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 	// Find the transpose
 	Mat WT = W.t();
 	
+	cout << "Inside getwarpedPatch" << endl;
+	waitKey(10000);
+	
 	Mat pre_warp = Mat::zeros(1, 3, CV_64FC1);
 	for (int x = -r_T; x <= r_T; x++) {
 		for (int y = -r_T; y <= r_T; y++) {
+			cout << "Inside for loop get warped patch" << endl;
+			waitKey(5000);
 			pre_warp.at<double>(0,0) = x;
 			pre_warp.at<double>(0,1) = y;
 			pre_warp.at<double>(0,2) = 1;
+		
+			
+			cout << "Print of pre_warp" << endl;
+			for (int r = 0; r < pre_warp.rows; r++) {
+				for (int c = 0; r < pre_warp.cols; c++) {
+					cout << pre_warp.at<double>(r,c) << ", ";
+				}
+				cout << "" << endl;
+			}
+			waitKey(0);
+			waitKey(5000);
 			
 			Mat warped = x_T + pre_warp * WT;
 			
@@ -1018,6 +1034,33 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 	
 	// Get the warped patch
 	Mat I_RT = getWarpedPatch(I_R, W, x_T, r_T);
+	
+	// Output for debug 
+	cout << "r_T = " << r_T << endl;
+	cout << "W" << endl;
+	for (int r = 0; r < W.rows; r++) {
+		for (int c = 0; c < W.cols; c++) {
+			cout << W.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "x_T" << endl;
+	for (int r = 0; r < x_T.rows; r++) {
+		for (int c = 0; c < x_T.cols; c++) {
+			cout << x_T.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	MatType(I_RT);
+	cout << "I_RT" << endl;
+	for (int r = 0; r < I_RT.rows; r++) {
+		for (int c = 0; c < I_RT.cols; c++) {
+			cout << I_RT.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	waitKey(0);
 	
 	I_RT = I_RT.t();
 	Mat i_R = I_RT.reshape(0,I_RT.rows * I_RT.cols);

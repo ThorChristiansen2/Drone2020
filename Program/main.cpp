@@ -194,7 +194,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray);
 	const char* text1 = "Detected corners in frame I_i1";
 	drawCorners(I_i1, keypoints_I_i1,text1);
-	waitKey(0);
+	//waitKey(0);
 	//cout << "Done with finding keypoints " << endl;
 	// Find descriptors for Feature Points
 	
@@ -350,7 +350,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		
 	}
 	imshow("Match",I_i1);
-	waitKey(0);
+	//waitKey(0);
 	
 	
 	
@@ -479,8 +479,15 @@ Mat calibrate_matrix(Mat transformation_matrix) {
 tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 
 	// Turn the images into grayscale 
-
-
+	Mat Ii_gray, Ii_1_gray;
+	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
+	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );
+	
+	imshow("Ii_gray image", Ii_gray);
+	//waitKey(0);
+	imshow("Ii_1_gray image", Ii_1_gray);
+	//waitKey(0);
+	
 	// new state
 	state Si;
 
@@ -496,13 +503,13 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1); // Interest point
 	cout << "Si_1.k = " << Si_1.k << endl;
 	for (int i = 0; i < Si_1.k; i++) {
-		//x_T.at<double>(0,0) = Si_1.Pi.at<double>(1,i); To debug this point point configuration with VO reference solution 
-		//x_T.at<double>(0,1) = Si_1.Pi.at<double>(0,i);
-		x_T.at<double>(0,0) = Si_1.Pi.at<double>(0,i); 
-		x_T.at<double>(0,1) = Si_1.Pi.at<double>(1,i);
+		x_T.at<double>(0,0) = Si_1.Pi.at<double>(1,i); //To debug this point point configuration with VO reference solution 
+		x_T.at<double>(0,1) = Si_1.Pi.at<double>(0,i);
+		//x_T.at<double>(0,0) = Si_1.Pi.at<double>(0,i); 
+		//x_T.at<double>(0,1) = Si_1.Pi.at<double>(1,i);
 		cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
 
-		delta_keypoint = KLT::trackKLTrobustly(Ii_1, Ii, x_T, r_T, num_iters, lambda);
+		delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, r_T, num_iters, lambda);
 		
 		for (int k = 0; k < delta_keypoint.rows; k++) {
 
@@ -663,14 +670,13 @@ int main ( int argc,char **argv ) {
 	// Test billeder
 	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
-	imshow("Frame I_i0 displayed", I_i0);
-	waitKey(0);
+	//imshow("Frame I_i0 displayed", I_i0);
+	//waitKey(0);
 	
 	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
-	imshow("Frame I_i1 displayed", I_i1);
-	waitKey(0);
-	
+	//imshow("Frame I_i1 displayed", I_i1);
+	//waitKey(0);
 	
 	
 	
@@ -681,7 +687,7 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Mat transformation_matrix;
-	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
@@ -698,9 +704,11 @@ int main ( int argc,char **argv ) {
 	cout << "State Si_1" << endl;
 	cout << "Keypoints of state Si = (" << Si_1.Pi.rows << "," << Si_1.Pi.cols << ")" << endl;
 	cout << "Landmarks of state Si = " << Si_1.Xi.rows << "," << Si_1.Xi.cols << endl;
+	/*
 	for (int i = 0; i < 5; i++) {
 		cout << Si_1.Xi.at<double>(0,i) << "," << Si_1.Xi.at<double>(1,i) << ","  << Si_1.Xi.at<double>(2,i) << ","  << Si_1.Xi.at<double>(3,i) << endl;
 	}
+	*/
 	
 	
 	/*
@@ -917,11 +925,15 @@ int main ( int argc,char **argv ) {
 	// Needed variables
 	state Si;
 	Mat Ii;
-	Mat Ii_1 = I_i1;
+	
+	
+	// Mat Ii_1 = I_i1;
+	// For test 
+	
 	
 	// Debug variable
-	int stop = 0;
-	
+	int stop = 1;
+	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
 	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
 		cout << "Begin Continuous VO operation " << endl;
@@ -937,8 +949,8 @@ int main ( int argc,char **argv ) {
 		*/
 		
 		Ii = imread("cam1.png", IMREAD_UNCHANGED);
-		imshow("Continous operation frame", Ii);
-		waitKey(0);
+		//imshow("Continous operation frame", Ii);
+		//waitKey(0);
 		//Ii.convertTo(Ii, CV_64FC1);
 		for (int r = 0; r < K.rows; r++) {
 			for (int c = 0; c < K.cols; c++) {
@@ -982,6 +994,42 @@ int main ( int argc,char **argv ) {
 	double time_=cv::getTickCount();
 	
 	Camera.release();
+	
+	
+	
+	// Test of KLT
+	cout << "Test of KLT in Main function" << endl;
+	Mat I1, I2, I1_gray, I2_gray;
+	I1 = imread("cam1.png", IMREAD_UNCHANGED);
+	I2 = imread("cam1.png", IMREAD_UNCHANGED);
+	cvtColor(I1, I1_gray, COLOR_BGR2GRAY );
+	cvtColor(I2, I2_gray, COLOR_BGR2GRAY );
+	
+	int r_T = 15; 
+	int num_iters = 50; 
+	double lambda = 0.1;
+	int nr_keep = 0;
+	Mat delta_keypoint;
+	
+	Mat x_T = Mat::zeros(1, 2, CV_64FC1); 
+	//x_T.at<double>(0,0) = 1023; 
+	//x_T.at<double>(0,1) = 316;
+	x_T.at<double>(0,0) = 1023; 
+	x_T.at<double>(0,1) = 316;
+	circle (I1_gray, Point(1023,316), 5,  Scalar(0,0,255), 2,8,0);
+	imshow("frame I1_gray", I1_gray);
+	waitKey(0);
+	waitKey(5000);
+	
+	delta_keypoint = KLT::trackKLTrobustly(I2_gray, I1_gray, x_T, r_T, num_iters, lambda);
+	
+	cout << "Match = " << delta_keypoint.at<double>(2,0) << " at point = (" << delta_keypoint.at<double>(0,0) << "," << delta_keypoint.at<double>(1,0) << ")" << endl;
+	
+	
+	
+	
+	
+	
 }
 
 
