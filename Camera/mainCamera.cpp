@@ -249,7 +249,7 @@ Matrix extractMaxHeap(Matrix Corners, int n) {
 }
 
 // ############################# Harris ############################# 
-Matrix Harris::corner(Mat src, Mat src_gray) {
+Matrix Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 	
 	// Define variables
 	const char* corners_window = "Corners detected";
@@ -265,7 +265,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	
 	// Variables related to Non Maximum suppression 
 	int NMSBox = 5;
-	int boundaries = 10; // Boundaries in the image 
+	int boundaries = 6; // Boundaries in the image 
 	
 	Mat dst = Mat::zeros( src.size(), CV_32FC1 );
 	cornerHarris (src_gray, dst, blockSize, apertureSize, k);
@@ -279,7 +279,7 @@ Matrix Harris::corner(Mat src, Mat src_gray) {
 	if (display == false) {
 		int nr_corners = 0;
 		
-		int keypoints_limit = 300; // Change to 200
+		int keypoints_limit = maxinum_keypoint; // Change to 200
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;
@@ -2520,5 +2520,42 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	
 	return make_tuple(transformation_matrix, best_inlier_mask);
 }
+
+// ############################# triangulate New Landmarks #############################
+state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
+	
+	// Make sure you only find new keypoints and not keypoints you have already tracked
+	for (int i = 0; i < Si.k; i++) {
+		double x = Si.Pi.at<double>(0,1);
+		double y = Si.Pi.at<double>(0,0);
+		
+		// Area of 4x4 is set to zero in the image
+		for (int r = -2; r < 3; r++) {
+			for (int c = -2; c < 3; c++) {
+				Ii.at<uchar>(y+r,x+c) = 0;
+			}
+		}
+	}
+	
+	// Convert the image to gray scale 
+	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
+	
+	// Find new keypoints 
+	keypoint_max = 100;
+	Matrix candidate_keypoints = Harris::corner(Mat src, Mat src_gray, int keypoint_max);
+	
+	
+	
+	
+	return Si;
+}
+
+state triangulateNewLandmarks(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
+	
+	return Si;
+}
+
+
+
 
 

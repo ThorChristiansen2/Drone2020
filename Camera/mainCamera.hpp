@@ -36,7 +36,7 @@ namespace draw {
 */ 
 
 namespace Harris {
-	Matrix corner(Mat src, Mat src_gray);
+	Matrix corner(Mat src, Mat src_gray, int maxinum_keypoint)
 	//void corner(Mat src, Mat src_gray, bool display);
 
 }	// Harris Corner

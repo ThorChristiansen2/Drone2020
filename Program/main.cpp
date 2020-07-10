@@ -118,7 +118,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 	// Get Feature points
-	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray);
+	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 200); // Number of maximum keypoints
 	const char* text0 = "Detected corners in frame I_i0";
 	drawCorners(I_i0, keypoints_I_i0, text0);
 	waitKey(0);
@@ -191,7 +191,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 	// ######################### SIFT ######################### 
-	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray);
+	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 200); // Number of keypoints that is looked for
 	const char* text1 = "Detected corners in frame I_i1";
 	drawCorners(I_i1, keypoints_I_i1,text1);
 	//waitKey(0);
