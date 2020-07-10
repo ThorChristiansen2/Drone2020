@@ -35,14 +35,34 @@ namespace draw {
  * namespace cv', this is not necessary. 
 */ 
 
+// For the continous operation at struct is made. 
+struct state {
+	/* Si = (Pi, Xi, Ci, Fi, Ti)
+	 * K = Number of keypoints
+	 * Pi = Keypoints 														2 x K
+	 * Xi = 3D landmarks 													3 x K
+	 * Ci = Candidate Keypoints (The most recent observation)				2 x M
+	 * Fi = The first ever observation of the keypoint						2 x M
+	 * Ti = The Camera pose at the first ever observation of the keypoint 	16 x M
+	 */
+	int k;
+	Mat Pi;
+	Mat Xi; 
+	
+	int num_candidates;
+	Mat Ci; 
+	Mat Fi; 
+	Mat Ti; 
+};
+
 namespace Harris {
-	Matrix corner(Mat src, Mat src_gray, int maxinum_keypoint)
+	Mat corner(Mat src, Mat src_gray, int maxinum_keypoint);
 	//void corner(Mat src, Mat src_gray, bool display);
 
 }	// Harris Corner
 
 namespace SIFT {
-	Matrix FindDescriptors(Mat src, Matrix keypoints);
+	Matrix FindDescriptors(Mat src, Mat keypoints);
 	Matrix matchDescriptors(Matrix descriptor1, Matrix descriptor2);
 	
 }	// SIFT
@@ -63,6 +83,8 @@ Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2);
 Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K);
 Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat points2Mat);
 
+// Triangulate new landmarks 
+state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc);
 
 // For KLT
 //Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters);

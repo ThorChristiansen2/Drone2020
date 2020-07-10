@@ -249,7 +249,7 @@ Matrix extractMaxHeap(Matrix Corners, int n) {
 }
 
 // ############################# Harris ############################# 
-Matrix Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
+Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 	
 	// Define variables
 	const char* corners_window = "Corners detected";
@@ -287,7 +287,7 @@ Matrix Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 		Corners(0,0) = 0;
 		Corners(1,0) = 0;
 		
-		Matrix keypoints(keypoints_limit,3);
+		Mat keypoints = Mat::zeros(keypoints_limit, 3, CV_64FC1);
 		for (int count = 0; count < keypoints_limit; count++) {
 			double max = 0; 
 			int x = 0; 
@@ -313,9 +313,9 @@ Matrix Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 				}
 			}
 			//cout << "Keypoints extracted" << endl;
-			keypoints(count,0) = max;
-			keypoints(count,1) = y;
-			keypoints(count,2) = x;
+			keypoints.at<double>(count, 0) = max;
+			keypoints.at<double>(count, 1) = y;
+			keypoints.at<double>(count, 2) = x;
 			/*
 			cout << "Keypoint at (y,x) = (" << y << "," << x << ") with intensity = " << max << endl;
 			waitKey(0);
@@ -389,7 +389,7 @@ Matrix Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 		return keypoints;
 	}
 	cout << "End of Harris " << endl;	
-	Matrix emptyArray(1,3);	
+	Mat emptyArray;	
 	return emptyArray;
 }
 
@@ -461,12 +461,12 @@ Matrix circularShift(Matrix histogram) {
 }
 
 // Find SIFT Desriptors 
-Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
+Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	
 	// Simplification of SIFT
 	//cout << "Error here" << endl;
 	// Maybe the image should be smoothed first with a Gaussian Kernel
-	int n = keypoints.dim1();
+	int n = keypoints.rows;
 	
 	// Initialize matrix containing keypoints descriptors
 	Matrix Descriptors(n,128);
@@ -496,8 +496,8 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Matrix keypoints) {
 	
 	// For each keypoint
 	for (int i = 0; i < n; i++) {
-		int y = keypoints(i,1);
-		int x = keypoints(i,2); 
+		int y = keypoints.at<double>(i, 1);
+		int x = keypoints.at<double>(i, 2); 
 		
 		//waitKey(0);
 		
@@ -2521,6 +2521,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	return make_tuple(transformation_matrix, best_inlier_mask);
 }
 
+
 // ############################# triangulate New Landmarks #############################
 state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	
@@ -2529,7 +2530,7 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 		double x = Si.Pi.at<double>(0,1);
 		double y = Si.Pi.at<double>(0,0);
 		
-		// Area of 4x4 is set to zero in the image
+		// Area of 5x5 is set to zero in the image
 		for (int r = -2; r < 3; r++) {
 			for (int c = -2; c < 3; c++) {
 				Ii.at<uchar>(y+r,x+c) = 0;
@@ -2537,23 +2538,51 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 		}
 	}
 	
+	Mat Ii_gray;
 	// Convert the image to gray scale 
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	
 	// Find new keypoints 
-	keypoint_max = 100;
-	Matrix candidate_keypoints = Harris::corner(Mat src, Mat src_gray, int keypoint_max);
+	int keypoint_max = 100;
+	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, keypoint_max);
 	
+	candidate_keypoints = candidate_keypoints.t();
+	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
 	
+	// Update state 
+	Si.num_candidates = keypoint_max;
 	
+	// Update keypoints
+	candidate_keypoints.copyTo(Si.Ci); 
+	
+	// Update first observation of keypoints
+	candidate_keypoints.copyTo(Si.Fi);
+	
+	// Update the camera poses at the first observations.
+	Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
+	Mat poses = repeat(t_C_W_vector, 1, candidate_keypoints.cols);
+	poses.copyTo(Si.Ti);
 	
 	return Si;
 }
 
 state triangulateNewLandmarks(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	
+	int r_T = 15; 
+	int num_iters = 50;
+	double lambda = 0.1;
+	
+	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
+	for (int i = 0; i < Si.num_candidates; i++) {
+		x_T.at<double>(0,0) = Si.Ci.at<double>(1,i); 
+		x_T.at<double>(0,1) = Si.Ci.at<double>(0,i);
+		
+		delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, r_T, num_iters, lambda);
+	}
+	
 	return Si;
 }
+
 
 
 

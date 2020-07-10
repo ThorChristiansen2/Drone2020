@@ -40,23 +40,6 @@ using namespace std;
 const char* source_window = "Source image"; 
 bool doTestSpeedOnly=false;
 
-// For the continous operation at struct is made. 
-struct state {
-	/* Si = (Pi, Xi, Ci, Fi, Ti)
-	 * K = Number of keypoints
-	 * Pi = Keypoints 														2 x K
-	 * Xi = 3D landmarks 													3 x K
-	 * Ci = Candidate Keypoints (The most recent observation)				2 x M
-	 * Fi = The first ever observation of the keypoint						2 x M
-	 * Ti = The Camera pose at the first ever observation of the keypoint 	16 x M
-	 */
-	int k;
-	Mat Pi;
-	Mat Xi; 
-	Mat Ci; 
-	Mat Fi; 
-	Mat Ti; 
-};
 
 //parse command line
 //returns the index of a command line param in argv. If not found, return -1
@@ -94,10 +77,10 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
         Camera.set ( cv::CAP_PROP_EXPOSURE, getParamVal ( "-ss",argc,argv )  );
 }
 
-void drawCorners(Mat img, Matrix keypoints, const char* frame_name) {
-	for (int k = 0; k < keypoints.dim1(); k++) {
-		double x = keypoints(k,1);
-		double y = keypoints(k,2);
+void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
+	for (int k = 0; k < keypoints.rows; k++) {
+		double x = keypoints.at<double>(k, 1);
+		double y = keypoints.at<double>(k, 2);
 		circle (img, Point(y,x), 5, Scalar(200), 2,8,0);
 	}
 	imshow(frame_name, img);
@@ -118,7 +101,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 	// Get Feature points
-	Matrix keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 200); // Number of maximum keypoints
+	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 200); // Number of maximum keypoints
 	const char* text0 = "Detected corners in frame I_i0";
 	drawCorners(I_i0, keypoints_I_i0, text0);
 	waitKey(0);
@@ -191,9 +174,9 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 	// ######################### SIFT ######################### 
-	Matrix keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 200); // Number of keypoints that is looked for
+	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 200); // Number of keypoints that is looked for
 	const char* text1 = "Detected corners in frame I_i1";
-	drawCorners(I_i1, keypoints_I_i1,text1);
+	drawCorners(I_i1, keypoints_I_i1, text1);
 	//waitKey(0);
 	//cout << "Done with finding keypoints " << endl;
 	// Find descriptors for Feature Points
@@ -255,19 +238,19 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		// Config1
 		//  #### SIFT #### 
 		// Be aware of differences in x and y
-		points1[i] = Point2f(keypoints_I_i0(matches(i,1),1),keypoints_I_i0(matches(i,1),2));
-		points2[i] = Point2f(keypoints_I_i1(matches(i,0),1),keypoints_I_i1(matches(i,0),2));
+		points1[i] = Point2f(keypoints_I_i0.at<double>(matches(i,1),1),keypoints_I_i0.at<double>(matches(i,1),2));
+		points2[i] = Point2f(keypoints_I_i1.at<double>(matches(i,0),1),keypoints_I_i1.at<double>(matches(i,0),2));
 		
-		temp_points1Mat.at<double>(0,i) = keypoints_I_i0(matches(i,1),1);
-		temp_points1Mat.at<double>(1,i) = keypoints_I_i0(matches(i,1),2); 
-		temp_points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),1);
-		temp_points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),2);
+		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(matches(i,1),1);
+		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(matches(i,1),2); 
+		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(matches(i,0),1);
+		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(matches(i,0),2);
 		
 	
-		double x = keypoints_I_i1(matches(i,0),1);
-		double y = keypoints_I_i1(matches(i,0),2);
-		double x2 = keypoints_I_i0(matches(i,1),1);
-		double y2 = keypoints_I_i0(matches(i,1),2);
+		double x = keypoints_I_i1.at<double>(matches(i,0),1);
+		double y = keypoints_I_i1.at<double>(matches(i,0),2);
+		double x2 = keypoints_I_i0.at<double>(matches(i,1),1);
+		double y2 = keypoints_I_i0.at<double>(matches(i,1),2);
 		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
 		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
 		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
@@ -933,6 +916,7 @@ int main ( int argc,char **argv ) {
 	
 	// Debug variable
 	int stop = 1;
+	int iter = 0;
 	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
 	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
@@ -968,10 +952,18 @@ int main ( int argc,char **argv ) {
 			}
 			cout << "" << endl;
 		}
+		
 		output_T_ready = true;
 		
 		// Submit the transformation matrix. Then set the flag low. 
 		output_T_ready = false;
+		
+		/*
+		// Find new candidate keypoints 
+		if (iter == 0) {
+			Si = newCandidateKeypoints(Mat Ii, state Si, Mat T_wc)
+		}
+		*/
 		
 		// Resert old values 
 		Ii_1 = Ii;
@@ -1061,10 +1053,34 @@ int main ( int argc,char **argv ) {
 	cout << "Match = " << delta_keypoint.at<double>(2,0) << " at point = (" << delta_keypoint.at<double>(0,0) << "," << delta_keypoint.at<double>(1,0) << ")" << endl;
 	*/
 	
+	/*
+	cout << "Test of test_struct" << endl;
+	testStruct hej;
+	
+	cout << "value = " << hej.test_k << endl;
 	
 	
+	hej.test_k = 5;
+	hej.test_Mat = Mat::ones(3, 4, CV_64FC1); 
 	
+	cout << "value = " << hej.test_k << endl;
+	for (int r = 0; r < hej.test_Mat.rows; r++) {
+		for (int c = 0; c < hej.test_Mat.cols; c++) {
+			cout << hej.test_Mat.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	hej = hejmeddig(hej);
 	
+	cout << "value = " << hej.test_k << endl; 
+	
+	for (int r = 0; r < hej.test_Mat.rows; r++) {
+		for (int c = 0; c < hej.test_Mat.cols; c++) {
+			cout << hej.test_Mat.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
 	
 }
 
