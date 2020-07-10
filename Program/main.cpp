@@ -996,7 +996,7 @@ int main ( int argc,char **argv ) {
 	Camera.release();
 	
 	
-	
+	/*
 	// Test of KLT
 	cout << "Test of KLT in Main function" << endl;
 	Mat I1, I2, I1_gray, I2_gray;
@@ -1014,18 +1014,52 @@ int main ( int argc,char **argv ) {
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1); 
 	//x_T.at<double>(0,0) = 1023; 
 	//x_T.at<double>(0,1) = 316;
-	x_T.at<double>(0,0) = 1023; 
-	x_T.at<double>(0,1) = 316;
+	//x_T.at<double>(0,0) = 1023/2.0; 
+	//x_T.at<double>(0,1) = 316/2.0;
+	x_T.at<double>(0,0) = 994/1.0; 
+	x_T.at<double>(0,1) = 340/1.0;
+	cout << "x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ")" << endl;
 	circle (I1, Point(1023,316), 5,  Scalar(0,0,255), 2,8,0);
 	imshow("frame I1", I1);
 	imshow("frame I1_gray", I1_gray);
 	waitKey(0);
 	//waitKey(5000);
 	
+	Mat dst1, dst2;
+	//resize(I2_gray, dst, Size(), 0.25, 0.25, INTER_AREA)
+	resize(I1_gray, dst1, Size(), 0.5, 0.5, INTER_CUBIC);
+	resize(I2_gray, dst2, Size(), 0.5, 0.5, INTER_CUBIC);
+	
+	
+	cout << "dst dimensions = (" << dst1.rows << "," << dst1.cols << ")" << endl;
+	cout << "cam1 dimensions = (" << I1_gray.rows << "," << I1_gray.cols << ")" << endl;
+	
+	MatType(I1_gray);
+	MatType(dst1);
+	
+	
+	cout << "I1_gray" << endl;
+	for (int r = 0; r < 10; r++) {
+		for (int c = 0; c < 10; c++) {
+			cout << (double) I1_gray.at<uchar>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "" << endl;
+	cout << "DST" << endl;
+	for (int r = 0; r < 10; r++) {
+		for (int c = 0; c < 10; c++) {
+			cout << (double) dst1.at<uchar>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	
+	//delta_keypoint = KLT::trackKLTrobustly(dst1, dst2, x_T, r_T, num_iters, lambda);
 	delta_keypoint = KLT::trackKLTrobustly(I1_gray, I2_gray, x_T, r_T, num_iters, lambda);
 	
 	cout << "Match = " << delta_keypoint.at<double>(2,0) << " at point = (" << delta_keypoint.at<double>(0,0) << "," << delta_keypoint.at<double>(1,0) << ")" << endl;
-	
+	*/
 	
 	
 	

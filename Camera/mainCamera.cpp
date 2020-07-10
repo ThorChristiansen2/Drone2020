@@ -1256,6 +1256,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 	for (int iter = 0; iter < num_iters; iter++) {
 		Mat big_IWT = getWarpedPatch(I_new, W, x_T, r_T + 1); // We are here 
 		
+		/*
 		cout << "big_IWT" << endl;
 		for (int r = 0; r < big_IWT.rows; r++) {
 			for (int c = 0; c < big_IWT.cols; c++) {
@@ -1264,6 +1265,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 			cout << "" << endl;
 		}
 		//waitKey(0);
+		*/
 		
 		
 		
@@ -1343,6 +1345,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 		// Transpose W to get the right shape for the next iteration - C++ is different from Matlab
 		W = W.t();
 		
+		/*
 		cout << "W" << endl;
 		for (int r = 0; r < W.rows; r++) {
 			for (int c = 0; c < W.cols; c++) {
@@ -1351,6 +1354,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 			cout << "" << endl;
 		}
 		//waitKey(0);
+		*/
 		
 	}
 	return W;
@@ -2039,7 +2043,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	double num_iterations;
 	int pixel_tolerance = 10; 
 	double k = 3.0;
-	int min_inlier_count = 5; // This parameter should be tuned for the implementation
+	int min_inlier_count = 15; // This parameter should be tuned for the implementation
 	double record_inlier = 0;
 		
 	if (adaptive_ransac) {
