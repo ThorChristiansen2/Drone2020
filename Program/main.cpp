@@ -908,7 +908,8 @@ int main ( int argc,char **argv ) {
 	// Needed variables
 	state Si;
 	Mat Ii;
-	
+	double threshold_angle = 0.2;
+	Mat extracted_keypoints = Mat::zeros(1, 100, CV_64FC1); // Remeber that 100 should be replaced by Si.num_candidates in a smart way
 	
 	// Mat Ii_1 = I_i1;
 	// For test 
@@ -958,12 +959,18 @@ int main ( int argc,char **argv ) {
 		// Submit the transformation matrix. Then set the flag low. 
 		output_T_ready = false;
 		
-		/*
+		
 		// Find new candidate keypoints 
 		if (iter == 0) {
-			Si = newCandidateKeypoints(Mat Ii, state Si, Mat T_wc)
+			Si = newCandidateKeypoints(Ii, Si, transformation_matrix);
+			iter++;
 		}
-		*/
+		else {
+			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix, extracted_keypoints);
+			tie(Si, extracted_keypoints) = triangulateNewLandmarks( Si, transformation_matrix, threshold_angle);
+		}
+		
+		
 		
 		// Resert old values 
 		Ii_1 = Ii;

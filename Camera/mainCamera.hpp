@@ -83,8 +83,13 @@ Mat linearTriangulation(Mat p1, Mat p2, Mat M1, Mat M2);
 Mat estimateEssentialMatrix(Mat fundamental_matrix, Mat K);
 Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat points2Mat);
 
-// Triangulate new landmarks 
+// Find new candidate Keypoints
 state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc);
+state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat extracted_keypoints);
+
+// Triangulate new candidate Keypoints
+std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat T_WC, double threshold_angle);
+
 
 // For KLT
 //Mat trackKLT(Mat I_R, Mat I, Mat x_T, int r_T, int num_iters);

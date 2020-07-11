@@ -2525,6 +2525,10 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 // ############################# triangulate New Landmarks #############################
 state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	
+	// Convert the image to gray scale 
+	Mat Ii_gray;
+	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY);
+	
 	// Make sure you only find new keypoints and not keypoints you have already tracked
 	for (int i = 0; i < Si.k; i++) {
 		double x = Si.Pi.at<double>(0,1);
@@ -2534,13 +2538,11 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 		for (int r = -2; r < 3; r++) {
 			for (int c = -2; c < 3; c++) {
 				Ii.at<uchar>(y+r,x+c) = 0;
+				Ii_gray.at<uchar>(y+r,x+c) = 0;
 			}
 		}
 	}
 	
-	Mat Ii_gray;
-	// Convert the image to gray scale 
-	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	
 	// Find new keypoints 
 	int keypoint_max = 100;
@@ -2566,24 +2568,145 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	return Si;
 }
 
-state triangulateNewLandmarks(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
+state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat extracted_keypoints) {
 	
 	int r_T = 15; 
 	int num_iters = 50;
 	double lambda = 0.1;
 	
+	//Mat kpold = Mat::zeros(3, Si.num_candidates, CV_64FC1);
+	Mat failed_candidates = Mat::zeros(1, Si.num_candidates, CV_64FC1);
+	
+	int nr_keep = 0;
+	
+	Mat Ii_1_gray, Ii_gray;
+	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY);
+	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY);
+	
+	// Track candidate keypoints 
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
+	Mat delta_keypoint;
 	for (int i = 0; i < Si.num_candidates; i++) {
-		x_T.at<double>(0,0) = Si.Ci.at<double>(1,i); 
-		x_T.at<double>(0,1) = Si.Ci.at<double>(0,i);
+		// Makes sure not to track already extracted keypoints
+		if (extracted_keypoints.at<double>(0,i) == 0) {
+			x_T.at<double>(0,0) = Si.Ci.at<double>(1,i); 
+			x_T.at<double>(0,1) = Si.Ci.at<double>(0,i);
+			
+			delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, r_T, num_iters, lambda);
+			
+			if (delta_keypoint.at<double>(2,0) == 1) {
+				nr_keep++;
+				Si.Ci.at<double>(1,i) = delta_keypoint.at<double>(0,0) + Si.Ci.at<double>(1,i); // Check if this is right 
+				Si.Ci.at<double>(0,i) = delta_keypoint.at<double>(1,0) + Si.Ci.at<double>(0,i);
+				
+			}
+			
+			if (delta_keypoint.at<double>(2,0) == 0) {
+				failed_candidates.at<double>(0,i) = 1;
+			}
+		}
 		
-		delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, r_T, num_iters, lambda);
 	}
+	
+	// Delete un-tracked candidate keypoints 
+	// We just overwrite those points 
+	
+	double x, y;
+	// Non maximum suppression of keypoints
+	for (int i = 0; i < Si.k; i++) {
+		x = Si.Pi.at<double>(0,1);
+		y = Si.Pi.at<double>(0,0);
+		
+		// Area of 5x5 is set to zero in the image
+		for (int r = -2; r < 3; r++) {
+			for (int c = -2; c < 3; c++) {
+				Ii.at<uchar>(y+r,x+c) = 0;
+				Ii_gray.at<uchar>(y+r,x+c) = 0;
+			}
+		}
+	}
+	
+	failed_candidates = failed_candidates + extracted_keypoints;
+	
+	// Non maximum suppression of candidate keypoints 
+	for (int i = 0; i < Si.num_candidates; i++) {
+		
+		if (failed_candidates.at<double>(0,i) == 0) {
+			x = Si.Pi.at<double>(0,1);
+			y = Si.Pi.at<double>(0,0);
+			
+			// Area of 5x5 is set to zero in the image
+			for (int r = -2; r < 3; r++) {
+				for (int c = -2; c < 3; c++) {
+					Ii.at<uchar>(y+r,x+c) = 0;
+					Ii_gray.at<uchar>(y+r,x+c) = 0;
+				}
+			}
+		}
+	}
+	
+	
+	// TFind new candidate keypoints 
+	Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
+	int n = Si.num_candidates - nr_keep;
+	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n);
+	candidate_keypoints = candidate_keypoints.t();
+	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
+	
+	int temp = 0;
+	for (int i = 0; i < Si.num_candidates; i++) {
+		if (failed_candidates.at<double>(0,i) > 0) {
+			// Update current keypoint position
+			Si.Ci.at<double>(1,i) = candidate_keypoints.at<double>(1,temp); // Check if this is right 
+			Si.Ci.at<double>(0,i) = candidate_keypoints.at<double>(0,temp);
+			
+			// Update first coordinates of first observation of keypoint
+			Si.Fi.at<double>(1,i) = candidate_keypoints.at<double>(1,temp);
+			Si.Fi.at<double>(0,i) = candidate_keypoints.at<double>(0,temp);
+			
+			// Update camera pose at the first observation of keypoint
+			for (int j = 0; j < t_C_W_vector.rows; j++) {
+				Si.Ti.at<double>(j,i) = t_C_W_vector.at<double>(j,0);
+			}
+			
+			
+			temp++;
+		}
+	}
+	
 	
 	return Si;
 }
 
-
+// Triangulate new landmarks 
+tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat T_WC, double threshold_angle) {
+	
+	// Check if points are ready to be traingulated 
+	Mat extracted_keypoints = Mat::zeros(1, Si.num_candidates, CV_64FC1);
+	
+	Mat newKeypoints;
+	Mat newLandmarks;
+	
+	// Beregn vinklen mellem vektorerne current viewpoint og den første observation af keypointet
+	double alpha;
+	for (int i = 0; i < Si.num_candidates; i++) {
+		// Beregn vinkel
+		alpha = 0;
+		if (alpha < 0.2) {
+			
+		}
+	}
+	
+	// 
+	
+	// Append new keypoints
+	hconcat(Si.Pi, newKeypoints, Si.Pi);
+	
+	// Append new 3D landmarks 
+	hconcat(Si.Xi, newLandmarks, Si.Xi);
+	
+	return make_tuple(Si, extracted_keypoints);
+}
 
 
 
