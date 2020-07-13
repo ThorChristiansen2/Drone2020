@@ -88,7 +88,7 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc);
 state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat extracted_keypoints);
 
 // Triangulate new candidate Keypoints
-std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat T_WC, double threshold_angle);
+std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle);
 
 
 // For KLT
@@ -100,4 +100,8 @@ Mat p3p(Mat worldPoints, Mat imageVectors);
 
 // Helper funcitons
 void MatType( Mat inputMat );
+
+// Test of funcitons 
+Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat keypoint0, Mat keypoint1);
+
 #endif

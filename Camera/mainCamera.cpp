@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <cmath> 
+#include <math.h>
 
 //#include "Matrix.h"
 
@@ -249,6 +250,14 @@ Matrix extractMaxHeap(Matrix Corners, int n) {
 }
 
 // ############################# Harris ############################# 
+/* Objective: To find keypoints in the image using Harris Corner detector
+ * Inputs: 
+ * Matrix: Image src 
+ * Matrix: Image src_gray
+ * int maxinum_keypoint - The number of keypoints that Harris Corner detector should find
+ * Matrix keypoints of size 3 x maxinum_keypoint, where the keypoints are organized
+ * as [keypoint_value, y, x].
+ */
 Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 	
 	// Define variables
@@ -265,7 +274,7 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 	
 	// Variables related to Non Maximum suppression 
 	int NMSBox = 5;
-	int boundaries = 6; // Boundaries in the image 
+	int boundaries = 10; // Boundaries in the image 
 	
 	Mat dst = Mat::zeros( src.size(), CV_32FC1 );
 	cornerHarris (src_gray, dst, blockSize, apertureSize, k);
@@ -287,7 +296,8 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 		Corners(0,0) = 0;
 		Corners(1,0) = 0;
 		
-		Mat keypoints = Mat::zeros(keypoints_limit, 3, CV_64FC1);
+		//Mat keypoints = Mat::zeros(keypoints_limit, 3, CV_64FC1);
+		Mat keypoints = Mat::zeros(3, keypoints_limit, CV_64FC1);
 		for (int count = 0; count < keypoints_limit; count++) {
 			double max = 0; 
 			int x = 0; 
@@ -313,10 +323,13 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 				}
 			}
 			//cout << "Keypoints extracted" << endl;
-			keypoints.at<double>(count, 0) = max;
-			keypoints.at<double>(count, 1) = y;
-			keypoints.at<double>(count, 2) = x;
-			/*
+			//keypoints.at<double>(count, 0) = max;
+			//keypoints.at<double>(count, 1) = y;
+			//keypoints.at<double>(count, 2) = x;
+			keypoints.at<double>(0, count) = max;
+			keypoints.at<double>(1, count) = y;
+			keypoints.at<double>(2, count) = x;
+			/* 
 			cout << "Keypoint at (y,x) = (" << y << "," << x << ") with intensity = " << max << endl;
 			waitKey(0);
 			for (int nn = y-NMSBox; nn <= y + NMSBox; nn++) {
@@ -466,7 +479,7 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	// Simplification of SIFT
 	//cout << "Error here" << endl;
 	// Maybe the image should be smoothed first with a Gaussian Kernel
-	int n = keypoints.rows;
+	int n = keypoints.cols;
 	
 	// Initialize matrix containing keypoints descriptors
 	Matrix Descriptors(n,128);
@@ -483,6 +496,9 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	Sobel(src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
 	Sobel(src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
 	
+	cout << "Size grad_x = (" << grad_x.rows << "," << grad_x.cols << ")" << endl;
+	cout << "Size grad_y = (" << grad_y.rows << "," << grad_y.cols << ")" << endl;
+	
 	// Converting back to CV_8U
 	convertScaleAbs(grad_x, abs_grad_x);
 	convertScaleAbs(grad_y, abs_grad_y);
@@ -496,8 +512,11 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	
 	// For each keypoint
 	for (int i = 0; i < n; i++) {
-		int y = keypoints.at<double>(i, 1);
-		int x = keypoints.at<double>(i, 2); 
+		//int y = keypoints.at<double>(i, 1);
+		//int x = keypoints.at<double>(i, 2); 
+		int y = keypoints.at<double>(1, i);
+		int x = keypoints.at<double>(2, i); 
+		cout << "(y,x) = (" << y << "," << x << ")" << endl;
 		
 		//waitKey(0);
 		
@@ -2058,8 +2077,8 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	// Switch from (row, col) to (u, v)
 	Mat matched_query_keypoints = Mat::zeros(2, keypoints_i.cols, CV_64FC1);
 	for (int i = 0; i < keypoints_i.cols; i++) {
-		matched_query_keypoints.at<double>(0,i) = keypoints_i.at<double>(1,i);
-		matched_query_keypoints.at<double>(1,i) = keypoints_i.at<double>(0,i);
+		matched_query_keypoints.at<double>(0,i) = keypoints_i.at<double>(1,i); // x-coordinate in iamge (u)
+		matched_query_keypoints.at<double>(1,i) = keypoints_i.at<double>(0,i); // y-coordinate in image (v)
 	}
 	Mat max_num_inliers_history = Mat::zeros(50, 1, CV_64FC1); // Should probably be changed
 	Mat num_iteration_history = Mat::zeros(50, 1, CV_64FC1); // Should probably be changed to 
@@ -2523,6 +2542,14 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 
 
 // ############################# triangulate New Landmarks #############################
+/* Objective: Locate new keypoints in the image 
+ * Inputs: 
+ * Ii - C++ Matrix - current image
+ * Si - state (a struct) with multiple attributes
+ * T_wc - 3x4 Matrix 
+ * Output 
+ * state Si
+ */
 state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	
 	// Convert the image to gray scale 
@@ -2531,8 +2558,8 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	
 	// Make sure you only find new keypoints and not keypoints you have already tracked
 	for (int i = 0; i < Si.k; i++) {
-		double x = Si.Pi.at<double>(0,1);
-		double y = Si.Pi.at<double>(0,0);
+		double y = Si.Pi.at<double>(0,i); // y-coordinate of image
+		double x = Si.Pi.at<double>(1,i); // x-coordinate of image
 		
 		// Area of 5x5 is set to zero in the image
 		for (int r = -2; r < 3; r++) {
@@ -2548,8 +2575,7 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	int keypoint_max = 100;
 	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, keypoint_max);
 	
-	candidate_keypoints = candidate_keypoints.t();
-	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
+	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints); // y-coordinates in row 1. x-coordinates in row 2.
 	
 	// Update state 
 	Si.num_candidates = keypoint_max;
@@ -2646,7 +2672,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	}
 	
 	
-	// TFind new candidate keypoints 
+	// Find new candidate keypoints 
 	Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
 	int n = Si.num_candidates - nr_keep;
 	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n);
@@ -2678,32 +2704,140 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	return Si;
 }
 
+// Method for finding landmark from two keypoints and their corresponding positions
+/* Input: 
+ * K - 3x3 Intrinsic parameters for the camera
+ * tau - 3x4 transformation matrix [R|t] for imagepoint 0
+ * T_WC - 3x4 transformation matrix [R|t] for imagepoint 1 
+ * keypoint0 - 2x1 matrix - the image coordinates as [u,v]
+ * keypoint1 - 2x1 matrix - the image coordinates as [u,v]
+ * Output: 
+ * P - 4x1 Matrix which contains the landmark as [Xw, Yw, Zw, 1] in world coordinate frame
+ * Needs to be scaled correctly (like mulitplied with a constant factor) in order to work.
+ */
+Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat keypoint0, Mat keypoint1) {
+	Mat P;
+	Mat Q;
+	
+	Mat imagepoint0 = Mat::ones(3, 1, CV_64FC1);
+	imagepoint0.at<double>(0,0) = keypoint0.at<double>(0,0);
+	imagepoint0.at<double>(1,0) = keypoint0.at<double>(1,0);
+	Mat imagepoint1 = Mat::ones(3, 1, CV_64FC1);
+	imagepoint1.at<double>(0,0) = keypoint1.at<double>(0,0);
+	imagepoint1.at<double>(1,0) = keypoint1.at<double>(1,0);
+	
+	Mat M0 = K*tau;
+	Mat M1 = K*T_WC;
+	Mat v1 = M0.row(0) - imagepoint0.at<double>(0) * M0.row(2);
+	Mat v2 = M0.row(1) - imagepoint0.at<double>(1) * M0.row(2);
+	vconcat(v1, v2, Q);
+	v1 = M1.row(0) - imagepoint1.at<double>(0) * M1.row(2);
+	vconcat(v1, Q, Q);
+	v2 = M1.row(1) - imagepoint1.at<double>(1) * M1.row(2);
+	vconcat(v2, Q, Q);
+	
+	Mat S, U, VT;
+	SVDecomp(Q, S, U, VT, SVD::FULL_UV);
+	VT = VT.t();
+	
+	P = VT.col(3); 
+	
+	// For debug: Maybe you should not multiply with a factor -1
+	P.at<double>(0,0) = -P.at<double>(0,0) / P.at<double>(3,0);
+	P.at<double>(1,0) = -P.at<double>(1,0) / P.at<double>(3,0);
+	P.at<double>(2,0) = -P.at<double>(2,0) / P.at<double>(3,0);
+	P.at<double>(3,0) = P.at<double>(3,0) / P.at<double>(3,0);
+	
+	return P;
+}
+
+
 // Triangulate new landmarks 
-tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat T_WC, double threshold_angle) {
+tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle) {
 	
 	// Check if points are ready to be traingulated 
 	Mat extracted_keypoints = Mat::zeros(1, Si.num_candidates, CV_64FC1);
 	
-	Mat newKeypoints;
-	Mat newLandmarks;
+	// Matrices to store valid extracted keypoints
+	Mat newKeypoints = Mat::zeros(2, Si.num_candidates, CV_64FC1);
+	Mat traingulated_landmark;
+	Mat newLandmarks = Mat::zeros(Si.Xi.rows, Si.num_candidates, CV_64FC1);
+	int temp = 0;
+	
+	Mat keypoint_last_occur = Mat::ones(3, 1, CV_64FC1);
+	Mat keypoint_newest_occcur = Mat::ones(3, 1, CV_64FC1);
+	Mat tau;
+	Mat a, b; // a = previous_vector, b = current_vector;
+	double length_prev_vector, length_current_vector;
 	
 	// Beregn vinklen mellem vektorerne current viewpoint og den første observation af keypointet
-	double alpha;
+	double fraction, alpha;
 	for (int i = 0; i < Si.num_candidates; i++) {
-		// Beregn vinkel
-		alpha = 0;
-		if (alpha < 0.2) {
+		// First occurrence of keypoint
+		keypoint_last_occur.at<double>(0,0) = Si.Fi.at<double>(0,i);
+		keypoint_last_occur.at<double>(1,0) = Si.Fi.at<double>(1,i);
+		tau = Si.Ti.col(i);
+		tau = tau.reshape(0, 3); // Check if this is the right reshape
+		a = tau.inv() * K.inv() * keypoint_last_occur;
+		//prev_vector = prev_vector.reshape(0, 1); // Reshape to a row vector
+		length_prev_vector = sqrt(pow(a.at<double>(0,0),2.0) + pow(a.at<double>(0,1),2.0) + pow(a.at<double>(0,2),2.0) + pow(a.at<double>(0,3),2.0));
+		
+		
+		// Maybe it is enough to only find the bearing vectors:
+		Mat bearing1 = K.inv() * keypoint_last_occur;
+		Mat bearing2 = K.inv() * keypoint_newest_occcur;
+		// And then find the angle between these two vectors. 
+		
+		
+		// Newest occurrence of keypoint
+		keypoint_newest_occcur.at<double>(0,0) = Si.Ci.at<double>(0,i);
+		keypoint_newest_occcur.at<double>(1,0) = Si.Ci.at<double>(1,i);
+		b = T_WC.inv() * K.inv() * keypoint_newest_occcur;  // Check these calculations // You cant find the inverse of the matrix
+		length_current_vector = sqrt(pow(b.at<double>(0,0),2.0) + pow(b.at<double>(1,0),2.0) + pow(b.at<double>(2,0),2.0) + pow(b.at<double>(3,0),2.0));
+		
+		// Determine the angle
+		// The angle is in radians 
+		double v = 3; // This value should be changed
+		alpha = acos((v)/(length_prev_vector * length_current_vector));
+		if (alpha > threshold_angle) {
+			extracted_keypoints.at<double>(0,i) = 1;
 			
+			// Update new keypoints 
+			newKeypoints.at<double>(0,temp) = Si.Ci.at<double>(0,i);
+			newKeypoints.at<double>(1,temp) = Si.Ci.at<double>(1,i);
+			
+			traingulated_landmark = findLandmark(K, tau, T_WC, keypoint_last_occur, keypoint_newest_occcur); // Check if tau should be changed to matrix
+			
+			newLandmarks.at<double>(0,temp) = traingulated_landmark.at<double>(0,0);
+			newLandmarks.at<double>(1,temp) = traingulated_landmark.at<double>(1,0);
+			newLandmarks.at<double>(2,temp) = traingulated_landmark.at<double>(2,0);
+			newLandmarks.at<double>(3,temp) = traingulated_landmark.at<double>(3,0);
+			
+			temp++;
 		}
+	}
+	
+	Mat temp_newKeypoints = Mat::zeros(2, temp, CV_64FC1);
+	Mat temp_newLandmarks = Mat::zeros(4, temp, CV_64FC1);
+	
+	for (int j = 0; j < temp; j++) {
+		temp_newKeypoints.at<double>(0,j) = newKeypoints.at<double>(0,j);
+		temp_newKeypoints.at<double>(1,j) = newKeypoints.at<double>(1,j);
+		
+		temp_newLandmarks.at<double>(0,j) = newLandmarks.at<double>(0,j);
+		temp_newLandmarks.at<double>(1,j) = newLandmarks.at<double>(1,j);
+		temp_newLandmarks.at<double>(2,j) = newLandmarks.at<double>(2,j);
+		temp_newLandmarks.at<double>(3,j) = newLandmarks.at<double>(3,j);
+		
 	}
 	
 	// 
 	
 	// Append new keypoints
-	hconcat(Si.Pi, newKeypoints, Si.Pi);
+	hconcat(Si.Pi, temp_newKeypoints, Si.Pi);
 	
 	// Append new 3D landmarks 
-	hconcat(Si.Xi, newLandmarks, Si.Xi);
+	hconcat(Si.Xi, temp_newLandmarks, Si.Xi);
 	
 	return make_tuple(Si, extracted_keypoints);
 }

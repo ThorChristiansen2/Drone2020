@@ -21,13 +21,14 @@
  * Project: Bachelor project 2020
  * 
  * Problems: 
+ * Sæt angle threshold 
  * OVERSkyggende problem: Det ser ud til, at der er et problem med matricen K, som skal kalibreres.
  * Lær hvordan man SSH'er ind på raspberry pi'en
  * Units seem to be meters 
  * The units are in meters.
  * Maybe you fuck up when you try to use KLT in the initialization 
  * See MatLab code week 3 for an efficient way to find Harris Corners 
- * When using KLT: Remember to use gray-scale images and resize the images with a factor of 4 
+ * When using KLT: Remember to use gray-scale images // Did not work with resizing the image with a factor of 4 
  * Implementation of ransac  in pose estimation in processFrame function 
  * Resize the images with a factor of 4 and also the resize the keypoints with a factor of 4 before processFrame to enhance speed
  * ########################
@@ -78,9 +79,9 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
 }
 
 void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
-	for (int k = 0; k < keypoints.rows; k++) {
-		double x = keypoints.at<double>(k, 1);
-		double y = keypoints.at<double>(k, 2);
+	for (int k = 0; k < keypoints.cols; k++) {
+		double x = keypoints.at<double>(1, k);
+		double y = keypoints.at<double>(2, k);
 		circle (img, Point(y,x), 5, Scalar(200), 2,8,0);
 	}
 	imshow(frame_name, img);
@@ -177,10 +178,10 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 200); // Number of keypoints that is looked for
 	const char* text1 = "Detected corners in frame I_i1";
 	drawCorners(I_i1, keypoints_I_i1, text1);
-	//waitKey(0);
+	waitKey(0);
 	//cout << "Done with finding keypoints " << endl;
 	// Find descriptors for Feature Points
-	
+	cout << "drawCorners found" << endl;
 	
 	
 	// Maybe use KLT instead 
@@ -188,8 +189,12 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	//cout << "descriptors_I_i0 dimensions = (" << descriptors_I_i0.dim1() << "," << descriptors_I_i0.dim2() << ")" << endl;
 	
+	cout << "descriptors_I_i0 found" << endl;
+	
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
 	//cout << "descriptors_I_i1 dimensions = (" << descriptors_I_i1.dim1() << "," << descriptors_I_i1.dim2() << ")" << endl;
+	
+	cout << "descriptors_I_i1 found" << endl;
 	
 	// Match descriptors 
 	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
@@ -238,22 +243,22 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		// Config1
 		//  #### SIFT #### 
 		// Be aware of differences in x and y
-		points1[i] = Point2f(keypoints_I_i0.at<double>(matches(i,1),1),keypoints_I_i0.at<double>(matches(i,1),2));
-		points2[i] = Point2f(keypoints_I_i1.at<double>(matches(i,0),1),keypoints_I_i1.at<double>(matches(i,0),2));
+		points1[i] = Point2f(keypoints_I_i0.at<double>(1, matches(i,1)),keypoints_I_i0.at<double>(2, matches(i,1)));
+		points2[i] = Point2f(keypoints_I_i1.at<double>(1, matches(i,0)),keypoints_I_i1.at<double>(2, matches(i,0)));
 		
-		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(matches(i,1),1);
-		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(matches(i,1),2); 
-		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(matches(i,0),1);
-		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(matches(i,0),2);
+		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(1, matches(i,1)); // y-coordinate in image 
+		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(2, matches(i,1)); // x-coordinate in image
+		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(1, matches(i,0)); // y-coordinate in image
+		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(2, matches(i,0)); // x-coordinate in image
 		
 	
-		double x = keypoints_I_i1.at<double>(matches(i,0),1);
-		double y = keypoints_I_i1.at<double>(matches(i,0),2);
-		double x2 = keypoints_I_i0.at<double>(matches(i,1),1);
-		double y2 = keypoints_I_i0.at<double>(matches(i,1),2);
-		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
-		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		double y = keypoints_I_i1.at<double>(1, matches(i,0));
+		double x = keypoints_I_i1.at<double>(2, matches(i,0));
+		double y2 = keypoints_I_i0.at<double>(1, matches(i,1));
+		double x2 = keypoints_I_i0.at<double>(2, matches(i,1));
+		line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
+		circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
 		
 		// SIFT but switching the order of points 
 		
@@ -333,7 +338,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		
 	}
 	imshow("Match",I_i1);
-	//waitKey(0);
+	waitKey(0);
 	
 	
 	
@@ -365,10 +370,10 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	int temp_index = 0;
 	for (int i = 0; i < N; i++) {
 		if ((double) pArray[i] == 1) {
-			points1Mat.at<double>(0,temp_index) = temp_points1Mat.at<double>(0,i);
-			points1Mat.at<double>(1,temp_index) = temp_points1Mat.at<double>(1,i);
-			points2Mat.at<double>(0,temp_index) = temp_points2Mat.at<double>(0,i);
-			points2Mat.at<double>(1,temp_index) = temp_points2Mat.at<double>(1,i);
+			points1Mat.at<double>(0,temp_index) = temp_points1Mat.at<double>(0,i); // y-coordinate in image
+			points1Mat.at<double>(1,temp_index) = temp_points1Mat.at<double>(1,i); // x-coordinate in image
+			points2Mat.at<double>(0,temp_index) = temp_points2Mat.at<double>(0,i); // y-coordinate in image
+			points2Mat.at<double>(1,temp_index) = temp_points2Mat.at<double>(1,i); // x-coordinate in image
 			temp_index++;
 		}
 	}
@@ -486,8 +491,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1); // Interest point
 	cout << "Si_1.k = " << Si_1.k << endl;
 	for (int i = 0; i < Si_1.k; i++) {
-		x_T.at<double>(0,0) = Si_1.Pi.at<double>(1,i); //To debug this point point configuration with VO reference solution 
-		x_T.at<double>(0,1) = Si_1.Pi.at<double>(0,i);
+		x_T.at<double>(0,0) = Si_1.Pi.at<double>(1,i); // x-coordinate in image
+		x_T.at<double>(0,1) = Si_1.Pi.at<double>(0,i); // y-coordiante in image
 		//x_T.at<double>(0,0) = Si_1.Pi.at<double>(0,i); 
 		//x_T.at<double>(0,1) = Si_1.Pi.at<double>(1,i);
 		cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
@@ -502,8 +507,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 			nr_keep++;
 			kpold.at<double>(2,i) = 1; // The keypoint is reliably matched
 		}
-		kpold.at<double>(0,i) = delta_keypoint.at<double>(0,0) + Si_1.Pi.at<double>(1,i);
-		kpold.at<double>(1,i) = delta_keypoint.at<double>(1,0) + Si_1.Pi.at<double>(0,i);
+		kpold.at<double>(0,i) = delta_keypoint.at<double>(0,0) + Si_1.Pi.at<double>(1,i); // x-coordinate in image
+		kpold.at<double>(1,i) = delta_keypoint.at<double>(1,0) + Si_1.Pi.at<double>(0,i); // y-coordinate in image
 		cout << "Match = " << kpold.at<double>(2,i) << " at point = (" << kpold.at<double>(0,i) << "," << kpold.at<double>(1,i) << ")" << endl;
 
 	}
@@ -519,8 +524,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 			// Update matched keypoints 
 			// keypoints_i.at<double>(0, nr_keep) = kpold.at<double>(0, j); // This is for debugging 
 			// keypoints_i.at<double>(1, nr_keep) = kpold.at<double>(1, j);
-			keypoints_i.at<double>(0, nr_keep) = kpold.at<double>(1, j);
-			keypoints_i.at<double>(1, nr_keep) = kpold.at<double>(0, j);
+			keypoints_i.at<double>(0, nr_keep) = kpold.at<double>(0, j); // y-coordinate in image
+			keypoints_i.at<double>(1, nr_keep) = kpold.at<double>(1, j); // x-coordinate in image
 			
 			// Update landmarks 
 			corresponding_landmarks.at<double>(0, nr_keep) = Si_1.Xi.at<double>(0, j);
@@ -560,7 +565,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat transformation_matrix, best_inlier_mask;
 	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(keypoints_i, corresponding_landmarks, K);
 	
-	// Remove points that are determined as outliers from best_inlier_mask 
+	// Remove points that are determined as outliers from best_inlier_mask by using best_inlier_mask
 	
 	
 	// Update keypoints in state 
@@ -653,13 +658,13 @@ int main ( int argc,char **argv ) {
 	// Test billeder
 	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
-	//imshow("Frame I_i0 displayed", I_i0);
-	//waitKey(0);
+	imshow("Frame I_i0 displayed", I_i0);
+	waitKey(0);
 	
 	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
-	//imshow("Frame I_i1 displayed", I_i1);
-	//waitKey(0);
+	imshow("Frame I_i1 displayed", I_i1);
+	waitKey(0);
 	
 	
 	
@@ -670,7 +675,7 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Mat transformation_matrix;
-	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
@@ -916,7 +921,7 @@ int main ( int argc,char **argv ) {
 	
 	
 	// Debug variable
-	int stop = 1;
+	int stop = 0;
 	int iter = 0;
 	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
@@ -933,7 +938,7 @@ int main ( int argc,char **argv ) {
 		//waitKey(0);
 		*/
 		
-		Ii = imread("cam2.png", IMREAD_UNCHANGED);
+		Ii = imread("cam1.png", IMREAD_UNCHANGED);
 		//imshow("Continous operation frame", Ii);
 		//waitKey(0);
 		//Ii.convertTo(Ii, CV_64FC1);
@@ -967,9 +972,49 @@ int main ( int argc,char **argv ) {
 		}
 		else {
 			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix, extracted_keypoints);
-			tie(Si, extracted_keypoints) = triangulateNewLandmarks( Si, transformation_matrix, threshold_angle);
+			tie(Si, extracted_keypoints) = triangulateNewLandmarks( Si, K, transformation_matrix, threshold_angle);
 		}
 		
+		
+		// Test of function newCandidateKeypoints 
+		cout << "Test of function newCandidateKeypoints" << endl;
+		for (int k = 0; k < Si.Pi.cols; k++) {
+			double x = Si.Pi.at<double>(0, k);
+			double y = Si.Pi.at<double>(1, k);
+			circle (Ii, Point(y,x), 5, Scalar(0,0,255), 2,8,0);
+		}
+		imshow("Corners from Si.Pi", Ii);
+		waitKey(0);
+		waitKey(0);
+		for (int k = 0; k < Si.num_candidates; k++) {
+			double x = Si.Ci.at<double>(0, k);
+			double y = Si.Ci.at<double>(1, k);
+			circle (Ii, Point(y,x), 5, Scalar(255,0,0), 2,8,0);
+		}
+		imshow("Corners from Si.Ci", Ii);
+		waitKey(0);
+		// Draw Corners from Si.Ci 
+		cout << "Si.Ci" << endl;
+		for (int r = 0; r < Si.Ci.rows; r++) {
+			for (int c = 0; c < Si.Ci.cols; c++) {
+				cout << Si.Ci.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "Si.Fi" << endl;
+		for (int r = 0; r < Si.Fi.rows; r++) {
+			for (int c = 0; c < Si.Fi.cols; c++) {
+				cout << Si.Fi.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		cout << "Si.Ti" << endl;
+		for (int r = 0; r < Si.Ti.rows; r++) {
+			for (int c = 0; c < Si.Ti.cols; c++) {
+				cout << Si.Ti.at<double>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
 		
 		
 		// Resert old values 
@@ -1088,6 +1133,26 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	*/
+	
+	/*
+	 * Method to 
+	cout << "P from findLandMark" << endl;
+	Mat K2 = (Mat_<double>(3,3) << 359.4280, 0, 303.5964, 0, 359.4280, 92.6078, 0, 0, 1);
+	Mat M0 = (Mat_<double>(3,4) << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0);
+	Mat M1 = (Mat_<double>(3,4) << 1, 0, 0, 0.54, 0, 1, 0, 0, 0, 0, 1, 0);
+	Mat keypoint0 = (Mat_<double>(3,1) << 228, 28, 1);
+	Mat keypoint1 = (Mat_<double>(3,1) << 222, 28, 1);
+	Mat P = findLandmark(K2, M0, M1,  keypoint0,  keypoint1);
+	
+	cout << "P Coordinates" << endl;
+	for (int r = 0; r < P.rows; r++) {
+		for (int c = 0; c < P.cols; c++) {
+			cout << P.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
+	
 	
 }
 
