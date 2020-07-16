@@ -80,9 +80,9 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
 
 void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
 	for (int k = 0; k < keypoints.cols; k++) {
-		double x = keypoints.at<double>(1, k);
-		double y = keypoints.at<double>(2, k);
-		circle (img, Point(y,x), 5, Scalar(200), 2,8,0);
+		double y = keypoints.at<double>(1, k);
+		double x = keypoints.at<double>(2, k);
+		circle (img, Point(x,y), 5, Scalar(200), 2,8,0);
 	}
 	imshow(frame_name, img);
 	waitKey(0);
@@ -163,6 +163,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	int N = nr_keep--;
 	*/
 	
+	/*
 	cout << "Matrix K " << endl;
 	for (int r = 0; r < K.rows; r++) {
 		for (int c = 0; c < K.cols; c++) {
@@ -170,6 +171,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		}
 		cout << "" << endl;
 	}
+	*/
 	
 	
 	
@@ -676,7 +678,7 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Mat transformation_matrix;
-	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
@@ -922,7 +924,7 @@ int main ( int argc,char **argv ) {
 	
 	
 	// Debug variable
-	int stop = 2;
+	int stop = 0;
 	int iter = 0;
 	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
@@ -972,6 +974,7 @@ int main ( int argc,char **argv ) {
 			iter++;
 		}
 		else {
+			cout << "Iter 2" << endl;
 			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix, extracted_keypoints);
 			cout << "ContinuousCandidateKeypoints" << endl;
 			for (int r = 0; r < Si.Ci.rows; r++) {
@@ -993,7 +996,6 @@ int main ( int argc,char **argv ) {
 			circle (Ii, Point(y,x), 5, Scalar(0,0,255), 2,8,0);
 		}
 		imshow("Corners from Si.Pi", Ii);
-		waitKey(0);
 		waitKey(0);
 		for (int k = 0; k < Si.num_candidates; k++) {
 			double x = Si.Ci.at<double>(0, k);
@@ -1018,8 +1020,8 @@ int main ( int argc,char **argv ) {
 			cout << "" << endl;
 		}
 		cout << "Si.Ti" << endl;
-		for (int r = 0; r < Si.Ti.rows; r++) {
-			for (int c = 0; c < Si.Ti.cols; c++) {
+		for (int r = 0; r < 6; r++) {
+			for (int c = 0; c < 1; c++) {
 				cout << Si.Ti.at<double>(r,c) << ", ";
 			}
 			cout << "" << endl;
@@ -1029,6 +1031,7 @@ int main ( int argc,char **argv ) {
 		// Resert old values 
 		Ii_1.copyTo(Ii);
 		Si_1 = Si;
+		cout << "Update of Si.num_candidates = " << Si.num_candidates << endl;
 		
 		// Debug variable
 		stop++;

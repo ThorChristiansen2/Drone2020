@@ -510,8 +510,8 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	Sobel(src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
 	Sobel(src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
 	
-	cout << "Size grad_x = (" << grad_x.rows << "," << grad_x.cols << ")" << endl;
-	cout << "Size grad_y = (" << grad_y.rows << "," << grad_y.cols << ")" << endl;
+	//cout << "Size grad_x = (" << grad_x.rows << "," << grad_x.cols << ")" << endl;
+	//cout << "Size grad_y = (" << grad_y.rows << "," << grad_y.cols << ")" << endl;
 	
 	// Converting back to CV_8U
 	convertScaleAbs(grad_x, abs_grad_x);
@@ -530,7 +530,7 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 		//int x = keypoints.at<double>(i, 2); 
 		int y = keypoints.at<double>(1, i);
 		int x = keypoints.at<double>(2, i); 
-		cout << "(y,x) = (" << y << "," << x << ")" << endl;
+		//cout << "(y,x) = (" << y << "," << x << ")" << endl;
 		
 		//waitKey(0);
 		
@@ -2625,12 +2625,24 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY);
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY);
 	
+	cout << "Mistake 1" << endl;
+	
+	for (int r = 0; r < extracted_keypoints.rows; r++) {
+		for (int c = 0; c < extracted_keypoints.cols; c++) {
+			cout << extracted_keypoints.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
+	cout << "Si.num_candidates = " << Si.num_candidates << endl;
+	
 	// Track candidate keypoints 
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
 	Mat delta_keypoint;
 	for (int i = 0; i < Si.num_candidates; i++) {
 		// Makes sure not to track already extracted keypoints
 		if (extracted_keypoints.at<double>(0,i) == 0) {
+			cout << "Mistake 2" << endl;
 			x_T.at<double>(0,0) = Si.Ci.at<double>(1,i); // x-coordinate in image
 			x_T.at<double>(0,1) = Si.Ci.at<double>(0,i); // y-coordinate in image
 			
@@ -2649,25 +2661,10 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 		}
 		
 	}
-	
+
+	cout << "Mistake 3" << endl;
 	// Delete un-tracked candidate keypoints 
 	// We just overwrite those points 
-	
-	double x, y;
-	// Non maximum suppression of keypoints
-	for (int i = 0; i < Si.k; i++) {
-		x = Si.Pi.at<double>(0,1);
-		y = Si.Pi.at<double>(0,0);
-		
-		// Area of 5x5 is set to zero in the image
-		for (int r = -2; r < 3; r++) {
-			for (int c = -2; c < 3; c++) {
-				Ii.at<uchar>(y+r,x+c) = 0;
-				Ii_gray.at<uchar>(y+r,x+c) = 0;
-			}
-		}
-	}
-	
 	failed_candidates = failed_candidates + extracted_keypoints;
 	
 	// Non maximum suppression of candidate keypoints 
@@ -2676,22 +2673,15 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 		if (failed_candidates.at<double>(0,i) == 0) {
 			tempMat.at<double>(0,i) = Si.Ci.at<double>(0,i);
 			tempMat.at<double>(1,i) = Si.Ci.at<double>(1,i);
-			
-			// Area of 5x5 is set to zero in the image
-			for (int r = -2; r < 3; r++) {
-				for (int c = -2; c < 3; c++) {
-					Ii.at<uchar>(y+r,x+c) = 0;
-					Ii_gray.at<uchar>(y+r,x+c) = 0;
-				}
-			}
 		}
 	}
+	hconcat(Si.Pi, tempMat, tempMat);
 	
 	
 	// Find new candidate keypoints 
 	Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
 	int n = Si.num_candidates - nr_keep;
-	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, emptyMat);
+	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, tempMat);
 	candidate_keypoints = candidate_keypoints.t();
 	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
 	
