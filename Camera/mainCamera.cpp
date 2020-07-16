@@ -258,7 +258,7 @@ Matrix extractMaxHeap(Matrix Corners, int n) {
  * Matrix keypoints of size 3 x maxinum_keypoint, where the keypoints are organized
  * as [keypoint_value, y, x].
  */
-Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
+Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression) {
 	
 	// Define variables
 	const char* corners_window = "Corners detected";
@@ -269,7 +269,7 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 	int blockSize = 9; 
 	int apertureSize = 3;
 	double k = 0.08;		// Magic parameter 
-	int thres = 200;	
+	//int thres = 200;	
 	// Parameters before: blocksize = 2, aperturesize = 3, thres = 200, k = 0.04
 	
 	// Variables related to Non Maximum suppression 
@@ -284,32 +284,46 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 	convertScaleAbs( dst_norm, dst_norm_scaled );
 
 	// Find corners and return 
-	bool display = false;
-	if (display == false) {
-		int nr_corners = 0;
+	int nr_corners = 0;
 		
-		int keypoints_limit = maxinum_keypoint; // Change to 200
+		
+	int keypoints_limit = maxinum_keypoint; // Change to 200
+		/*
 		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
 		
 		int CornerResponse = 0;
 		int maxCornerResponse = 0;
 		Corners(0,0) = 0;
 		Corners(1,0) = 0;
+		*/
+	double row_nr, col_nr;
+	if (suppression.cols != 0) {
+		for (int c = 0; c < suppression.cols; c++) {
+			row_nr = suppression.at<double>(0,c);
+			col_nr = suppression.at<double>(1,c);
+			for (int i = -3; i < 4; i++) {
+				for (int j = -3; j < 4; j++) {
+					dst_norm.at<float>(row_nr + i, col_nr + j) = 0;
+				}
+			}
+		}
+	}
+		
 		
 		//Mat keypoints = Mat::zeros(keypoints_limit, 3, CV_64FC1);
-		Mat keypoints = Mat::zeros(3, keypoints_limit, CV_64FC1);
-		for (int count = 0; count < keypoints_limit; count++) {
-			double max = 0; 
-			int x = 0; 
-			int y = 0; 
-			for (int i = 0+boundaries; i < dst_norm.rows-boundaries; i++) {
-				for (int j = 0+boundaries; j < dst_norm.cols-boundaries; j++) {
-					if ((double) dst_norm.at<float>(i,j) > max) {
-						max = (double) dst_norm.at<float>(i,j) ;
-						y = i;
-						x = j;
+	Mat keypoints = Mat::zeros(3, keypoints_limit, CV_64FC1);
+	for (int count = 0; count < keypoints_limit; count++) {
+		double max = 0; 
+		int x = 0; 
+		int y = 0; 
+		for (int i = 0+boundaries; i < dst_norm.rows-boundaries; i++) {
+			for (int j = 0+boundaries; j < dst_norm.cols-boundaries; j++) {
+				if ((double) dst_norm.at<float>(i,j) > max) {
+					max = (double) dst_norm.at<float>(i,j) ;
+					y = i;
+					x = j;
 						
-					}
+				}
 					/*
 					CornerResponse = (int) dst_norm.at<float>(i,j);
 					if ( CornerResponse > thres && nr_corners < keypoints_limit-1) {
@@ -326,9 +340,9 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 			//keypoints.at<double>(count, 0) = max;
 			//keypoints.at<double>(count, 1) = y;
 			//keypoints.at<double>(count, 2) = x;
-			keypoints.at<double>(0, count) = max;
-			keypoints.at<double>(1, count) = y;
-			keypoints.at<double>(2, count) = x;
+		keypoints.at<double>(0, count) = max;
+		keypoints.at<double>(1, count) = y;
+		keypoints.at<double>(2, count) = x;
 			/* 
 			cout << "Keypoint at (y,x) = (" << y << "," << x << ") with intensity = " << max << endl;
 			waitKey(0);
@@ -340,7 +354,7 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 			}
 			waitKey(0);
 			*/
-			nonMaximumSuppression(dst_norm, y-NMSBox, x-NMSBox, y+NMSBox+1, x+NMSBox+1);
+		nonMaximumSuppression(dst_norm, y-NMSBox, x-NMSBox, y+NMSBox+1, x+NMSBox+1);
 			/*
 			for (int nn = y-NMSBox; nn <= y + NMSBox; nn++) {
 				for (int mm = x - NMSBox; mm <= x + NMSBox; mm++) {
@@ -350,7 +364,7 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 			}
 			waitKey(0);
 			*/
-		}
+	}
 		
 		/*
 		cout << "Number of corners: " << nr_corners << endl;
@@ -399,11 +413,11 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint) {
 		cout << "Number of corners left: " <<  corners_left << endl;
 		return keypoints.slice(0,corners_left);
 		*/
-		return keypoints;
-	}
-	cout << "End of Harris " << endl;	
-	Mat emptyArray;	
-	return emptyArray;
+	return keypoints;
+	
+	//cout << "End of Harris " << endl;	
+	//Mat emptyArray;	
+	//return emptyArray;
 }
 
 // ############################# SIFT ############################# 
@@ -2556,6 +2570,7 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	Mat Ii_gray;
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY);
 	
+	/*
 	// Make sure you only find new keypoints and not keypoints you have already tracked
 	for (int i = 0; i < Si.k; i++) {
 		double y = Si.Pi.at<double>(0,i); // y-coordinate of image
@@ -2569,11 +2584,12 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 			}
 		}
 	}
+	*/
 	
 	
 	// Find new keypoints 
 	int keypoint_max = 100;
-	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, keypoint_max);
+	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, keypoint_max, Si.Pi);
 	
 	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints); // y-coordinates in row 1. x-coordinates in row 2.
 	
@@ -2615,8 +2631,8 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	for (int i = 0; i < Si.num_candidates; i++) {
 		// Makes sure not to track already extracted keypoints
 		if (extracted_keypoints.at<double>(0,i) == 0) {
-			x_T.at<double>(0,0) = Si.Ci.at<double>(1,i); 
-			x_T.at<double>(0,1) = Si.Ci.at<double>(0,i);
+			x_T.at<double>(0,0) = Si.Ci.at<double>(1,i); // x-coordinate in image
+			x_T.at<double>(0,1) = Si.Ci.at<double>(0,i); // y-coordinate in image
 			
 			delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, r_T, num_iters, lambda);
 			
@@ -2655,11 +2671,11 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	failed_candidates = failed_candidates + extracted_keypoints;
 	
 	// Non maximum suppression of candidate keypoints 
+	Mat tempMat = Mat::zeros(2, countNonZero(failed_candidates), CV_64FC1); 
 	for (int i = 0; i < Si.num_candidates; i++) {
-		
 		if (failed_candidates.at<double>(0,i) == 0) {
-			x = Si.Pi.at<double>(0,1);
-			y = Si.Pi.at<double>(0,0);
+			tempMat.at<double>(0,i) = Si.Ci.at<double>(0,i);
+			tempMat.at<double>(1,i) = Si.Ci.at<double>(1,i);
 			
 			// Area of 5x5 is set to zero in the image
 			for (int r = -2; r < 3; r++) {
@@ -2675,7 +2691,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	// Find new candidate keypoints 
 	Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
 	int n = Si.num_candidates - nr_keep;
-	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n);
+	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, emptyMat);
 	candidate_keypoints = candidate_keypoints.t();
 	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
 	

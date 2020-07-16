@@ -98,11 +98,11 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
 	cvtColor(I_i1, I_i1_gray, COLOR_BGR2GRAY );
 	
-	
+	Mat emptyMatrix;
 	
 	
 	// Get Feature points
-	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 200); // Number of maximum keypoints
+	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 200, emptyMatrix); // Number of maximum keypoints
 	const char* text0 = "Detected corners in frame I_i0";
 	drawCorners(I_i0, keypoints_I_i0, text0);
 	waitKey(0);
@@ -175,7 +175,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 	// ######################### SIFT ######################### 
-	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 200); // Number of keypoints that is looked for
+	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 200, emptyMatrix); // Number of keypoints that is looked for
 	const char* text1 = "Detected corners in frame I_i1";
 	drawCorners(I_i1, keypoints_I_i1, text1);
 	waitKey(0);
@@ -481,7 +481,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 
 	// Variables 
 	int r_T = 25; // 15
-	int num_iters = 50; 
+	int num_iters = 25; 
 	double lambda = 0.1;
 	int nr_keep = 0;
 	Mat kpold = Mat::zeros(3, Si_1.k, CV_64FC1);
@@ -570,7 +570,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	// Update keypoints in state 
 	Si.k = keypoints_i.cols;
-	keypoints_i.copyTo(Si.Pi); 
+	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si.Pi); // Apparently you have to switch rows
+	//keypoints_i.copyTo(Si.Pi); 
 	corresponding_landmarks.copyTo(Si.Xi);
 	
 	/*
@@ -675,7 +676,7 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Mat transformation_matrix;
-	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
@@ -921,11 +922,11 @@ int main ( int argc,char **argv ) {
 	
 	
 	// Debug variable
-	int stop = 0;
+	int stop = 2;
 	int iter = 0;
 	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
-	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
+	while (continueVOoperation == true && pipelineBroke == false && stop < 2) {
 		cout << "Begin Continuous VO operation " << endl;
 		
 		/*
@@ -972,6 +973,14 @@ int main ( int argc,char **argv ) {
 		}
 		else {
 			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix, extracted_keypoints);
+			cout << "ContinuousCandidateKeypoints" << endl;
+			for (int r = 0; r < Si.Ci.rows; r++) {
+				for (int c = 0; c < Si.Ci.cols; c++) {
+					cout << Si.Ci.at<double>(r,c) << ", ";
+				}
+				cout << "" << endl;
+			}
+			waitKey(0);
 			tie(Si, extracted_keypoints) = triangulateNewLandmarks( Si, K, transformation_matrix, threshold_angle);
 		}
 		
@@ -1018,7 +1027,7 @@ int main ( int argc,char **argv ) {
 		
 		
 		// Resert old values 
-		Ii_1 = Ii;
+		Ii_1.copyTo(Ii);
 		Si_1 = Si;
 		
 		// Debug variable
@@ -1153,6 +1162,12 @@ int main ( int argc,char **argv ) {
 	}
 	*/
 	
+	// Test of test_mat
+	Mat test_mat = Mat::ones(2,25, CV_64FC1);
+	cout << "test_mat " << endl;
+	cout << "Dimensions of test_mat = (" << test_mat.rows << "," << test_mat.cols << ")" << endl;
+	
+	cout << "countNonZero(test_mat) = " << countNonZero(test_mat) << endl;
 	
 }
 

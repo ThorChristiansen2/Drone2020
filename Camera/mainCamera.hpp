@@ -56,7 +56,7 @@ struct state {
 };
 
 namespace Harris {
-	Mat corner(Mat src, Mat src_gray, int maxinum_keypoint);
+	Mat corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression); 
 	//void corner(Mat src, Mat src_gray, bool display);
 
 }	// Harris Corner
