@@ -11,6 +11,7 @@
 #include <sstream>
 #include <cmath> 
 #include <math.h>
+//#include <complex>
 
 //#include "Matrix.h"
 
@@ -2642,9 +2643,10 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	for (int i = 0; i < Si.num_candidates; i++) {
 		// Makes sure not to track already extracted keypoints
 		if (extracted_keypoints.at<double>(0,i) == 0) {
-			cout << "Mistake 2" << endl;
+			//cout << "Mistake 2" << endl;
 			x_T.at<double>(0,0) = Si.Ci.at<double>(1,i); // x-coordinate in image
 			x_T.at<double>(0,1) = Si.Ci.at<double>(0,i); // y-coordinate in image
+			cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
 			
 			delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, r_T, num_iters, lambda);
 			
@@ -2654,6 +2656,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 				Si.Ci.at<double>(0,i) = delta_keypoint.at<double>(1,0) + Si.Ci.at<double>(0,i);
 				
 			}
+			cout << "Match = " << delta_keypoint.at<double>(2,0) << " at point = (" << Si.Ci.at<double>(0,i) << "," << Si.Ci.at<double>(1,i) << ")" << endl;
 			
 			if (delta_keypoint.at<double>(2,0) == 0) {
 				failed_candidates.at<double>(0,i) = 1;
@@ -2667,22 +2670,48 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	// We just overwrite those points 
 	failed_candidates = failed_candidates + extracted_keypoints;
 	
+	cout << "failed_candidates" << endl;
+	for (int r = 0; r < failed_candidates.rows; r++) {
+		for (int c = 0; c < failed_candidates.cols; c++) {
+			cout << failed_candidates.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	
 	// Non maximum suppression of candidate keypoints 
 	Mat tempMat = Mat::zeros(2, countNonZero(failed_candidates), CV_64FC1); 
-	for (int i = 0; i < Si.num_candidates; i++) {
-		if (failed_candidates.at<double>(0,i) == 0) {
+	cout << "Dimensions of tempMat = (" << tempMat.rows << "," << tempMat.cols << ")" << endl; 
+	for (int i = 0; i < countNonZero(failed_candidates); i++) {
+		if (failed_candidates.at<double>(0,i) == 1) {
 			tempMat.at<double>(0,i) = Si.Ci.at<double>(0,i);
 			tempMat.at<double>(1,i) = Si.Ci.at<double>(1,i);
 		}
 	}
-	hconcat(Si.Pi, tempMat, tempMat);
 	
-	
+	cout << "tempMat" << endl;
+	for (int r = 0; r < tempMat.rows; r++) {
+		for (int c = 0; c < tempMat.cols; c++) {
+			cout << tempMat.at<double>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "Dimensions of Si.Pi = (" << Si.Pi.rows << "," << Si.Pi.cols << ")" << endl;
+	Mat suprression;
+	if (tempMat.cols == 0) {
+		Si.Pi.copyTo(suprression);
+	}
+	else {
+		hconcat(Si.Pi, tempMat, suprression);
+	}	
+	cout << "Done here " << endl;
 	// Find new candidate keypoints 
 	Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
 	int n = Si.num_candidates - nr_keep;
-	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, tempMat);
-	candidate_keypoints = candidate_keypoints.t();
+	cout << "Before Harris " << endl;
+	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, suprression);
+	cout << "After Harris" << endl;
+	cout << "Dimensions of candidate_keypoints = (" << candidate_keypoints.rows << "," << candidate_keypoints.cols << ")" << endl;
+	//candidate_keypoints = candidate_keypoints.t();
 	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
 	
 	int temp = 0;
@@ -2706,7 +2735,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 		}
 	}
 	
-	
+	cout << "End continuousCandidateKeypoints" << endl;
 	return Si;
 }
 
@@ -2782,29 +2811,34 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 		// First occurrence of keypoint
 		keypoint_last_occur.at<double>(0,0) = Si.Fi.at<double>(0,i);
 		keypoint_last_occur.at<double>(1,0) = Si.Fi.at<double>(1,i);
-		tau = Si.Ti.col(i);
-		tau = tau.reshape(0, 3); // Check if this is the right reshape
-		a = tau.inv() * K.inv() * keypoint_last_occur;
-		//prev_vector = prev_vector.reshape(0, 1); // Reshape to a row vector
-		length_prev_vector = sqrt(pow(a.at<double>(0,0),2.0) + pow(a.at<double>(0,1),2.0) + pow(a.at<double>(0,2),2.0) + pow(a.at<double>(0,3),2.0));
 		
-		
-		// Maybe it is enough to only find the bearing vectors:
-		Mat bearing1 = K.inv() * keypoint_last_occur;
-		Mat bearing2 = K.inv() * keypoint_newest_occcur;
-		// And then find the angle between these two vectors. 
-		
-		
+		cout << "First occurence of keypoint =(" << keypoint_last_occur.at<double>(0,0) << "," << keypoint_last_occur.at<double>(1,0) << ")" << endl;
+	
 		// Newest occurrence of keypoint
 		keypoint_newest_occcur.at<double>(0,0) = Si.Ci.at<double>(0,i);
 		keypoint_newest_occcur.at<double>(1,0) = Si.Ci.at<double>(1,i);
-		b = T_WC.inv() * K.inv() * keypoint_newest_occcur;  // Check these calculations // You cant find the inverse of the matrix
-		length_current_vector = sqrt(pow(b.at<double>(0,0),2.0) + pow(b.at<double>(1,0),2.0) + pow(b.at<double>(2,0),2.0) + pow(b.at<double>(3,0),2.0));
+		
+		cout << "Newest occurence of keypoint =(" << keypoint_newest_occcur.at<double>(0,0) << "," << keypoint_newest_occcur.at<double>(1,0) << ")" << endl;
+		
+		// Finding the angle using bearing vectors 
+		Mat bearing1 = K.inv() * keypoint_last_occur;
+		Mat bearing2 = K.inv() * keypoint_newest_occcur;
+		
+		cout << "Bearing vector 1 " << bearing1 << endl;
+		cout << "Bearing vector 2 " << bearing2 << endl;
+		
+		// Finding length of vectors 
+		double length_first_vector = sqrt(pow(bearing1.at<double>(0,0),2.0) + pow(bearing1.at<double>(1,0),2.0) + pow(bearing1.at<double>(2,0),2.0));
+		double length_current_vector = sqrt(pow(bearing2.at<double>(0,0),2.0) + pow(bearing2.at<double>(1,0),2.0) + pow(bearing2.at<double>(2,0),2.0));
 		
 		// Determine the angle
 		// The angle is in radians 
-		double v = 3; // This value should be changed
-		alpha = acos((v)/(length_prev_vector * length_current_vector));
+		// CHANGES NEEDED HERE
+		double v = bearing1.at<double>(0,0)*bearing2.at<double>(0,0)+bearing1.at<double>(1,0)*bearing2.at<double>(1,0)+bearing1.at<double>(2,0)*bearing2.at<double>(2,0); // This value should be changed
+		alpha = acos((v)/(length_prev_vector * length_current_vector)) * 360/(2*M_PI);
+		
+		cout << "alpha = " << alpha << endl;
+		
 		if (alpha > threshold_angle) {
 			extracted_keypoints.at<double>(0,i) = 1;
 			
@@ -2848,6 +2882,14 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 	return make_tuple(Si, extracted_keypoints);
 }
 
+/*
+void *PrintHello(void *threadid) {
+	long tid; 
+	tid = (long)threadid;
+	cout << "Hello World! Thread ID, " << tid << endl;
+	pthread_exit(NULL);
+}
+*/
 
 
 

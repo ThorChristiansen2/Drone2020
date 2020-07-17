@@ -15,6 +15,9 @@
 #include "Matrix.h"
 #include <math.h>
 #include <tuple> 
+//#include <cstdlib>
+//#include <pthread.h>
+//#include <iostream>
 
 using namespace cv;
 
@@ -103,5 +106,9 @@ void MatType( Mat inputMat );
 
 // Test of funcitons 
 Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat keypoint0, Mat keypoint1);
+
+
+// Test of threadid
+//void *PrintHello(void *threadid);
 
 #endif

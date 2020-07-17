@@ -209,9 +209,6 @@ DroneProject_SOURCE_DIR:STATIC=/home/pi/GitHub/Drone2020
 //The directory containing a CMake configuration file for OpenCV.
 OpenCV_DIR:PATH=/usr/local/lib/cmake/opencv4
 
-//The directory containing a CMake configuration file for raspicam.
-raspicam_DIR:PATH=raspicam_DIR-NOTFOUND
-
 
 ########################
 # INTERNAL cache entries

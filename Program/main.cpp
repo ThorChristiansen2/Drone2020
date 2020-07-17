@@ -479,7 +479,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	//waitKey(0);
 	
 	// new state
-	state Si;
+	//state Si;
 
 	// Variables 
 	int r_T = 25; // 15
@@ -570,11 +570,15 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	// Remove points that are determined as outliers from best_inlier_mask by using best_inlier_mask
 	
 	
+	
 	// Update keypoints in state 
-	Si.k = keypoints_i.cols;
-	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si.Pi); // Apparently you have to switch rows
+	//Si.k = keypoints_i.cols;
+	Si_1.k = keypoints_i.cols;
+	//vconcat(keypoints_i.row(1), keypoints_i.row(0), Si.Pi); // Apparently you have to switch rows
+	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si_1.Pi); // Apparently you have to switch rows
 	//keypoints_i.copyTo(Si.Pi); 
-	corresponding_landmarks.copyTo(Si.Xi);
+	//corresponding_landmarks.copyTo(Si.Xi);
+	corresponding_landmarks.copyTo(Si_1.Xi);
 	
 	/*
 	// Triangulate new points
@@ -583,7 +587,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Si.Xi = linearTriangulation(Si_1.Pi, Si.Pi, M1, M2 );
 	*/
 	
-	return make_tuple(Si, transformation_matrix); 
+	//return make_tuple(Si, transformation_matrix); 
+	return make_tuple(Si_1, transformation_matrix); 
 }
 
 
@@ -678,7 +683,7 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Mat transformation_matrix;
-	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
@@ -916,7 +921,7 @@ int main ( int argc,char **argv ) {
 	// Needed variables
 	state Si;
 	Mat Ii;
-	double threshold_angle = 0.2;
+	double threshold_angle = 20; // In degrees
 	Mat extracted_keypoints = Mat::zeros(1, 100, CV_64FC1); // Remeber that 100 should be replaced by Si.num_candidates in a smart way
 	
 	// Mat Ii_1 = I_i1;
@@ -924,7 +929,7 @@ int main ( int argc,char **argv ) {
 	
 	
 	// Debug variable
-	int stop = 0;
+	int stop = 2;
 	int iter = 0;
 	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
@@ -1164,13 +1169,46 @@ int main ( int argc,char **argv ) {
 		cout << "" << endl;
 	}
 	*/
-	
+	/*
 	// Test of test_mat
 	Mat test_mat = Mat::ones(2,25, CV_64FC1);
 	cout << "test_mat " << endl;
 	cout << "Dimensions of test_mat = (" << test_mat.rows << "," << test_mat.cols << ")" << endl;
 	
 	cout << "countNonZero(test_mat) = " << countNonZero(test_mat) << endl;
+	*/
+	
+	/*
+	cout << "Test of matrix as vectors " << endl;
+	Mat K2 = (Mat_<double>(3,3) << 359.4280, 0, 303.5964, 0, 359.4280, 92.6078, 0, 0, 1.0);
+	
+	Mat v1 = (Mat_<double>(3,1) << 228, 28, 1);
+	Mat v2 = (Mat_<double>(3,1) << 222, 28, 1);
+	Mat prikprodukt = v1.at<double>(0,0)*v2.at<dou;
+	cout << "prikprodukt = " << prikprodukt << endl
+	
+	
+	cout << "K2 " << endl;
+	cout << K2 << endl;
+	*/
+	
+	/*
+	#define NUM_THREADS 5;
+	pthread_t threads[NUM_THREADS];
+	int rc;
+	int i;
+	
+	for (i = 0; i < NUM_THREADS; i++) {
+		cout << "main() : creating thread, " << i << endl;
+		rc = pthread_create(&threads[i], NULL, PrintHello, (void *)i);
+		
+		if (rc) {
+			cout << "Error:unable to create thread, " << rc << endl;
+			exit(-1);
+		}
+	}
+	pthread_exit(NULL);
+	*/
 	
 }
 
