@@ -57,6 +57,10 @@ sstream
 -
 raspicam/raspicam_cv.h
 -
+pthread.h
+/home/pi/GitHub/Drone2020/Program/pthread.h
+cstdlib
+-
 
 /usr/local/include/opencv2/calib3d.hpp
 opencv2/core.hpp

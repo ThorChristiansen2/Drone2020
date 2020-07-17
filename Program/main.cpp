@@ -9,7 +9,8 @@
 #include <fstream>
 #include <sstream>
 #include <raspicam/raspicam_cv.h>
-
+#include "pthread.h"
+#include <cstdlib>
 
 /* ########################
  * Name: mainCamera.cpp
@@ -78,6 +79,10 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
         Camera.set ( cv::CAP_PROP_EXPOSURE, getParamVal ( "-ss",argc,argv )  );
 }
 
+// ####################### Rtest of parallel threads #######################
+
+
+// ####################### drawCorners #######################
 void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
 	for (int k = 0; k < keypoints.cols; k++) {
 		double y = keypoints.at<double>(1, k);
@@ -591,6 +596,48 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	return make_tuple(Si_1, transformation_matrix); 
 }
 
+double plusfunction(int a, int b) {
+	int v = a + b;
+	double c = v/a;
+	
+	return c;
+}
+
+
+#define NUM_THREADS 5
+/*
+void *PrintHello(void *threadid) {
+   long tid;
+   tid = (long)threadid;
+   int a = 5; 
+   int b = 15;
+   double c = plusfunction(a, b);
+   cout << "c = " << c << endl;
+   cout << "Hello World! Thread ID, " << tid << endl;
+   pthread_exit(NULL);
+}
+*/
+
+struct thread_data {
+		int thread_id;
+		Mat thread_mat;
+		int thread_sum = 0;
+};
+
+void *PrintHello(void *threadarg) {
+	struct thread_data *my_data;
+	my_data = (struct thread_data *) threadarg;
+	
+	cout << "Thread ID : " << my_data->thread_id << endl;
+	cout << "Matrix : " << my_data->thread_mat << endl;
+	//cout << " my data = " << my_data->thread_mat.at<double>(0,0) << endl;
+	//cout << "Sum : " << my_data->thread_mat.at<double>(0,0) + my_data->thread_mat.at<double>(0,1) + my_data->thread_mat.at<double>(1,0) + my_data->thread_mat.at<double>(1,1);
+	my_data->thread_sum = my_data->thread_mat.at<double>(0,0) + my_data->thread_mat.at<double>(0,1) + my_data->thread_mat.at<double>(1,0) + my_data->thread_mat.at<double>(1,1);
+	
+	pthread_exit(NULL);
+}
+
+
 
 // ####################### Main function #######################
 int main ( int argc,char **argv ) {
@@ -659,8 +706,40 @@ int main ( int argc,char **argv ) {
 	waitKey(5000);
 	*/
 	
-	
-	
+	Mat M = (Mat_<double>(2,10) << 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10);
+	cout << "M = " << M << endl;
+	Mat H;
+	M.colRange(0,10).copyTo(H);
+	cout << "H = " << H << endl;
+	pthread_t threads[NUM_THREADS];
+	struct thread_data td[NUM_THREADS];
+   int rc;
+   int i;
+   
+   for( i = 0; i < NUM_THREADS; i++ ) {
+      cout << "main() : creating thread, " << i << endl;
+      td[i].thread_id = i;
+      M.colRange(2*i,2*i+2).copyTo(td[i].thread_mat);
+      
+      rc = pthread_create(&threads[i], NULL, PrintHello, (void *)&td[i]);
+      
+      if (rc) {
+         cout << "Error:unable to create thread," << rc << endl;
+         exit(-1);
+      }
+   }
+   //pthread_exit(NULL);
+   cout << "Print of structs td" << endl;
+   void* ret = NULL;
+   pthread_join(0, &ret);
+   //pthread_join(1,(void**));
+   //pthread_join(2,(void**));
+   //pthread_join(3,(void**));
+   //pthread_join(4,(void**));
+   for (int j = 0; j < NUM_THREADS; j++) {
+	   cout << "sum = " << td[j].thread_sum << endl;
+   }
+   
 	
 	
 	// Test billeder
@@ -1192,24 +1271,14 @@ int main ( int argc,char **argv ) {
 	cout << K2 << endl;
 	*/
 	
-	/*
-	#define NUM_THREADS 5;
-	pthread_t threads[NUM_THREADS];
-	int rc;
-	int i;
+
 	
-	for (i = 0; i < NUM_THREADS; i++) {
-		cout << "main() : creating thread, " << i << endl;
-		rc = pthread_create(&threads[i], NULL, PrintHello, (void *)i);
-		
-		if (rc) {
-			cout << "Error:unable to create thread, " << rc << endl;
-			exit(-1);
-		}
-	}
-	pthread_exit(NULL);
-	*/
+   
 	
+	
+	
+	
+	return 0;
 }
 
 
