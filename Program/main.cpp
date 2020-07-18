@@ -41,6 +41,7 @@ using namespace cv;
 using namespace std;
 const char* source_window = "Source image"; 
 bool doTestSpeedOnly=false;
+using namespace std::chrono;
 
 #define NUM_SIFT_THREADS 6
 
@@ -168,8 +169,6 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	}
 	int N = nr_keep--;
 	*/
-
-	time_t tstart, tend;
 	
 	
 	
@@ -184,7 +183,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// Find SIFT::descriptors with parallelization
 	cout << "Create Threads for finding descriptors" << endl;
-	tstart = time(0);
+	high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	
 	Mat Matdescriptors_I_i0;
 	pthread_t threads[NUM_SIFT_THREADS];
 	struct SIT td[NUM_SIFT_THREADS];
@@ -236,6 +236,11 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	pthread_join(threads[5], &ret);
 	hej = {td[0].descriptors, td[1].descriptors, td[2].descriptors, td[3].descriptors, td[4].descriptors, td[5].descriptors};
 	vconcat(hej, Matdescriptors_I_i1);
+	high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
+	
+	std::cout << "It toome me " << time_span.count() << " seconds.";
+	
 	
 	/*
 	vconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
@@ -271,18 +276,24 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	//cout << "Matdescriptors_I_i0 = " << endl;
 	//cout << Matdescriptors_I_i0 << endl;
-	tend = time(0);
-	cout << "it took = " << difftime(tend,tstart) << "seconds(s)." << endl;
+
 	cout << "Dimensions Matdescriptors_I_i0 = (" << Matdescriptors_I_i0.rows << "," << Matdescriptors_I_i0.cols << ")" << endl;
 	
 	
-	
+	high_resolution_clock::time_point t3 = high_resolution_clock::now();
 	//Finding SIFT::descriptors without parallelization 
 	// Maybe use KLT instead 
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
-	cout << "descriptors_I_i0 found" << endl;
+	//cout << "descriptors_I_i0 found" << endl;
 	
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
+	high_resolution_clock::time_point t4 = high_resolution_clock::now();
+	
+	duration<double> time_span2 = duration_cast<duration<double>>(t4-t3);
+	
+	std::cout << "It toome me " << time_span2.count() << " seconds.";
+	
+	
 	cout << "descriptors_I_i1 found" << endl;
 	
 	
