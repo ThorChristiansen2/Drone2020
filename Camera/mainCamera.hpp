@@ -73,6 +73,7 @@ struct thread_data {
 		Mat Ii_1_gray;
 		Mat Ii_gray;
 		Mat thread_mat;
+		int keep_point;
 };
 
 // SIT = SIFT Descriptor thread struct

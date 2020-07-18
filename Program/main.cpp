@@ -44,7 +44,7 @@ bool doTestSpeedOnly=false;
 using namespace std::chrono;
 
 //#define NUM_SIFT_THREADS 6
-#define NUM_THREADS 25
+//#define NUM_THREADS 29
 
 //parse command line
 //returns the index of a command line param in argv. If not found, return -1
@@ -104,10 +104,13 @@ void *functionKLT(void *threadarg) {
    Mat delta_keypoint;
    for (int i = 0; i < my_data->thread_mat.cols; i++) {
 	   x_T.at<double>(0,0) = my_data->thread_mat.at<double>(1,i);
-	   x_T.at<double>(0,0) = my_data->thread_mat.at<double>(0,i);
+	   x_T.at<double>(0,1) = my_data->thread_mat.at<double>(0,i);
 	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, 15, 25, 0.1);
-	   my_data->thread_mat.at<double>(1,i) = delta_keypoint.at<double>(0,0) + my_data->thread_mat.at<double>(1,i); // x-coordinate in image
-	   my_data->thread_mat.at<double>(0,i) = delta_keypoint.at<double>(1,0) + my_data->thread_mat.at<double>(0,i); // y-coordinate in image
+	   double a = delta_keypoint.at<double>(0,0) + my_data->thread_mat.at<double>(1,i);
+	   double b = delta_keypoint.at<double>(1,0) + my_data->thread_mat.at<double>(0,i);
+	   my_data->thread_mat.at<double>(1,i) = b; // x-coordinate in image
+	   my_data->thread_mat.at<double>(0,i) = a; // y-coordinate in image
+	   my_data->keep_point = delta_keypoint.at<double>(2,0);
    }
    pthread_exit(NULL);
 }
@@ -127,8 +130,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// Get Feature points
 	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 200, emptyMatrix); // Number of maximum keypoints
 	const char* text0 = "Detected corners in frame I_i0";
-	drawCorners(I_i0, keypoints_I_i0, text0);
-	waitKey(0);
+	//drawCorners(I_i0, keypoints_I_i0, text0);
+	//waitKey(0);
 	
 	/*
 	// ######################### KLT ######################### 
@@ -191,8 +194,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// ######################### SIFT ######################### 
 	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 200, emptyMatrix); // Number of keypoints that is looked for
 	const char* text1 = "Detected corners in frame I_i1";
-	drawCorners(I_i1, keypoints_I_i1, text1);
-	waitKey(0);
+	//drawCorners(I_i1, keypoints_I_i1, text1);
+	//waitKey(0);
 	//cout << "Done with finding keypoints " << endl;
 	// Find descriptors for Feature Points
 	cout << "drawCorners found" << endl;
@@ -451,8 +454,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		
 		
 	}
-	imshow("Match",I_i1);
-	waitKey(0);
+	//imshow("Match",I_i1);
+	//waitKey(0);
 	
 	
 	
@@ -585,16 +588,16 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );
 	
-	imshow("Ii_gray image", Ii_gray);
+	//imshow("Ii_gray image", Ii_gray);
 	//waitKey(0);
-	imshow("Ii_1_gray image", Ii_1_gray);
+	//imshow("Ii_1_gray image", Ii_1_gray);
 	//waitKey(0);
 	
 	// new state
 	//state Si;
 
 	// Variables 
-	int r_T = 25; // 15
+	int r_T = 15; // 15
 	int num_iters = 25; 
 	double lambda = 0.1;
 	int nr_keep = 0;
@@ -602,6 +605,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat delta_keypoint;
 	
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	
+	int NUM_THREADS = Si_1.k;
 	
 	pthread_t threads[NUM_THREADS];
 	struct thread_data td[NUM_THREADS];
@@ -612,19 +617,42 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		td[i].Ii_1_gray = Ii_1_gray;
 		td[i].Ii_gray = Ii_gray;
 		if (i != NUM_THREADS-1) {
-			Si_1.Pi.colRange(i*k,(1+i)*k).copyTo(td[i].thread_mat);
+			//Si_1.Pi.colRange(i*k,(1+i)*k).copyTo(td[i].thread_mat);
+			td[i].thread_mat = Si_1.Pi.colRange(i*k,(1+i)*k);
 		}
 		else {
-			Si_1.Pi.colRange(i*k,(1+i)*k+q).copyTo(td[i].thread_mat);
+			//Si_1.Pi.colRange(i*k,(1+i)*k+q).copyTo(td[i].thread_mat);
+			td[i].thread_mat = Si_1.Pi.colRange(i*k,(1+i)*k+q);
 		}
 		rc = pthread_create(&threads[i], NULL, functionKLT, (void *)&td[i]);
 	}
 	void* ret = NULL;
+	vector<Mat> keypoint_container;
+	vector<Mat> landmark_container;
+	Mat keypoints_i;
+	Mat corresponding_landmarks;
 	for (int k = 0; k < NUM_THREADS; k++) {
 		pthread_join(threads[k], &ret);
+		if (td[k].keep_point == 1) {
+			keypoint_container.push_back(td[k].thread_mat);
+			landmark_container.push_back(Si_1.Xi.col(k));
+		}
+		//Matcontainer.push_back(td[k].thread_mat);
 	}
+	hconcat(keypoint_container, keypoints_i);
+	hconcat(landmark_container, corresponding_landmarks);
 	
-	/* Part without parallelizaiton
+	high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
+	std::cout << "This process took = " << time_span.count() << " seconds.";
+	
+	//cout << "test_thread" << endl;
+	//cout << test_thread << endl;
+	//cout << "hej" << endl;
+	//cout << hej << endl;
+	
+	/*
+	 // Part without parallelizaiton
 	// Track every keypoint - Maybe utilize parallelization 
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1); // Interest point
 	//cout << "Si_1.k = " << Si_1.k << endl;
@@ -650,13 +678,11 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		//cout << "Match = " << kpold.at<double>(2,i) << " at point = (" << kpold.at<double>(0,i) << "," << kpold.at<double>(1,i) << ")" << endl;
 
 	}
-	*/
+	
+	cout << "kpold" << endl;
+	cout << kpold << endl;
 	
 	
-	
-	high_resolution_clock::time_point t2 = high_resolution_clock::now();
-	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
-	std::cout << "This process took = " << time_span.count() << " seconds.";
 	//Mat keypoints_i_1 = Mat::zeros(2, nr_keep, CV_64FC1);
 	Mat keypoints_i = Mat::zeros(2, nr_keep, CV_64FC1);
 	
@@ -682,6 +708,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	}
 	cout << "Number of keypoints left = " << keypoints_i.cols << endl;
 	waitKey(5000);
+	*/
 	
 	cout << "Print of keypoints_i" << endl;
 	for (int r = 0; r < keypoints_i.rows; r++) {
@@ -700,7 +727,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	}
 	cout << "" << endl;	
 	waitKey(5000);
-	waitKey(0);
+	//waitKey(0);
 	
 	
 	// Delete landmarks for those points that were not matched 
@@ -895,13 +922,13 @@ int main ( int argc,char **argv ) {
 	// Test billeder
 	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
-	imshow("Frame I_i0 displayed", I_i0);
-	waitKey(0);
+	//imshow("Frame I_i0 displayed", I_i0);
+	//waitKey(0);
 	
 	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
-	imshow("Frame I_i1 displayed", I_i1);
-	waitKey(0);
+	//imshow("Frame I_i1 displayed", I_i1);
+	//waitKey(0);
 	
 	
 	
