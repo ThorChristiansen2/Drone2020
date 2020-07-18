@@ -1519,6 +1519,7 @@ Mat KLT::trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, int r_T, int num_ite
 	reverse_keypoint.at<double>(0,0) = keypoint.at<double>(0,0) + delta_keypoint.at<double>(0,0);
 	reverse_keypoint.at<double>(0,1) = keypoint.at<double>(0,1) + delta_keypoint.at<double>(1,0);
 	
+	// Brug for threading her. 
 	Mat Winv = trackKLT(I_new, I_R, reverse_keypoint, r_T, num_iters);
 	
 	Mat dkpinv = Mat::zeros(2, 1, CV_64FC1);
@@ -1531,6 +1532,9 @@ Mat KLT::trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, int r_T, int num_ite
 	
 	return delta_keypoint;
 }
+
+
+
 
 // ############################# ransacLocalizaiton #############################
 Mat crossProduct(Mat vector1, Mat vector2) {
@@ -2999,6 +3003,7 @@ void *PrintHello(void *threadid) {
 	pthread_exit(NULL);
 }
 */
+/*
 void *PrintHello(void *threadarg) {
 	struct thread_data *my_data;
 	my_data = (struct thread_data *) threadarg;
@@ -3011,6 +3016,7 @@ void *PrintHello(void *threadarg) {
 	
 	pthread_exit(NULL);
 }
+*/
 
 
 

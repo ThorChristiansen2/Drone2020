@@ -19,6 +19,7 @@
 //#include <iostream>
 #include "pthread.h"
 #include <cstdlib>
+//#include "gperftools/profiler.h"
 
 using namespace cv;
 
@@ -59,10 +60,19 @@ struct state {
 	Mat Ti; 
 };
 
+/*
 struct thread_data {
 		int thread_id;
 		Mat thread_mat;
 		int thread_sum = 0;
+};
+*/
+
+struct thread_data {
+		//int thread_id;
+		Mat Ii_1_gray;
+		Mat Ii_gray;
+		Mat thread_mat;
 };
 
 // SIT = SIFT Descriptor thread struct

@@ -43,7 +43,8 @@ const char* source_window = "Source image";
 bool doTestSpeedOnly=false;
 using namespace std::chrono;
 
-#define NUM_SIFT_THREADS 6
+//#define NUM_SIFT_THREADS 6
+#define NUM_THREADS 25
 
 //parse command line
 //returns the index of a command line param in argv. If not found, return -1
@@ -95,6 +96,21 @@ void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
 	waitKey(0);
 }
 
+void *functionKLT(void *threadarg) {
+   struct thread_data *my_data;
+   my_data = (struct thread_data *) threadarg;
+   Mat x_T = Mat::zeros(1, 2, CV_64FC1);
+   
+   Mat delta_keypoint;
+   for (int i = 0; i < my_data->thread_mat.cols; i++) {
+	   x_T.at<double>(0,0) = my_data->thread_mat.at<double>(1,i);
+	   x_T.at<double>(0,0) = my_data->thread_mat.at<double>(0,i);
+	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, 15, 25, 0.1);
+	   my_data->thread_mat.at<double>(1,i) = delta_keypoint.at<double>(0,0) + my_data->thread_mat.at<double>(1,i); // x-coordinate in image
+	   my_data->thread_mat.at<double>(0,i) = delta_keypoint.at<double>(1,0) + my_data->thread_mat.at<double>(0,i); // y-coordinate in image
+   }
+   pthread_exit(NULL);
+}
 
 // ####################### VO Initialization Pipeline #######################
 tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
@@ -181,6 +197,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// Find descriptors for Feature Points
 	cout << "drawCorners found" << endl;
 	
+	/*
 	// Find SIFT::descriptors with parallelization
 	cout << "Create Threads for finding descriptors" << endl;
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
@@ -242,7 +259,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	std::cout << "It toome me " << time_span.count() << " seconds.";
 	
 	
-	/*
+	
 	vconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
 	pthread_join(threads[2], &ret);
 	hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
@@ -272,26 +289,21 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	pthread_join(threads[5], &ret);
 	//hconcat(td[5].descriptors, Matdescriptors_I_i0, Matdescriptors_I_i0);
 	cout << "Dimensions = (" << td[5].descriptors.rows << "," << td[5].descriptors.cols << ")" << endl;
-	*/
+	
 	
 	//cout << "Matdescriptors_I_i0 = " << endl;
 	//cout << Matdescriptors_I_i0 << endl;
 
 	cout << "Dimensions Matdescriptors_I_i0 = (" << Matdescriptors_I_i0.rows << "," << Matdescriptors_I_i0.cols << ")" << endl;
+	*/
 	
-	
-	high_resolution_clock::time_point t3 = high_resolution_clock::now();
+
 	//Finding SIFT::descriptors without parallelization 
 	// Maybe use KLT instead 
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	//cout << "descriptors_I_i0 found" << endl;
 	
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
-	high_resolution_clock::time_point t4 = high_resolution_clock::now();
-	
-	duration<double> time_span2 = duration_cast<duration<double>>(t4-t3);
-	
-	std::cout << "It toome me " << time_span2.count() << " seconds.";
 	
 	
 	cout << "descriptors_I_i1 found" << endl;
@@ -589,15 +601,39 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat kpold = Mat::zeros(3, Si_1.k, CV_64FC1);
 	Mat delta_keypoint;
 	
+	high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	
+	pthread_t threads[NUM_THREADS];
+	struct thread_data td[NUM_THREADS];
+	int i, rc;
+	int q = Si_1.k % NUM_THREADS;
+	int k = (Si_1.k - q) / NUM_THREADS;
+	for (i = 0; i < NUM_THREADS; i++) {
+		td[i].Ii_1_gray = Ii_1_gray;
+		td[i].Ii_gray = Ii_gray;
+		if (i != NUM_THREADS-1) {
+			Si_1.Pi.colRange(i*k,(1+i)*k).copyTo(td[i].thread_mat);
+		}
+		else {
+			Si_1.Pi.colRange(i*k,(1+i)*k+q).copyTo(td[i].thread_mat);
+		}
+		rc = pthread_create(&threads[i], NULL, functionKLT, (void *)&td[i]);
+	}
+	void* ret = NULL;
+	for (int k = 0; k < NUM_THREADS; k++) {
+		pthread_join(threads[k], &ret);
+	}
+	
+	/* Part without parallelizaiton
 	// Track every keypoint - Maybe utilize parallelization 
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1); // Interest point
-	cout << "Si_1.k = " << Si_1.k << endl;
+	//cout << "Si_1.k = " << Si_1.k << endl;
 	for (int i = 0; i < Si_1.k; i++) {
 		x_T.at<double>(0,0) = Si_1.Pi.at<double>(1,i); // x-coordinate in image
 		x_T.at<double>(0,1) = Si_1.Pi.at<double>(0,i); // y-coordiante in image
 		//x_T.at<double>(0,0) = Si_1.Pi.at<double>(0,i); 
 		//x_T.at<double>(0,1) = Si_1.Pi.at<double>(1,i);
-		cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
+		//cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
 
 		delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, r_T, num_iters, lambda);
 		
@@ -611,9 +647,16 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		}
 		kpold.at<double>(0,i) = delta_keypoint.at<double>(0,0) + Si_1.Pi.at<double>(1,i); // x-coordinate in image
 		kpold.at<double>(1,i) = delta_keypoint.at<double>(1,0) + Si_1.Pi.at<double>(0,i); // y-coordinate in image
-		cout << "Match = " << kpold.at<double>(2,i) << " at point = (" << kpold.at<double>(0,i) << "," << kpold.at<double>(1,i) << ")" << endl;
+		//cout << "Match = " << kpold.at<double>(2,i) << " at point = (" << kpold.at<double>(0,i) << "," << kpold.at<double>(1,i) << ")" << endl;
 
 	}
+	*/
+	
+	
+	
+	high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
+	std::cout << "This process took = " << time_span.count() << " seconds.";
 	//Mat keypoints_i_1 = Mat::zeros(2, nr_keep, CV_64FC1);
 	Mat keypoints_i = Mat::zeros(2, nr_keep, CV_64FC1);
 	
@@ -699,7 +742,7 @@ double plusfunction(int a, int b) {
 }
 
 
-#define NUM_THREADS 5
+//#define NUM_THREADS 5
 /*
 void *PrintHello(void *threadid) {
    long tid;
@@ -735,7 +778,7 @@ void *PrintHello(void *threadarg) {
 */
 
 
-
+//profiler::ProfilerStart("soundstretch.prof");
 // ####################### Main function #######################
 int main ( int argc,char **argv ) {
 	
@@ -1115,11 +1158,11 @@ int main ( int argc,char **argv ) {
 	
 	
 	// Debug variable
-	int stop = 2;
+	int stop = 0;
 	int iter = 0;
 	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
-	while (continueVOoperation == true && pipelineBroke == false && stop < 2) {
+	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
 		cout << "Begin Continuous VO operation " << endl;
 		
 		/*
@@ -1242,6 +1285,7 @@ int main ( int argc,char **argv ) {
 	
 	Camera.release();
 	
+	//profiler::ProfilerStop();
 	
 	/*
 	// Test of KLT
