@@ -731,7 +731,11 @@ int main ( int argc,char **argv ) {
    //pthread_exit(NULL);
    cout << "Print of structs td" << endl;
    void* ret = NULL;
-   pthread_join(0, &ret);
+   pthread_join(threads[0], &ret);
+   pthread_join(threads[1], &ret);
+   pthread_join(threads[2], &ret);
+   pthread_join(threads[3], &ret);
+   pthread_join(threads[4], &ret);
    //pthread_join(1,(void**));
    //pthread_join(2,(void**));
    //pthread_join(3,(void**));
