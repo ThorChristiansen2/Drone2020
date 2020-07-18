@@ -35,6 +35,10 @@ math.h
 -
 tuple
 -
+pthread.h
+../Camera/pthread.h
+cstdlib
+-
 
 ../libfiles/src/say-hello/hello.hpp
 
@@ -56,10 +60,6 @@ fstream
 sstream
 -
 raspicam/raspicam_cv.h
--
-pthread.h
-/home/pi/GitHub/Drone2020/Program/pthread.h
-cstdlib
 -
 
 /usr/local/include/opencv2/calib3d.hpp

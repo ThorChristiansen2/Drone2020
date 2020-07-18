@@ -9,8 +9,8 @@
 #include <fstream>
 #include <sstream>
 #include <raspicam/raspicam_cv.h>
-#include "pthread.h"
-#include <cstdlib>
+//#include "pthread.h"
+//#include <cstdlib>
 
 /* ########################
  * Name: mainCamera.cpp
@@ -42,6 +42,7 @@ using namespace std;
 const char* source_window = "Source image"; 
 bool doTestSpeedOnly=false;
 
+#define NUM_SIFT_THREADS 6
 
 //parse command line
 //returns the index of a command line param in argv. If not found, return -1
@@ -167,17 +168,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	}
 	int N = nr_keep--;
 	*/
-	
-	/*
-	cout << "Matrix K " << endl;
-	for (int r = 0; r < K.rows; r++) {
-		for (int c = 0; c < K.cols; c++) {
-			cout << K.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	*/
-	
+
+	time_t tstart, tend;
 	
 	
 	
@@ -190,18 +182,110 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// Find descriptors for Feature Points
 	cout << "drawCorners found" << endl;
 	
+	// Find SIFT::descriptors with parallelization
+	cout << "Create Threads for finding descriptors" << endl;
+	tstart = time(0);
+	Mat Matdescriptors_I_i0;
+	pthread_t threads[NUM_SIFT_THREADS];
+	struct SIT td[NUM_SIFT_THREADS];
+	int i, rc;
+	int q = keypoints_I_i0.cols % NUM_SIFT_THREADS;
+	int k = (keypoints_I_i0.cols - q) / NUM_SIFT_THREADS;
+	for (i = 0; i < NUM_SIFT_THREADS; i++) {
+		I_i0_gray.copyTo(td[i].image_gray);
+		if (i != NUM_SIFT_THREADS-1) {
+			keypoints_I_i0.colRange(i*k,(1+i)*k).copyTo(td[i].keypoints);
+		}
+		else {
+			keypoints_I_i0.colRange(i*k,(1+i)*k+q).copyTo(td[i].keypoints);
+		}
+		rc = pthread_create(&threads[i], NULL, FindDescriptors, (void *)&td[i]);
+	}
+	void* ret = NULL;
+	pthread_join(threads[0], &ret);
+	pthread_join(threads[1], &ret);
+	pthread_join(threads[2], &ret);
+	pthread_join(threads[3], &ret);
+	pthread_join(threads[4], &ret);
+	pthread_join(threads[5], &ret);
+	vector<Mat> hej = {td[0].descriptors, td[1].descriptors, td[2].descriptors, td[3].descriptors, td[4].descriptors, td[5].descriptors};
+	vconcat(hej, Matdescriptors_I_i0);
 	
+	Mat Matdescriptors_I_i1;
+	//pthread_t threads[NUM_SIFT_THREADS];
+	//struct SIT td2[NUM_SIFT_THREADS];
+	
+	q = keypoints_I_i1.cols % NUM_SIFT_THREADS;
+	k = (keypoints_I_i1.cols - q) / NUM_SIFT_THREADS;
+	for (i = 0; i < NUM_SIFT_THREADS; i++) {
+		I_i1_gray.copyTo(td[i].image_gray);
+		if (i != NUM_SIFT_THREADS-1) {
+			keypoints_I_i1.colRange(i*k,(1+i)*k).copyTo(td[i].keypoints);
+		}
+		else {
+			keypoints_I_i1.colRange(i*k,(1+i)*k+q).copyTo(td[i].keypoints);
+		}
+		rc = pthread_create(&threads[i], NULL, FindDescriptors, (void *)&td[i]);
+	}
+	//void* ret = NULL;
+	pthread_join(threads[0], &ret);
+	pthread_join(threads[1], &ret);
+	pthread_join(threads[2], &ret);
+	pthread_join(threads[3], &ret);
+	pthread_join(threads[4], &ret);
+	pthread_join(threads[5], &ret);
+	hej = {td[0].descriptors, td[1].descriptors, td[2].descriptors, td[3].descriptors, td[4].descriptors, td[5].descriptors};
+	vconcat(hej, Matdescriptors_I_i1);
+	
+	/*
+	vconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
+	pthread_join(threads[2], &ret);
+	hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
+	pthread_join(threads[3], &ret);
+	hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
+	pthread_join(threads[4], &ret);
+	hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
+	pthread_join(threads[5], &ret);
+	hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
+	tend = time(0);
+	cout << "it took = " << difftime(tend,tstart) << "seconds(s)." << endl;
+	vconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
+	
+	
+	cout << "Dimensions = (" << td[0].descriptors.rows << "," << td[0].descriptors.cols << ")" << endl;
+	//hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
+	pthread_join(threads[2], &ret);
+	cout << "Dimensions = (" << td[1].descriptors.rows << "," << td[1].descriptors.cols << ")" << endl;
+	//hconcat(td[2].descriptors, Matdescriptors_I_i0, Matdescriptors_I_i0);
+	pthread_join(threads[3], &ret);
+	cout << "Dimensions = (" << td[2].descriptors.rows << "," << td[2].descriptors.cols << ")" << endl;
+	//hconcat(td[3].descriptors, Matdescriptors_I_i0, Matdescriptors_I_i0);
+	pthread_join(threads[4], &ret);
+	cout << "Dimensions = (" << td[3].descriptors.rows << "," << td[3].descriptors.cols << ")" << endl;
+	//hconcat(td[4].descriptors, Matdescriptors_I_i0, Matdescriptors_I_i0);
+	cout << "Dimensions = (" << td[4].descriptors.rows << "," << td[4].descriptors.cols << ")" << endl;
+	pthread_join(threads[5], &ret);
+	//hconcat(td[5].descriptors, Matdescriptors_I_i0, Matdescriptors_I_i0);
+	cout << "Dimensions = (" << td[5].descriptors.rows << "," << td[5].descriptors.cols << ")" << endl;
+	*/
+	
+	//cout << "Matdescriptors_I_i0 = " << endl;
+	//cout << Matdescriptors_I_i0 << endl;
+	tend = time(0);
+	cout << "it took = " << difftime(tend,tstart) << "seconds(s)." << endl;
+	cout << "Dimensions Matdescriptors_I_i0 = (" << Matdescriptors_I_i0.rows << "," << Matdescriptors_I_i0.cols << ")" << endl;
+	
+	
+	
+	//Finding SIFT::descriptors without parallelization 
 	// Maybe use KLT instead 
-	
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
-	//cout << "descriptors_I_i0 dimensions = (" << descriptors_I_i0.dim1() << "," << descriptors_I_i0.dim2() << ")" << endl;
-	
 	cout << "descriptors_I_i0 found" << endl;
 	
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
-	//cout << "descriptors_I_i1 dimensions = (" << descriptors_I_i1.dim1() << "," << descriptors_I_i1.dim2() << ")" << endl;
-	
 	cout << "descriptors_I_i1 found" << endl;
+	
+	
 	
 	// Match descriptors 
 	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
@@ -618,6 +702,7 @@ void *PrintHello(void *threadid) {
 }
 */
 
+/*
 struct thread_data {
 		int thread_id;
 		Mat thread_mat;
@@ -636,6 +721,7 @@ void *PrintHello(void *threadarg) {
 	
 	pthread_exit(NULL);
 }
+*/
 
 
 
@@ -706,6 +792,10 @@ int main ( int argc,char **argv ) {
 	waitKey(5000);
 	*/
 	
+	
+	
+	
+	/* Test af pthread
 	Mat M = (Mat_<double>(2,10) << 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10);
 	cout << "M = " << M << endl;
 	Mat H;
@@ -728,6 +818,7 @@ int main ( int argc,char **argv ) {
          exit(-1);
       }
    }
+  
    //pthread_exit(NULL);
    cout << "Print of structs td" << endl;
    void* ret = NULL;
@@ -743,6 +834,7 @@ int main ( int argc,char **argv ) {
    for (int j = 0; j < NUM_THREADS; j++) {
 	   cout << "sum = " << td[j].thread_sum << endl;
    }
+   */
    
 	
 	
@@ -766,7 +858,7 @@ int main ( int argc,char **argv ) {
 	// VO-pipeline: Initialization. Bootstraps the initial position. 
 	state Si_1;
 	Mat transformation_matrix;
-	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix Thor " << endl;
 	for (int r = 0; r < transformation_matrix.rows; r++) {
 		for (int c = 0; c < transformation_matrix.cols; c++) {
@@ -1275,8 +1367,12 @@ int main ( int argc,char **argv ) {
 	cout << K2 << endl;
 	*/
 	
-
-	
+	//vector<Mat> matrices = {Mat(4,1, CV_8UC1, Scalar(1)), Mat(4,1, CV_8UC1, Scalar(2)), Mat(4,1, CV_8UC1, Scalar(3))};
+	//vector<Mat> matrices;
+	//Mat v1 = (Mat_<double>(3,1) << 228, 28, 1);
+	//matrices(1) = v1;
+	//cout << "matrices[1]" << endl;
+	//cout << matrices[1] << endl;
    
 	
 	

@@ -17,6 +17,8 @@
 #include <tuple> 
 //#include <pthread.h>
 //#include <iostream>
+#include "pthread.h"
+#include <cstdlib>
 
 using namespace cv;
 
@@ -57,6 +59,19 @@ struct state {
 	Mat Ti; 
 };
 
+struct thread_data {
+		int thread_id;
+		Mat thread_mat;
+		int thread_sum = 0;
+};
+
+// SIT = SIFT Descriptor thread struct
+struct SIT {
+	Mat image_gray; // 
+	Mat keypoints; 	// 2xM matrix
+	Mat descriptors;
+};
+
 namespace Harris {
 	Mat corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression); 
 	//void corner(Mat src, Mat src_gray, bool display);
@@ -69,6 +84,7 @@ namespace SIFT {
 	
 }	// SIFT
 
+void *FindDescriptors(void *threadarg);
 
 
 namespace KLT {
@@ -109,5 +125,6 @@ Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat keypoint0, Mat keypoint1);
 
 // Test of threadid
 //void *PrintHello(void *threadid);
+void *PrintHello(void *threadarg);
 
 #endif
