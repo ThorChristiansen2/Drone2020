@@ -129,6 +129,7 @@ std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, doubl
 Mat solveQuartic(Mat factors);
 Mat p3p(Mat worldPoints, Mat imageVectors);
 Mat Kroneckerproduct(Mat A, Mat B);
+void *functionKLT(void *threadarg);
 
 // Helper funcitons
 void MatType( Mat inputMat );

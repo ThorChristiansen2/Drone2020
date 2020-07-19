@@ -96,6 +96,7 @@ void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
 	waitKey(0);
 }
 
+/*
 void *functionKLT(void *threadarg) {
    struct thread_data *my_data;
    my_data = (struct thread_data *) threadarg;
@@ -105,7 +106,7 @@ void *functionKLT(void *threadarg) {
    for (int i = 0; i < my_data->thread_mat.cols; i++) {
 	   x_T.at<double>(0,0) = my_data->thread_mat.at<double>(1,i);
 	   x_T.at<double>(0,1) = my_data->thread_mat.at<double>(0,i);
-	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, my_data->dwdx, 10, 20, 0.1);
+	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, my_data->dwdx, 11, 20, 0.1);
 	   double a = delta_keypoint.at<double>(0,0) + my_data->thread_mat.at<double>(1,i);
 	   double b = delta_keypoint.at<double>(1,0) + my_data->thread_mat.at<double>(0,i);
 	   my_data->thread_mat.at<double>(1,i) = b; // x-coordinate in image
@@ -114,6 +115,7 @@ void *functionKLT(void *threadarg) {
    }
    pthread_exit(NULL);
 }
+*/
 
 // ####################### VO Initialization Pipeline #######################
 tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
@@ -201,106 +203,6 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	waitKey(0);
 	cout << "Done with finding keypoints " << endl;
 	cout << "drawCorners found" << endl;
-	*/
-	
-	/*
-	// Find SIFT::descriptors with parallelization
-	cout << "Create Threads for finding descriptors" << endl;
-	high_resolution_clock::time_point t1 = high_resolution_clock::now();
-	
-	Mat Matdescriptors_I_i0;
-	pthread_t threads[NUM_SIFT_THREADS];
-	struct SIT td[NUM_SIFT_THREADS];
-	int i, rc;
-	int q = keypoints_I_i0.cols % NUM_SIFT_THREADS;
-	int k = (keypoints_I_i0.cols - q) / NUM_SIFT_THREADS;
-	for (i = 0; i < NUM_SIFT_THREADS; i++) {
-		I_i0_gray.copyTo(td[i].image_gray);
-		if (i != NUM_SIFT_THREADS-1) {
-			keypoints_I_i0.colRange(i*k,(1+i)*k).copyTo(td[i].keypoints);
-		}
-		else {
-			keypoints_I_i0.colRange(i*k,(1+i)*k+q).copyTo(td[i].keypoints);
-		}
-		rc = pthread_create(&threads[i], NULL, FindDescriptors, (void *)&td[i]);
-	}
-	void* ret = NULL;
-	pthread_join(threads[0], &ret);
-	pthread_join(threads[1], &ret);
-	pthread_join(threads[2], &ret);
-	pthread_join(threads[3], &ret);
-	pthread_join(threads[4], &ret);
-	pthread_join(threads[5], &ret);
-	vector<Mat> hej = {td[0].descriptors, td[1].descriptors, td[2].descriptors, td[3].descriptors, td[4].descriptors, td[5].descriptors};
-	vconcat(hej, Matdescriptors_I_i0);
-	
-	Mat Matdescriptors_I_i1;
-	//pthread_t threads[NUM_SIFT_THREADS];
-	//struct SIT td2[NUM_SIFT_THREADS];
-	
-	q = keypoints_I_i1.cols % NUM_SIFT_THREADS;
-	k = (keypoints_I_i1.cols - q) / NUM_SIFT_THREADS;
-	for (i = 0; i < NUM_SIFT_THREADS; i++) {
-		I_i1_gray.copyTo(td[i].image_gray);
-		if (i != NUM_SIFT_THREADS-1) {
-			keypoints_I_i1.colRange(i*k,(1+i)*k).copyTo(td[i].keypoints);
-		}
-		else {
-			keypoints_I_i1.colRange(i*k,(1+i)*k+q).copyTo(td[i].keypoints);
-		}
-		rc = pthread_create(&threads[i], NULL, FindDescriptors, (void *)&td[i]);
-	}
-	//void* ret = NULL;
-	pthread_join(threads[0], &ret);
-	pthread_join(threads[1], &ret);
-	pthread_join(threads[2], &ret);
-	pthread_join(threads[3], &ret);
-	pthread_join(threads[4], &ret);
-	pthread_join(threads[5], &ret);
-	hej = {td[0].descriptors, td[1].descriptors, td[2].descriptors, td[3].descriptors, td[4].descriptors, td[5].descriptors};
-	vconcat(hej, Matdescriptors_I_i1);
-	high_resolution_clock::time_point t2 = high_resolution_clock::now();
-	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
-	
-	std::cout << "It toome me " << time_span.count() << " seconds.";
-	
-	
-	
-	vconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
-	pthread_join(threads[2], &ret);
-	hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
-	pthread_join(threads[3], &ret);
-	hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
-	pthread_join(threads[4], &ret);
-	hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
-	pthread_join(threads[5], &ret);
-	hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
-	tend = time(0);
-	cout << "it took = " << difftime(tend,tstart) << "seconds(s)." << endl;
-	vconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
-	
-	
-	cout << "Dimensions = (" << td[0].descriptors.rows << "," << td[0].descriptors.cols << ")" << endl;
-	//hconcat(td[0].descriptors, td[1].descriptors, Matdescriptors_I_i0);
-	pthread_join(threads[2], &ret);
-	cout << "Dimensions = (" << td[1].descriptors.rows << "," << td[1].descriptors.cols << ")" << endl;
-	//hconcat(td[2].descriptors, Matdescriptors_I_i0, Matdescriptors_I_i0);
-	pthread_join(threads[3], &ret);
-	cout << "Dimensions = (" << td[2].descriptors.rows << "," << td[2].descriptors.cols << ")" << endl;
-	//hconcat(td[3].descriptors, Matdescriptors_I_i0, Matdescriptors_I_i0);
-	pthread_join(threads[4], &ret);
-	cout << "Dimensions = (" << td[3].descriptors.rows << "," << td[3].descriptors.cols << ")" << endl;
-	//hconcat(td[4].descriptors, Matdescriptors_I_i0, Matdescriptors_I_i0);
-	cout << "Dimensions = (" << td[4].descriptors.rows << "," << td[4].descriptors.cols << ")" << endl;
-	pthread_join(threads[5], &ret);
-	//hconcat(td[5].descriptors, Matdescriptors_I_i0, Matdescriptors_I_i0);
-	cout << "Dimensions = (" << td[5].descriptors.rows << "," << td[5].descriptors.cols << ")" << endl;
-	
-	
-	//cout << "Matdescriptors_I_i0 = " << endl;
-	//cout << Matdescriptors_I_i0 << endl;
-
-	cout << "Dimensions Matdescriptors_I_i0 = (" << Matdescriptors_I_i0.rows << "," << Matdescriptors_I_i0.cols << ")" << endl;
 	*/
 	
 
@@ -536,20 +438,6 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	return make_tuple(Si_1, transformation_matrix);
 }
 
-Mat calibrate_matrix(Mat transformation_matrix) {
-	
-	Mat calib_matrix = Mat::eye(3, 4, CV_64FC1) - transformation_matrix;
-	
-	for (int r = 0; r < calib_matrix.rows; r++) {
-		for (int c = 0; c < calib_matrix.cols; c++) {
-			cout << calib_matrix.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	
-	return calib_matrix;
-}
-
 // ####################### VO Continuous Operation #######################
 // Process Frame for continuous VO operation 
 /* Arguments: 
@@ -573,7 +461,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	//Mat kpold = Mat::zeros(3, Si_1.k, CV_64FC1);
 	//Mat delta_keypoint;
 	
-	high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	//high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	
 	int NUM_THREADS = Si_1.k;
 	
@@ -603,11 +491,13 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		td[i].dwdx = dwdx;
 		if (i != NUM_THREADS-1) {
 			//Si_1.Pi.colRange(i*k,(1+i)*k).copyTo(td[i].thread_mat);
-			td[i].thread_mat = Si_1.Pi.colRange(i*k,(1+i)*k);
+			//td[i].thread_mat = Si_1.Pi.colRange(i*k,(1+i)*k);
+			td[i].thread_mat = Si_1.Pi.col(i);
 		}
 		else {
 			//Si_1.Pi.colRange(i*k,(1+i)*k+q).copyTo(td[i].thread_mat);
-			td[i].thread_mat = Si_1.Pi.colRange(i*k,(1+i)*k+q);
+			//td[i].thread_mat = Si_1.Pi.colRange(i*k,(1+i)*k+q);
+			td[i].thread_mat = Si_1.Pi.col(i);
 		}
 		rc = pthread_create(&threads[i], NULL, functionKLT, (void *)&td[i]);
 	}
@@ -621,15 +511,15 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		if (td[k].keep_point == 1) {
 			keypoint_container.push_back(td[k].thread_mat);
 			landmark_container.push_back(Si_1.Xi.col(k));
+			//cout << "Mistake 1" << endl;
 		}
 		//Matcontainer.push_back(td[k].thread_mat);
+		//cout << "Mistake here = " << k << endl;
 	}
+	//cout << "Mistake hej" << endl;
 	hconcat(keypoint_container, keypoints_i);
 	hconcat(landmark_container, corresponding_landmarks);
-	
-	high_resolution_clock::time_point t2 = high_resolution_clock::now();
-	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
-	//std::cout << "This process took = " << time_span.count() << " seconds.";
+	cout << "mistake here " << endl;
 	
 	/*
 	cout << "Print of keypoints_i" << endl;
@@ -637,19 +527,23 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cout << "Print of corresponding_landmarks" << endl;
 	cout << corresponding_landmarks << endl;	
 	*/
+	cout << "keypoints_i" << endl;
+	cout << keypoints_i << endl;
+	
+	cout << "corresponding_landmarks" << endl;
+	cout << corresponding_landmarks << endl;
+	
 	
 	// Estimate the new pose using RANSAC and P3P algorithm 
 	Mat transformation_matrix, best_inlier_mask;
 	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(keypoints_i, corresponding_landmarks, K);
+	cout << "mistake here 2" << endl;
 	
 	// Remove points that are determined as outliers from best_inlier_mask by using best_inlier_mask
-	cout << "best_inlier_mask" << endl;
-	cout << best_inlier_mask << endl;
-	
+	//cout << "best_inlier_mask" << endl;
+	//cout << best_inlier_mask << endl;
 	vector<Mat> keypoint_inlier;
 	vector<Mat> landmark_inlier;
-	MatType(best_inlier_mask);
-	cout << (double) best_inlier_mask.at<uchar>(0,0) << endl;
 	for (int i = 0; i < best_inlier_mask.cols; i++) {
 		if ((double) best_inlier_mask.at<uchar>(0,i) > 0) {
 			keypoint_inlier.push_back(keypoints_i.col(i));
@@ -662,72 +556,25 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	// Update keypoints in state 
 	Si_1.k = keypoints_i.cols;
-	//vconcat(keypoints_i.row(1), keypoints_i.row(0), Si.Pi); // Apparently you have to switch rows
 	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si_1.Pi); // Apparently you have to switch rows
-	//keypoints_i.copyTo(Si.Pi); 
-	//corresponding_landmarks.copyTo(Si.Xi);
 	corresponding_landmarks.copyTo(Si_1.Xi);
 	
+	/*
 	cout << "inliers " << endl;
 	cout << Si_1.Pi << endl;
 	cout << Si_1.Xi << endl;
-	
-	/*
-	// Triangulate new points
-	Mat M1 = K * prev_transformation_matrix;
-	Mat M2 = K * transformation_matrix;
-	Si.Xi = linearTriangulation(Si_1.Pi, Si.Pi, M1, M2 );
 	*/
+	
+	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	//duration<double> time_span = duration_cast<duration<double>>(t2-t1);
+	//cout << "This process took = " << time_span.count() << " seconds.";
+	
 	
 	//return make_tuple(Si, transformation_matrix); 
 	return make_tuple(Si_1, transformation_matrix); 
 }
 
-double plusfunction(int a, int b) {
-	int v = a + b;
-	double c = v/a;
-	
-	return c;
-}
 
-
-//#define NUM_THREADS 5
-/*
-void *PrintHello(void *threadid) {
-   long tid;
-   tid = (long)threadid;
-   int a = 5; 
-   int b = 15;
-   double c = plusfunction(a, b);
-   cout << "c = " << c << endl;
-   cout << "Hello World! Thread ID, " << tid << endl;
-   pthread_exit(NULL);
-}
-*/
-
-/*
-struct thread_data {
-		int thread_id;
-		Mat thread_mat;
-		int thread_sum = 0;
-};
-
-void *PrintHello(void *threadarg) {
-	struct thread_data *my_data;
-	my_data = (struct thread_data *) threadarg;
-	
-	cout << "Thread ID : " << my_data->thread_id << endl;
-	cout << "Matrix : " << my_data->thread_mat << endl;
-	//cout << " my data = " << my_data->thread_mat.at<double>(0,0) << endl;
-	//cout << "Sum : " << my_data->thread_mat.at<double>(0,0) + my_data->thread_mat.at<double>(0,1) + my_data->thread_mat.at<double>(1,0) + my_data->thread_mat.at<double>(1,1);
-	my_data->thread_sum = my_data->thread_mat.at<double>(0,0) + my_data->thread_mat.at<double>(0,1) + my_data->thread_mat.at<double>(1,0) + my_data->thread_mat.at<double>(1,1);
-	
-	pthread_exit(NULL);
-}
-*/
-
-
-//profiler::ProfilerStart("soundstretch.prof");
 // ####################### Main function #######################
 int main ( int argc,char **argv ) {
 	
@@ -836,7 +683,7 @@ int main ( int argc,char **argv ) {
 	int iter = 0;
 	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
-	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
+	while (continueVOoperation == true && pipelineBroke == false && stop < 2) {
 		cout << "Begin Continuous VO operation " << endl;
 		
 		/*
@@ -853,12 +700,6 @@ int main ( int argc,char **argv ) {
 		//imshow("Continous operation frame", Ii);
 		//waitKey(0);
 		//Ii.convertTo(Ii, CV_64FC1);
-		for (int r = 0; r < K.rows; r++) {
-			for (int c = 0; c < K.cols; c++) {
-				cout << K.at<double>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		}
 		
 		// Estimate pose 
 		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K);
@@ -940,6 +781,11 @@ int main ( int argc,char **argv ) {
 		Si_1 = Si;
 		cout << "Update of Si.num_candidates = " << Si.num_candidates << endl;
 		
+		cout << "Si_1.Pi and number of keypoints = " << Si_1.Pi.cols << endl;
+		cout << Si_1.Pi << endl;
+		cout << "Si_1.Xi and number of 3D landmarks = " << Si_1.Xi.cols << endl;
+		cout << Si_1.Xi << endl;
+		
 		// Debug variable
 		stop++;
 		if (stop > 10) {
@@ -957,8 +803,7 @@ int main ( int argc,char **argv ) {
 	double time_=cv::getTickCount();
 	
 	Camera.release();
-	
-	//profiler::ProfilerStop();
+
 	
 	
 	return 0;
