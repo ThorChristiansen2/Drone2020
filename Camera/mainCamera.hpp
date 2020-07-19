@@ -27,13 +27,13 @@ using namespace cv;
 using Matrix = Numeric_lib::Matrix<double,2>;
 using Vector = Numeric_lib::Matrix<double,1>;
 
-/*
-namespace draw {
-
-	void circles();
-
-}	// namespace draw
-*/
+// Variables to define
+// KLT
+#define KLT_r_T 11
+#define KLT_num_iters 20
+#define KLT_lambda 0.1
+// Num candidate keypoints
+#define num_candidate_keypoints 30
 
 /*
  * Usually, you have to write cv::Mat, but since you have written 'using 
@@ -60,13 +60,6 @@ struct state {
 	Mat Ti; 
 };
 
-/*
-struct thread_data {
-		int thread_id;
-		Mat thread_mat;
-		int thread_sum = 0;
-};
-*/
 
 struct thread_data {
 		//int thread_id;

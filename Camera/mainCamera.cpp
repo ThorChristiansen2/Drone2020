@@ -42,7 +42,7 @@ void *functionKLT(void *threadarg) {
    for (int i = 0; i < my_data->thread_mat.cols; i++) {
 	   x_T.at<double>(0,0) = my_data->thread_mat.at<double>(1,i);
 	   x_T.at<double>(0,1) = my_data->thread_mat.at<double>(0,i);
-	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, my_data->dwdx, 11, 20, 0.1);
+	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, my_data->dwdx, KLT_r_T, KLT_num_iters, KLT_lambda);
 	   double a = delta_keypoint.at<double>(0,0) + my_data->thread_mat.at<double>(1,i);
 	   double b = delta_keypoint.at<double>(1,0) + my_data->thread_mat.at<double>(0,i);
 	   my_data->thread_mat.at<double>(1,i) = b; // x-coordinate in image
@@ -2159,7 +2159,7 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	
 	
 	// Find new keypoints 
-	int keypoint_max = 100;
+	int keypoint_max = num_candidate_keypoints;
 	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, keypoint_max, Si.Pi);
 	
 	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints); // y-coordinates in row 1. x-coordinates in row 2.
@@ -2183,9 +2183,8 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 
 state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat extracted_keypoints, Mat dwdx) {
 	
-	int r_T = 11; 
-	int num_iters = 20;
-	double lambda = 0.1;
+	cout << "Si.Ci" << endl;
+	cout << Si.Ci << endl;
 	
 	//Mat kpold = Mat::zeros(3, Si.num_candidates, CV_64FC1);
 	Mat failed_candidates = Mat::zeros(1, Si.num_candidates, CV_64FC1);
@@ -2198,10 +2197,11 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	
 	//cout << extracted_keypoints << endl;
 	
-	cout << "Si.num_candidates = " << Si.num_candidates << endl;
+	//cout << "Si.num_candidates = " << Si.num_candidates << endl;
 		
-	/*
+	
 	// Parallelizaiton of code 	
+	cout << "Parallelization of continuousCandidateKeypoints" << endl;
 	int NUM_THREADS = Si.num_candidates;
 	pthread_t threads[NUM_THREADS];
 	struct thread_data td[NUM_THREADS];
@@ -2216,17 +2216,17 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	void* ret = NULL;
 	for (int k = 0; k < NUM_THREADS; k++) {
 		pthread_join(threads[k], &ret);
-		if (td[k].keep_point == 0) {
-			failed_candidates.at<double>(0,i) = 1;
+		cout << "td[k].keep_point = " << td[k].keep_point << endl;
+		if (td[k].keep_point != 1) {
+			failed_candidates.at<double>(0,k) = 1;
 			//cout << "Mistake 1" << endl;
 		}
 		//Matcontainer.push_back(td[k].thread_mat);
 		//cout << "Mistake here = " << k << endl;
 	}
-	*/
 	
-		
-	
+	/*
+	cout << "continuousCandidateKeypoints" << endl;
 	// Track candidate keypoints 
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
 	Mat delta_keypoint;
@@ -2238,14 +2238,16 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 			x_T.at<double>(0,1) = Si.Ci.at<double>(0,i); // y-coordinate in image
 			cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
 			
-			delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, dwdx, r_T, num_iters, lambda);
+			delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, dwdx, KLT_r_T, KLT_num_iters, KLT_lambda);
 			
 			if (delta_keypoint.at<double>(2,0) == 1) {
 				nr_keep++;
-				Si.Ci.at<double>(1,i) = delta_keypoint.at<double>(0,0) + Si.Ci.at<double>(1,i); // Check if this is right 
-				Si.Ci.at<double>(0,i) = delta_keypoint.at<double>(1,0) + Si.Ci.at<double>(0,i);
+				//Si.Ci.at<double>(1,i) = delta_keypoint.at<double>(0,0) + Si.Ci.at<double>(1,i); // Check if this is right 
+				//Si.Ci.at<double>(0,i) = delta_keypoint.at<double>(1,0) + Si.Ci.at<double>(0,i);
 				
 			}
+			Si.Ci.at<double>(1,i) = delta_keypoint.at<double>(0,0) + Si.Ci.at<double>(1,i); // Check if this is right 
+			Si.Ci.at<double>(0,i) = delta_keypoint.at<double>(1,0) + Si.Ci.at<double>(0,i);
 			cout << "Match = " << delta_keypoint.at<double>(2,0) << " at point = (" << Si.Ci.at<double>(0,i) << "," << Si.Ci.at<double>(1,i) << ")" << endl;
 			
 			if (delta_keypoint.at<double>(2,0) == 0) {
@@ -2254,10 +2256,18 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 		}
 		
 	}
+	*/
+	
+	cout << "Si.Ci" << endl;
+	cout << Si.Ci << endl;
+	cout << "failed_candidates" << endl;
+	cout << failed_candidates << endl;
 
 	cout << "Mistake 3" << endl;
 	// Delete un-tracked candidate keypoints 
 	// We just overwrite those points 
+	cout << "Dimensions of failed_candidates = (" << failed_candidates.rows << "," << failed_candidates.cols << ")" << endl;
+	cout << "Dimensions of extracted_keypoints = (" << extracted_keypoints.rows << "," << extracted_keypoints.cols << ")" << endl;
 	failed_candidates = failed_candidates + extracted_keypoints;
 	
 	cout << "failed_candidates" << endl;

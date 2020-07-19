@@ -452,11 +452,6 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );
 	
-
-	// Variables 
-	int r_T = 15; // 15
-	int num_iters = 25; 
-	double lambda = 0.1;
 	int nr_keep = 0;
 	//Mat kpold = Mat::zeros(3, Si_1.k, CV_64FC1);
 	//Mat delta_keypoint;
@@ -465,6 +460,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	int NUM_THREADS = Si_1.k;
 	
+	int r_T = KLT_r_T;
 	int n = 2*r_T + 1;
 	Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
 	int temp_index = 0; 
@@ -483,22 +479,11 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	pthread_t threads[NUM_THREADS];
 	struct thread_data td[NUM_THREADS];
 	int i, rc;
-	int q = Si_1.k % NUM_THREADS;
-	int k = (Si_1.k - q) / NUM_THREADS;
 	for (i = 0; i < NUM_THREADS; i++) {
 		td[i].Ii_1_gray = Ii_1_gray;
 		td[i].Ii_gray = Ii_gray;
 		td[i].dwdx = dwdx;
-		if (i != NUM_THREADS-1) {
-			//Si_1.Pi.colRange(i*k,(1+i)*k).copyTo(td[i].thread_mat);
-			//td[i].thread_mat = Si_1.Pi.colRange(i*k,(1+i)*k);
-			td[i].thread_mat = Si_1.Pi.col(i);
-		}
-		else {
-			//Si_1.Pi.colRange(i*k,(1+i)*k+q).copyTo(td[i].thread_mat);
-			//td[i].thread_mat = Si_1.Pi.colRange(i*k,(1+i)*k+q);
-			td[i].thread_mat = Si_1.Pi.col(i);
-		}
+		td[i].thread_mat = Si_1.Pi.col(i);
 		rc = pthread_create(&threads[i], NULL, functionKLT, (void *)&td[i]);
 	}
 	void* ret = NULL;
@@ -519,7 +504,6 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	//cout << "Mistake hej" << endl;
 	hconcat(keypoint_container, keypoints_i);
 	hconcat(landmark_container, corresponding_landmarks);
-	cout << "mistake here " << endl;
 	
 	/*
 	cout << "Print of keypoints_i" << endl;
@@ -537,7 +521,6 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	// Estimate the new pose using RANSAC and P3P algorithm 
 	Mat transformation_matrix, best_inlier_mask;
 	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(keypoints_i, corresponding_landmarks, K);
-	cout << "mistake here 2" << endl;
 	
 	// Remove points that are determined as outliers from best_inlier_mask by using best_inlier_mask
 	//cout << "best_inlier_mask" << endl;
@@ -559,11 +542,6 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si_1.Pi); // Apparently you have to switch rows
 	corresponding_landmarks.copyTo(Si_1.Xi);
 	
-	/*
-	cout << "inliers " << endl;
-	cout << Si_1.Pi << endl;
-	cout << Si_1.Xi << endl;
-	*/
 	
 	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	//duration<double> time_span = duration_cast<duration<double>>(t2-t1);
@@ -683,6 +661,7 @@ int main ( int argc,char **argv ) {
 	int iter = 0;
 	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
+	
 	while (continueVOoperation == true && pipelineBroke == false && stop < 2) {
 		cout << "Begin Continuous VO operation " << endl;
 		
@@ -718,7 +697,9 @@ int main ( int argc,char **argv ) {
 			iter++;
 		}
 		else {
-			int r_T = 15;
+			Ii = imread("cam2.png", IMREAD_UNCHANGED);
+			
+			int r_T = KLT_r_T;
 			int n = 2*r_T + 1;
 			Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
 			int temp_index = 0; 
@@ -730,6 +711,10 @@ int main ( int argc,char **argv ) {
 					temp_index++;
 				} 
 			}
+			imshow("continuous Ii_1",Ii_1);
+			waitKey(0);
+			imshow("continuous Ii", Ii);
+			waitKey(0);
 			
 			// Find the Kroeneckerproduct 
 			Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
@@ -737,17 +722,14 @@ int main ( int argc,char **argv ) {
 			cout << "Iter 2" << endl;
 			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix, extracted_keypoints, dwdx);
 			cout << "ContinuousCandidateKeypoints" << endl;
-			for (int r = 0; r < Si.Ci.rows; r++) {
-				for (int c = 0; c < Si.Ci.cols; c++) {
-					cout << Si.Ci.at<double>(r,c) << ", ";
-				}
-				cout << "" << endl;
-			}
+			cout << Si.Ci << endl;
+			
 			waitKey(0);
 			tie(Si, extracted_keypoints) = triangulateNewLandmarks( Si, K, transformation_matrix, threshold_angle);
 		}
 		
 		
+		/*
 		// Test of function newCandidateKeypoints 
 		cout << "Test of function newCandidateKeypoints" << endl;
 		for (int k = 0; k < Si.Pi.cols; k++) {
@@ -763,6 +745,11 @@ int main ( int argc,char **argv ) {
 			circle (Ii, Point(y,x), 5, Scalar(255,0,0), 2,8,0);
 		}
 		imshow("Corners from Si.Ci", Ii);
+		waitKey(0);
+		*/
+		imshow("Ii_1",Ii_1);
+		waitKey(0);
+		imshow("Ii", Ii);
 		waitKey(0);
 		
 		// Draw Corners from Si.Ci 
