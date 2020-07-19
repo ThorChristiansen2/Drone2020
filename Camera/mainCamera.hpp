@@ -73,6 +73,7 @@ struct thread_data {
 		Mat Ii_1_gray;
 		Mat Ii_gray;
 		Mat thread_mat;
+		Mat dwdx;
 		int keep_point;
 };
 
@@ -99,7 +100,8 @@ void *FindDescriptors(void *threadarg);
 
 
 namespace KLT {
-	Mat trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, double lambda);
+	//Mat trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, double lambda);
+	Mat trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, Mat dwdx, int r_T, int num_iters, double lambda);
 }
 
 namespace Localize {
@@ -114,7 +116,7 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 
 // Find new candidate Keypoints
 state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc);
-state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat extracted_keypoints);
+state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat extracted_keypoints, Mat dwdx);
 
 // Triangulate new candidate Keypoints
 std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle);
@@ -126,6 +128,7 @@ std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, doubl
 //Mat warpImage(Mat I_R, Mat W);
 Mat solveQuartic(Mat factors);
 Mat p3p(Mat worldPoints, Mat imageVectors);
+Mat Kroneckerproduct(Mat A, Mat B);
 
 // Helper funcitons
 void MatType( Mat inputMat );

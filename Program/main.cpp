@@ -105,7 +105,7 @@ void *functionKLT(void *threadarg) {
    for (int i = 0; i < my_data->thread_mat.cols; i++) {
 	   x_T.at<double>(0,0) = my_data->thread_mat.at<double>(1,i);
 	   x_T.at<double>(0,1) = my_data->thread_mat.at<double>(0,i);
-	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, 15, 25, 0.1);
+	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, my_data->dwdx, 10, 20, 0.1);
 	   double a = delta_keypoint.at<double>(0,0) + my_data->thread_mat.at<double>(1,i);
 	   double b = delta_keypoint.at<double>(1,0) + my_data->thread_mat.at<double>(0,i);
 	   my_data->thread_mat.at<double>(1,i) = b; // x-coordinate in image
@@ -129,9 +129,11 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// Get Feature points
 	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 200, emptyMatrix); // Number of maximum keypoints
+	/*
 	const char* text0 = "Detected corners in frame I_i0";
-	//drawCorners(I_i0, keypoints_I_i0, text0);
-	//waitKey(0);
+	drawCorners(I_i0, keypoints_I_i0, text0);
+	waitKey(0);
+	*/
 	
 	/*
 	// ######################### KLT ######################### 
@@ -193,12 +195,13 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// ######################### SIFT ######################### 
 	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 200, emptyMatrix); // Number of keypoints that is looked for
+	/*
 	const char* text1 = "Detected corners in frame I_i1";
-	//drawCorners(I_i1, keypoints_I_i1, text1);
-	//waitKey(0);
-	//cout << "Done with finding keypoints " << endl;
-	// Find descriptors for Feature Points
+	drawCorners(I_i1, keypoints_I_i1, text1);
+	waitKey(0);
+	cout << "Done with finding keypoints " << endl;
 	cout << "drawCorners found" << endl;
+	*/
 	
 	/*
 	// Find SIFT::descriptors with parallelization
@@ -309,7 +312,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
 	
 	
-	cout << "descriptors_I_i1 found" << endl;
+	//cout << "descriptors_I_i1 found" << endl;
 	
 	
 	
@@ -458,28 +461,21 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	//waitKey(0);
 	
 	
-	
-	
-	
-	// Update State  with regards to keypoints in frame Ii_1
-	//Si_1.Pi = temp_points2Mat;
-	
-	
 	// Find fudamental matrix 
-	//Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 1, 0.95, 5000, noArray()); // 1 should be changed ot 3 
 	vector<uchar> pArray(N);
-	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 1, 0.95, 5000, pArray);
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.95, 5000, pArray); // 3 can be changed to 1
 	
-	
+	/*
 	cout << "Output Mask " << endl;
 	for (int i = 0; i < N; i++) {
 		cout << (double) pArray[i] << ", ";
 	}
 	cout << "" << endl;
 	cout << "Nonzero elements = " << countNonZero(pArray) << endl;
+	*/
 	
 	int N_inlier = countNonZero(pArray);
-	cout << "N_inlier = " << N_inlier << endl;
+	//cout << "N_inlier = " << N_inlier << endl;
 	Mat points1Mat = Mat::zeros(2, N_inlier, CV_64FC1);
 	Mat points2Mat = Mat::zeros(2, N_inlier, CV_64FC1);
 	int temp_index = 0;
@@ -492,21 +488,22 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 			temp_index++;
 		}
 	}
-	// 
-	cout << "Number of reliably matched keypoints (using RANSAC) in initializaiton = " << N_inlier << endl;
+	 
+	//cout << "Number of reliably matched keypoints (using RANSAC) in initializaiton = " << N_inlier << endl;
 	Si_1.k = N_inlier;
 	
 	// Update of reliably matched keypoints
 	Si_1.Pi = points2Mat;
 	
+	/*
 	cout << "Print of Si_1 Keypoints " << endl;
 	cout << Si_1.Pi << endl;
 	cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
+	*/
 	
 	// Estimate Essential Matrix
 	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);	
 	
-	// Find position and rotation from images
 	// Find the rotation and translation assuming the first frame is taken with the drone on the ground 
 	Mat transformation_matrix = findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
 	for (int i = 0; i < transformation_matrix.rows; i++) {
@@ -522,17 +519,18 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat M2 = K * transformation_matrix;
 	Mat landmarks = linearTriangulation(points1Mat, points2Mat, M1, M2);
 	
-	cout << "Print landmarks " << endl;
-	cout << landmarks << endl;
-	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
+	//cout << "Print landmarks " << endl;
+	//cout << landmarks << endl;
+	//cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	Mat temp;
 	vconcat(landmarks.row(0), landmarks.row(1), temp);
 	vconcat(temp, landmarks.row(2), Si_1.Xi);
 	
-	
+	/*
 	cout << "Print of 3D landmarks " << endl;
 	cout << Si_1.Xi << endl;
 	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
+	*/
 	
 	// return state of drone as well as transformation_matrix;
 	return make_tuple(Si_1, transformation_matrix);
@@ -572,12 +570,27 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	int num_iters = 25; 
 	double lambda = 0.1;
 	int nr_keep = 0;
-	Mat kpold = Mat::zeros(3, Si_1.k, CV_64FC1);
-	Mat delta_keypoint;
+	//Mat kpold = Mat::zeros(3, Si_1.k, CV_64FC1);
+	//Mat delta_keypoint;
 	
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	
 	int NUM_THREADS = Si_1.k;
+	
+	int n = 2*r_T + 1;
+	Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
+	int temp_index = 0; 
+	for (int i = -r_T; i <= r_T; i++) {
+		for (int j = -r_T; j <= r_T; j++) {
+			xy1.at<double>(temp_index,0) = i;
+			xy1.at<double>(temp_index,1) = j;
+			xy1.at<double>(temp_index,2) = 1;
+			temp_index++;
+		} 
+	}
+	
+	// Find the Kroeneckerproduct 
+	Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
 	
 	pthread_t threads[NUM_THREADS];
 	struct thread_data td[NUM_THREADS];
@@ -587,6 +600,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	for (i = 0; i < NUM_THREADS; i++) {
 		td[i].Ii_1_gray = Ii_1_gray;
 		td[i].Ii_gray = Ii_gray;
+		td[i].dwdx = dwdx;
 		if (i != NUM_THREADS-1) {
 			//Si_1.Pi.colRange(i*k,(1+i)*k).copyTo(td[i].thread_mat);
 			td[i].thread_mat = Si_1.Pi.colRange(i*k,(1+i)*k);
@@ -613,16 +627,16 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	hconcat(keypoint_container, keypoints_i);
 	hconcat(landmark_container, corresponding_landmarks);
 	
-	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
-	//duration<double> time_span = duration_cast<duration<double>>(t2-t1);
+	high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
 	//std::cout << "This process took = " << time_span.count() << " seconds.";
 	
-	
+	/*
 	cout << "Print of keypoints_i" << endl;
 	cout << keypoints_i << endl;
-	
 	cout << "Print of corresponding_landmarks" << endl;
 	cout << corresponding_landmarks << endl;	
+	*/
 	
 	// Estimate the new pose using RANSAC and P3P algorithm 
 	Mat transformation_matrix, best_inlier_mask;
@@ -729,13 +743,6 @@ int main ( int argc,char **argv ) {
 	
 	// Calibrate camera to get intrinsic parameters K 
 	Mat K = (Mat_<double>(3,3) << 769.893, 0, 2.5, 0,1613.3, 4, 0, 0, 1);
-	cout << "K (intrinsic matrix)" << endl;
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			cout << K.at<double>(i,j) << ", ";
-		}
-		cout << "" << endl;
-	}
 	
 	cv::Mat I_i0, I_i1, image;
 	
@@ -781,50 +788,7 @@ int main ( int argc,char **argv ) {
 	waitKey(5000);
 	*/
 	
-	
-	
-	
-	/* Test af pthread
-	Mat M = (Mat_<double>(2,10) << 1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10);
-	cout << "M = " << M << endl;
-	Mat H;
-	M.colRange(0,10).copyTo(H);
-	cout << "H = " << H << endl;
-	pthread_t threads[NUM_THREADS];
-	struct thread_data td[NUM_THREADS];
-   int rc;
-   int i;
-   
-   for( i = 0; i < NUM_THREADS; i++ ) {
-      cout << "main() : creating thread, " << i << endl;
-      td[i].thread_id = i;
-      M.colRange(2*i,2*i+2).copyTo(td[i].thread_mat);
-      
-      rc = pthread_create(&threads[i], NULL, PrintHello, (void *)&td[i]);
-      
-      if (rc) {
-         cout << "Error:unable to create thread," << rc << endl;
-         exit(-1);
-      }
-   }
-  
-   //pthread_exit(NULL);
-   cout << "Print of structs td" << endl;
-   void* ret = NULL;
-   pthread_join(threads[0], &ret);
-   pthread_join(threads[1], &ret);
-   pthread_join(threads[2], &ret);
-   pthread_join(threads[3], &ret);
-   pthread_join(threads[4], &ret);
-   //pthread_join(1,(void**));
-   //pthread_join(2,(void**));
-   //pthread_join(3,(void**));
-   //pthread_join(4,(void**));
-   for (int j = 0; j < NUM_THREADS; j++) {
-	   cout << "sum = " << td[j].thread_sum << endl;
-   }
-   */
-   
+ 
 	
 	
 	// Test billeder
@@ -848,14 +812,8 @@ int main ( int argc,char **argv ) {
 	state Si_1;
 	Mat transformation_matrix;
 	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
-	cout << "Transformation matrix Thor " << endl;
-	for (int r = 0; r < transformation_matrix.rows; r++) {
-		for (int c = 0; c < transformation_matrix.cols; c++) {
-			cout << transformation_matrix.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	
+	cout << "Transformation matrix " << endl;
+	cout << transformation_matrix << endl;
 	
 	
 	// ############### VO Continuous ###############
@@ -905,12 +863,7 @@ int main ( int argc,char **argv ) {
 		// Estimate pose 
 		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K);
 		cout << "Print of Transformation Matrix" << endl;
-		for (int r = 0; r < transformation_matrix.rows; r++) {
-			for (int c = 0; c < transformation_matrix.cols; c++) {
-				cout << transformation_matrix.at<double>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		}
+		cout << transformation_matrix << endl;
 		
 		output_T_ready = true;
 		
@@ -924,8 +877,24 @@ int main ( int argc,char **argv ) {
 			iter++;
 		}
 		else {
+			int r_T = 15;
+			int n = 2*r_T + 1;
+			Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
+			int temp_index = 0; 
+			for (int i = -r_T; i <= r_T; i++) {
+				for (int j = -r_T; j <= r_T; j++) {
+					xy1.at<double>(temp_index,0) = i;
+					xy1.at<double>(temp_index,1) = j;
+					xy1.at<double>(temp_index,2) = 1;
+					temp_index++;
+				} 
+			}
+			
+			// Find the Kroeneckerproduct 
+			Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
+			
 			cout << "Iter 2" << endl;
-			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix, extracted_keypoints);
+			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix, extracted_keypoints, dwdx);
 			cout << "ContinuousCandidateKeypoints" << endl;
 			for (int r = 0; r < Si.Ci.rows; r++) {
 				for (int c = 0; c < Si.Ci.cols; c++) {
@@ -954,32 +923,20 @@ int main ( int argc,char **argv ) {
 		}
 		imshow("Corners from Si.Ci", Ii);
 		waitKey(0);
+		
 		// Draw Corners from Si.Ci 
 		cout << "Si.Ci" << endl;
-		for (int r = 0; r < Si.Ci.rows; r++) {
-			for (int c = 0; c < Si.Ci.cols; c++) {
-				cout << Si.Ci.at<double>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		}
-		cout << "Si.Fi" << endl;
-		for (int r = 0; r < Si.Fi.rows; r++) {
-			for (int c = 0; c < Si.Fi.cols; c++) {
-				cout << Si.Fi.at<double>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		}
-		cout << "Si.Ti" << endl;
-		for (int r = 0; r < 6; r++) {
-			for (int c = 0; c < 1; c++) {
-				cout << Si.Ti.at<double>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		}
+		cout << Si.Ci << endl;
 		
+		cout << "Si.Fi" << endl;
+		cout << Si.Fi << endl; 
+		
+		cout << "Si.Ti" << endl;
+		//cout << Si.Ti << endl;
 		
 		// Resert old values 
-		Ii_1.copyTo(Ii);
+		//Ii_1.copyTo(Ii);
+		Ii.copyTo(Ii_1);
 		Si_1 = Si;
 		cout << "Update of Si.num_candidates = " << Si.num_candidates << endl;
 		
@@ -1002,151 +959,6 @@ int main ( int argc,char **argv ) {
 	Camera.release();
 	
 	//profiler::ProfilerStop();
-	
-	/*
-	// Test of KLT
-	cout << "Test of KLT in Main function" << endl;
-	Mat I1, I2, I1_gray, I2_gray;
-	I1 = imread("cam1.png", IMREAD_UNCHANGED);
-	I2 = imread("cam2.png", IMREAD_UNCHANGED);
-	cvtColor(I1, I1_gray, COLOR_BGR2GRAY );
-	cvtColor(I2, I2_gray, COLOR_BGR2GRAY );
-	
-	int r_T = 15; 
-	int num_iters = 50; 
-	double lambda = 0.1;
-	int nr_keep = 0;
-	Mat delta_keypoint;
-	
-	Mat x_T = Mat::zeros(1, 2, CV_64FC1); 
-	//x_T.at<double>(0,0) = 1023; 
-	//x_T.at<double>(0,1) = 316;
-	//x_T.at<double>(0,0) = 1023/2.0; 
-	//x_T.at<double>(0,1) = 316/2.0;
-	x_T.at<double>(0,0) = 994/1.0; 
-	x_T.at<double>(0,1) = 340/1.0;
-	cout << "x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ")" << endl;
-	circle (I1, Point(1023,316), 5,  Scalar(0,0,255), 2,8,0);
-	imshow("frame I1", I1);
-	imshow("frame I1_gray", I1_gray);
-	waitKey(0);
-	//waitKey(5000);
-	
-	Mat dst1, dst2;
-	//resize(I2_gray, dst, Size(), 0.25, 0.25, INTER_AREA)
-	resize(I1_gray, dst1, Size(), 0.5, 0.5, INTER_CUBIC);
-	resize(I2_gray, dst2, Size(), 0.5, 0.5, INTER_CUBIC);
-	
-	
-	cout << "dst dimensions = (" << dst1.rows << "," << dst1.cols << ")" << endl;
-	cout << "cam1 dimensions = (" << I1_gray.rows << "," << I1_gray.cols << ")" << endl;
-	
-	MatType(I1_gray);
-	MatType(dst1);
-	
-	
-	cout << "I1_gray" << endl;
-	for (int r = 0; r < 10; r++) {
-		for (int c = 0; c < 10; c++) {
-			cout << (double) I1_gray.at<uchar>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	cout << "" << endl;
-	cout << "DST" << endl;
-	for (int r = 0; r < 10; r++) {
-		for (int c = 0; c < 10; c++) {
-			cout << (double) dst1.at<uchar>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	
-	
-	//delta_keypoint = KLT::trackKLTrobustly(dst1, dst2, x_T, r_T, num_iters, lambda);
-	delta_keypoint = KLT::trackKLTrobustly(I1_gray, I2_gray, x_T, r_T, num_iters, lambda);
-	
-	cout << "Match = " << delta_keypoint.at<double>(2,0) << " at point = (" << delta_keypoint.at<double>(0,0) << "," << delta_keypoint.at<double>(1,0) << ")" << endl;
-	*/
-	
-	/*
-	cout << "Test of test_struct" << endl;
-	testStruct hej;
-	
-	cout << "value = " << hej.test_k << endl;
-	
-	
-	hej.test_k = 5;
-	hej.test_Mat = Mat::ones(3, 4, CV_64FC1); 
-	
-	cout << "value = " << hej.test_k << endl;
-	for (int r = 0; r < hej.test_Mat.rows; r++) {
-		for (int c = 0; c < hej.test_Mat.cols; c++) {
-			cout << hej.test_Mat.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	hej = hejmeddig(hej);
-	
-	cout << "value = " << hej.test_k << endl; 
-	
-	for (int r = 0; r < hej.test_Mat.rows; r++) {
-		for (int c = 0; c < hej.test_Mat.cols; c++) {
-			cout << hej.test_Mat.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	*/
-	
-	/*
-	 * Method to 
-	cout << "P from findLandMark" << endl;
-	Mat K2 = (Mat_<double>(3,3) << 359.4280, 0, 303.5964, 0, 359.4280, 92.6078, 0, 0, 1);
-	Mat M0 = (Mat_<double>(3,4) << 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0);
-	Mat M1 = (Mat_<double>(3,4) << 1, 0, 0, 0.54, 0, 1, 0, 0, 0, 0, 1, 0);
-	Mat keypoint0 = (Mat_<double>(3,1) << 228, 28, 1);
-	Mat keypoint1 = (Mat_<double>(3,1) << 222, 28, 1);
-	Mat P = findLandmark(K2, M0, M1,  keypoint0,  keypoint1);
-	
-	cout << "P Coordinates" << endl;
-	for (int r = 0; r < P.rows; r++) {
-		for (int c = 0; c < P.cols; c++) {
-			cout << P.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	*/
-	/*
-	// Test of test_mat
-	Mat test_mat = Mat::ones(2,25, CV_64FC1);
-	cout << "test_mat " << endl;
-	cout << "Dimensions of test_mat = (" << test_mat.rows << "," << test_mat.cols << ")" << endl;
-	
-	cout << "countNonZero(test_mat) = " << countNonZero(test_mat) << endl;
-	*/
-	
-	/*
-	cout << "Test of matrix as vectors " << endl;
-	Mat K2 = (Mat_<double>(3,3) << 359.4280, 0, 303.5964, 0, 359.4280, 92.6078, 0, 0, 1.0);
-	
-	Mat v1 = (Mat_<double>(3,1) << 228, 28, 1);
-	Mat v2 = (Mat_<double>(3,1) << 222, 28, 1);
-	Mat prikprodukt = v1.at<double>(0,0)*v2.at<dou;
-	cout << "prikprodukt = " << prikprodukt << endl
-	
-	
-	cout << "K2 " << endl;
-	cout << K2 << endl;
-	*/
-	
-	//vector<Mat> matrices = {Mat(4,1, CV_8UC1, Scalar(1)), Mat(4,1, CV_8UC1, Scalar(2)), Mat(4,1, CV_8UC1, Scalar(3))};
-	//vector<Mat> matrices;
-	//Mat v1 = (Mat_<double>(3,1) << 228, 28, 1);
-	//matrices(1) = v1;
-	//cout << "matrices[1]" << endl;
-	//cout << matrices[1] << endl;
-   
-	
-	
 	
 	
 	return 0;

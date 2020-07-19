@@ -1076,12 +1076,6 @@ Mat getSimWarp(double dx, double dy, double alpha_deg, double lambda) {
 // Get the patch
 Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 	
-	//imshow("I_new", I_new);
-	//waitKey(0);
-	
-	//cout << "Type of image" << endl;
-	//MatType(I_new);
-	
 	// Initialize patch
 	Mat patch = Mat::zeros(2*r_T + 1, 2*r_T + 1, CV_64FC1);
 	
@@ -1094,24 +1088,6 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 	// Find the transpose
 	Mat WT = W.t();
 	
-	/*
-	int hej = 0;
-	if (WT.at<double>(0,0) > 1) {
-		hej = 1;
-	}
-	if (hej == 1) {
-		cout << "WT " << endl;
-		for (int r = 0; r < WT.rows; r++) {
-				for (int c = 0; c < WT.cols; c++) {
-					cout << WT.at<double>(r,c) << ", ";
-				}
-				cout << "" << endl;
-			}
-			waitKey(0);
-	}
-	//cout << "Inside getwarpedPatch" << endl;
-	//waitKey(10000);
-	*/
 	
 	Mat pre_warp = Mat::zeros(1, 3, CV_64FC1);
 	for (int x = -r_T; x <= r_T; x++) {
@@ -1120,33 +1096,9 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 			pre_warp.at<double>(0,1) = y;
 			pre_warp.at<double>(0,2) = 1;
 
-			/*
-			if (hej == 1) {
-				cout << "pre_warp" << endl;
-				for (int r = 0; r < pre_warp.rows; r++) {
-					for (int c = 0; c < pre_warp.cols; c++) {
-						cout << pre_warp.at<double>(r,c) << ", ";
-				}
-				cout << "" << endl;
-				}
-				waitKey(0);
-			}
-			*/
 			
 			Mat warped = x_T + pre_warp * WT;
 			
-			/*
-			if (hej == 1) {
-				cout << "warped" << endl;
-				for (int r = 0; r < warped.rows; r++) {
-					for (int c = 0; c < warped.cols; c++) {
-						cout << warped.at<double>(r,c) << ", ";
-				}
-				cout << "" << endl;
-				}
-				waitKey(0);
-			}
-			*/
 			
 			if (warped.at<double>(0,0) < max_coords_cols && warped.at<double>(0,1) < max_coords_rows) {
 				if (warped.at<double>(0,0) > 0 && warped.at<double>(0,1) > 0) { // It should be greater than 0 (C++ 0-indexing)
@@ -1162,125 +1114,22 @@ Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
 						}
 					}
 					
-					/*
-					if (hej == 1) {
-						cout << "floors " << endl;
-						for (int r = 0; r < floors.rows; r++) {
-							for (int c = 0; c < floors.cols; c++) {
-								cout << floors.at<double>(r, c) << ", ";
-							}
-						}
-					}
-					*/
-					
-					/*
-					cout << "floors " << endl;
-					for (int r = 0; r < floors.rows; r++) {
-						for (int c = 0; c < floors.cols; c++) {
-							cout << floors.at<double>(r,c) << ", ";
-						}
-						cout << "" << endl;
-					}
-					//waitKey(2000);
-					*/
-					
 					Mat weights = warped - floors;
 					
-					/*
-					if (hej == 1) {
-						cout << "weights " << endl;
-						for (int r = 0; r < weights.rows; r++) {
-							for (int c = 0; c < weights.cols; c++) {
-								cout << weights.at<double>(r, c) << ", ";
-							}
-						}
-					}
-					*/
-					
-					/*
-					cout << "weights " << endl;
-					for (int r = 0; r < weights.rows; r++) {
-						for (int c = 0; c < weights.cols; c++) {
-							cout << weights.at<double>(r,c) << ", ";
-						}
-						cout << "" << endl;
-					}
-					//waitKey(2000);
-					*/
 					
 					double a = weights.at<double>(0,0);
 					double b = weights.at<double>(0,1);
 					
-					/*
-					if (hej == 1) {
-						cout << "a and b " << endl;
-						cout << "a = " << a;
-						cout << "b = " << b;
-						cout << "" << endl;
-					}
-					*/
-					
-					//cout << "a = " << a << " and b = " << b << endl;
-					
-					//cout << "floors.at<double>(0,1)-1 = " << floors.at<double>(0,1)-1 << endl;
-					
-					//cout << "floors.at<double>(0,0)-1) = " << floors.at<double>(0,0)-1 << endl;
-					
-					//cout << "Image intensity 1 = " <<  I_new.at<uchar>((int) floors.at<double>(0,1)-1,(int) floors.at<double>(0,0)-1) << endl;
-					
-					//cout << "With switched coordinates = " << I_new.at<double>(floors.at<double>(0,0)-1,floors.at<double>(0,1)-1) << endl;
-					
-					//cout << "Image intensity 1 = " << I_new.at<double>(floors.at<double>(0,1)-1,floors.at<double>(0,0)) << endl;
-					
-					/*
-					if (hej == 1) {
-						cout << "First image index = " << I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) << endl;
-						cout << "Second image index = " << I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)) << endl;
-						cout << "index 1 = " << floors.at<double>(0,1)-1 << endl; // Should be one less
-						cout << "index 2 = " << floors.at<double>(0,0)-1 << endl;
-						cout << "index 3 = " << floors.at<double>(0,1)-1 << endl;
-						cout << "index 4 = " << floors.at<double>(0,0) << endl;
-					}
-					*/
 					
 					double intensity = (1-b) * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) + a * I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)));
 					
-					/*
-					if (hej == 1) {
-						cout << "temp_intensity = " << intensity << endl;
-					}
-					*/
-					
-					//cout << "temp-intensity = " << intensity << endl;
+
 					
 					intensity = intensity + b * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1),floors.at<double>(0,0)-1) + a * I_new.at<uchar>(floors.at<double>(0,1),floors.at<double>(0,0)));
 					
-					/*
-					if (intensity == 0) {
-						waitKey(0);
-					}
-					*/
-					/*
-					if (hej == 1) {
-						cout << "intensity = " << intensity << endl; 
-					}
-					*/
-					
-					
-					
-					//cout << "Intensity = " << intensity << endl;;
 					
 					patch.at<double>(y + r_T, x + r_T) = intensity;
 					
-					/*
-					if (hej == 1) {
-						cout << "patch value = " << patch.at<double>(y + r_T, x + r_T) << endl;
-					}
-					*/
-					
-					//cout << "y + r_T, x+r_T = (" << y + r_T << "," << x + r_T << ")" << endl;
-					
-					//cout << "patch = " << patch.at<double>(y + r_T, x + r_T) << endl;
 				}	
 			}
 		}
@@ -1313,54 +1162,32 @@ Mat Kroneckerproduct(Mat A, Mat B) {
 }
 
 // Track KLT
-Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
-	Mat p_hist = Mat::zeros(6, num_iters+1, CV_64FC1);
+//Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
+Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, Mat dwdx, int r_T, int num_iters) {
+	//Mat p_hist = Mat::zeros(6, num_iters+1, CV_64FC1);
 	Mat W = getSimWarp(0, 0, 0, 1);
 	
+	
 	int temp_index = 0;
+	
+	/*
 	for (int c = 0; c < W.cols; c++) {
 		for (int r = 0; r < W.rows; r++) {
 			p_hist.at<double>(temp_index, 0) = W.at<double>(r,c);
 			temp_index++;
 		}
 	}
+	*/
 	
 	// Get the warped patch
 	Mat I_RT = getWarpedPatch(I_R, W, x_T, r_T);
-	
-	/*
-	// Output for debug 
-	cout << "r_T = " << r_T << endl;
-	cout << "W" << endl;
-	for (int r = 0; r < W.rows; r++) {
-		for (int c = 0; c < W.cols; c++) {
-			cout << W.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	cout << "x_T" << endl;
-	for (int r = 0; r < x_T.rows; r++) {
-		for (int c = 0; c < x_T.cols; c++) {
-			cout << x_T.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	
-	MatType(I_RT);
-	cout << "I_RT" << endl;
-	for (int r = 0; r < I_RT.rows; r++) {
-		for (int c = 0; c < I_RT.cols; c++) {
-			cout << I_RT.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
-	waitKey(0);
-	*/
-	
+		
 	
 	I_RT = I_RT.t();
 	Mat i_R = I_RT.reshape(0,I_RT.rows * I_RT.cols);
 	
+	int n = 2*r_T + 1;
+	/*
 	int n = 2*r_T + 1;
 	Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
 	temp_index = 0; 
@@ -1375,6 +1202,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 	
 	// Find the Kroeneckerproduct 
 	Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
+	*/
 	
 	// 2D filters for convolution
 	Mat kernelx, kernely; 
@@ -1396,23 +1224,11 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 	kernely.at<double>(2,0) = 1;
 	
 	// About to begin iteration 
+	Mat IWT_temp, IWT, IWTx, IWTy, temp_IWTx, temp_IWTy, temp_IWTx2, temp_IWTy2, didw, H, temp_delta_p, delta_p, delta_p_temp;
 	for (int iter = 0; iter < num_iters; iter++) {
-		Mat big_IWT = getWarpedPatch(I_new, W, x_T, r_T + 1); // We are here 
+		Mat big_IWT = getWarpedPatch(I_new, W, x_T, r_T + 1); // We are here 		
 		
-		/*
-		cout << "big_IWT" << endl;
-		for (int r = 0; r < big_IWT.rows; r++) {
-			for (int c = 0; c < big_IWT.cols; c++) {
-				cout << big_IWT.at<double>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		}
-		//waitKey(0);
-		*/
-		
-		
-		
-		Mat IWT_temp, IWT;
+		//Mat IWT_temp, IWT;
 		IWT_temp = selectRegionOfInterest(big_IWT, 1, 1, big_IWT.rows-1, big_IWT.cols-1);
 		IWT_temp.copyTo(IWT);
 	
@@ -1421,7 +1237,7 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 		
 		// Getting di/dp 
 		//cout << "Getting di/dp" << endl;
-		Mat IWTx, IWTy, temp_IWTx, temp_IWTy, temp_IWTx2, temp_IWTy2;
+		//Mat IWTx, IWTy, temp_IWTx, temp_IWTy, temp_IWTx2, temp_IWTy2;
 		temp_IWTx2 = selectRegionOfInterest(big_IWT, 1, 0, big_IWT.cols+1, big_IWT.rows-2); // Maybe check for values
 		temp_IWTy2 = selectRegionOfInterest(big_IWT, 0, 1, big_IWT.cols-2, big_IWT.rows+1);
 		
@@ -1437,15 +1253,20 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 		filter2D(temp_IWTy, IWTy, ddepth, kernely, anchory, delta, BORDER_DEFAULT);
 		IWTy = selectRegionOfInterest(IWTy, 1, 0, IWTy.cols+1, IWTy.rows-1);
 		
-		// Concatenate vectors 
+		// Concatenate vectors
 		Mat IWTx_new, IWTy_new;
 		IWTx.copyTo(IWTx_new);
 		IWTy.copyTo(IWTy_new);
 		IWTx_new = IWTx_new.t();
 		IWTy_new = IWTy_new.t();
+	
+		
 		temp_IWTx = IWTx_new.reshape(0, IWTx.rows * IWTx.cols);
 		temp_IWTy = IWTy_new.reshape(0, IWTy.rows * IWTy.cols);
-		Mat didw;
+		
+		
+		
+		//Mat didw;
 		hconcat(temp_IWTx, temp_IWTy, didw);
 				
 		Mat didp = Mat::zeros(n * n, 6, CV_64FC1);
@@ -1461,51 +1282,36 @@ Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
 		} 
 		
 		// Hessian matrix 
-		Mat H = didp.t() * didp;
+		H = didp.t() * didp;
 		
 		// Hessian matrix check
 		
-		Mat temp_delta_p = didp.t() * (i_R - i);
+		temp_delta_p = didp.t() * (i_R - i);
 		
 		// Calculate delta_p 
-		Mat delta_p = H.inv() * (didp.t() * (i_R - i)); // Maybe problem with 
+		delta_p = H.inv() * (didp.t() * (i_R - i)); // Maybe problem with 
 		
 		// Reshape delta_p 
-		Mat delta_p_temp = delta_p.reshape(0, 3);
+		delta_p_temp = delta_p.reshape(0, 3);
 		
 		delta_p_temp = delta_p_temp.t();
 		
 		W = W + delta_p_temp; // 2 = W.rows
 		 
 		W = W.t();
-		Mat temp_W = W.reshape(0, W.rows * W.cols);
-		
-		// Create Matrix of p_hist
-		for (int hh = 0; hh < 6; hh++) {
-			p_hist.at<double>(hh, iter+1) =  temp_W.at<double>(hh,0);
-		}
 		
 		// Transpose W to get the right shape for the next iteration - C++ is different from Matlab
 		W = W.t();
-		
-		/*
-		cout << "W" << endl;
-		for (int r = 0; r < W.rows; r++) {
-			for (int c = 0; c < W.cols; c++) {
-				cout << W.at<double>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		}
-		//waitKey(0);
-		*/
+
 		
 	}
 	return W;
 }
 
-Mat KLT::trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, int r_T, int num_iters, double lambda) {
+//Mat KLT::trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, int r_T, int num_iters, double lambda) {
+Mat KLT::trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, Mat dwdx, int r_T, int num_iters, double lambda) {
 	
-	Mat W = trackKLT(I_R, I_new, keypoint, r_T, num_iters);
+	Mat W = trackKLT(I_R, I_new, keypoint, dwdx, r_T, num_iters);
 	
 	// delta_keypoint contains the y- and x-coordinate of the keypoint as the first and second coordiate
 	// and the third coordiate is a boolean-value, which is either 1 or 0 depending on whether the value is smaller 
@@ -1520,7 +1326,7 @@ Mat KLT::trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, int r_T, int num_ite
 	reverse_keypoint.at<double>(0,1) = keypoint.at<double>(0,1) + delta_keypoint.at<double>(1,0);
 	
 	// Brug for threading her. 
-	Mat Winv = trackKLT(I_new, I_R, reverse_keypoint, r_T, num_iters);
+	Mat Winv = trackKLT(I_new, I_R, reverse_keypoint, dwdx, r_T, num_iters);
 	
 	Mat dkpinv = Mat::zeros(2, 1, CV_64FC1);
 	dkpinv.at<double>(0,0) = Winv.at<double>(0,2);
@@ -2724,7 +2530,7 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	return Si;
 }
 
-state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat extracted_keypoints) {
+state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat extracted_keypoints, Mat dwdx) {
 	
 	int r_T = 15; 
 	int num_iters = 50;
@@ -2761,7 +2567,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 			x_T.at<double>(0,1) = Si.Ci.at<double>(0,i); // y-coordinate in image
 			cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
 			
-			delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, r_T, num_iters, lambda);
+			delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, dwdx, r_T, num_iters, lambda);
 			
 			if (delta_keypoint.at<double>(2,0) == 1) {
 				nr_keep++;
