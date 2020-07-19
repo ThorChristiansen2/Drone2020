@@ -466,8 +466,6 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 	// Find fudamental matrix 
-	// Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.99, 5000);
-	//int pArray[N];
 	//Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 1, 0.95, 5000, noArray()); // 1 should be changed ot 3 
 	vector<uchar> pArray(N);
 	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 1, 0.95, 5000, pArray);
@@ -494,7 +492,6 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 			temp_index++;
 		}
 	}
-	waitKey(5000);
 	// 
 	cout << "Number of reliably matched keypoints (using RANSAC) in initializaiton = " << N_inlier << endl;
 	Si_1.k = N_inlier;
@@ -503,19 +500,13 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Si_1.Pi = points2Mat;
 	
 	cout << "Print of Si_1 Keypoints " << endl;
-	for (int r = 0; r < Si_1.Pi.rows; r++) {
-		for (int c = 0; c < Si_1.Pi.cols; c++) {
-			cout << Si_1.Pi.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-	}
+	cout << Si_1.Pi << endl;
 	cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 	
 	// Estimate Essential Matrix
 	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);	
 	
 	// Find position and rotation from images
-	//Mat essential_matrix = (Mat_<double>(3,3) << -0.10579, -0.37558, -0.5162047, 4.39583, 0.25655, 19.99309, 0.4294123, -20.32203997, 0.023287939);
 	// Find the rotation and translation assuming the first frame is taken with the drone on the ground 
 	Mat transformation_matrix = findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
 	for (int i = 0; i < transformation_matrix.rows; i++) {
@@ -531,29 +522,16 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat M2 = K * transformation_matrix;
 	Mat landmarks = linearTriangulation(points1Mat, points2Mat, M1, M2);
 	
-		cout << "Print landmarks " << endl;
-	for (int r = 0; r < landmarks.rows; r++) {
-		for (int c = 0; c < landmarks.cols; c++) {
-			cout << landmarks.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-		cout << "" << endl;
-	}
+	cout << "Print landmarks " << endl;
+	cout << landmarks << endl;
 	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	Mat temp;
 	vconcat(landmarks.row(0), landmarks.row(1), temp);
 	vconcat(temp, landmarks.row(2), Si_1.Xi);
 	
-	//Si_1.Xi = linearTriangulation(points1Mat, points2Mat, M1, M2);
 	
 	cout << "Print of 3D landmarks " << endl;
-	for (int r = 0; r < Si_1.Xi.rows; r++) {
-		for (int c = 0; c < Si_1.Xi.cols; c++) {
-			cout << Si_1.Xi.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;
-		cout << "" << endl;
-	}
+	cout << Si_1.Xi << endl;
 	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	
 	// return state of drone as well as transformation_matrix;
@@ -588,13 +566,6 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );
 	
-	//imshow("Ii_gray image", Ii_gray);
-	//waitKey(0);
-	//imshow("Ii_1_gray image", Ii_1_gray);
-	//waitKey(0);
-	
-	// new state
-	//state Si;
 
 	// Variables 
 	int r_T = 15; // 15
@@ -642,113 +613,50 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	hconcat(keypoint_container, keypoints_i);
 	hconcat(landmark_container, corresponding_landmarks);
 	
-	high_resolution_clock::time_point t2 = high_resolution_clock::now();
-	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
-	std::cout << "This process took = " << time_span.count() << " seconds.";
+	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	//duration<double> time_span = duration_cast<duration<double>>(t2-t1);
+	//std::cout << "This process took = " << time_span.count() << " seconds.";
 	
-	//cout << "test_thread" << endl;
-	//cout << test_thread << endl;
-	//cout << "hej" << endl;
-	//cout << hej << endl;
-	
-	/*
-	 // Part without parallelizaiton
-	// Track every keypoint - Maybe utilize parallelization 
-	Mat x_T = Mat::zeros(1, 2, CV_64FC1); // Interest point
-	//cout << "Si_1.k = " << Si_1.k << endl;
-	for (int i = 0; i < Si_1.k; i++) {
-		x_T.at<double>(0,0) = Si_1.Pi.at<double>(1,i); // x-coordinate in image
-		x_T.at<double>(0,1) = Si_1.Pi.at<double>(0,i); // y-coordiante in image
-		//x_T.at<double>(0,0) = Si_1.Pi.at<double>(0,i); 
-		//x_T.at<double>(0,1) = Si_1.Pi.at<double>(1,i);
-		//cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
-
-		delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, r_T, num_iters, lambda);
-		
-		for (int k = 0; k < delta_keypoint.rows; k++) {
-
-		}
-		
-		if (delta_keypoint.at<double>(2,0) == 1) {
-			nr_keep++;
-			kpold.at<double>(2,i) = 1; // The keypoint is reliably matched
-		}
-		kpold.at<double>(0,i) = delta_keypoint.at<double>(0,0) + Si_1.Pi.at<double>(1,i); // x-coordinate in image
-		kpold.at<double>(1,i) = delta_keypoint.at<double>(1,0) + Si_1.Pi.at<double>(0,i); // y-coordinate in image
-		//cout << "Match = " << kpold.at<double>(2,i) << " at point = (" << kpold.at<double>(0,i) << "," << kpold.at<double>(1,i) << ")" << endl;
-
-	}
-	
-	cout << "kpold" << endl;
-	cout << kpold << endl;
-	
-	
-	//Mat keypoints_i_1 = Mat::zeros(2, nr_keep, CV_64FC1);
-	Mat keypoints_i = Mat::zeros(2, nr_keep, CV_64FC1);
-	
-	// corresponding landmarks 
-	Mat corresponding_landmarks = Mat::zeros(3, nr_keep, CV_64FC1);
-	
-	nr_keep = 0; 
-	for (int j = 0; j < Si_1.k; j++) {
-		if (kpold.at<double>(2,j) == 1) {
-			// Update matched keypoints 
-			// keypoints_i.at<double>(0, nr_keep) = kpold.at<double>(0, j); // This is for debugging 
-			// keypoints_i.at<double>(1, nr_keep) = kpold.at<double>(1, j);
-			keypoints_i.at<double>(0, nr_keep) = kpold.at<double>(0, j); // y-coordinate in image
-			keypoints_i.at<double>(1, nr_keep) = kpold.at<double>(1, j); // x-coordinate in image
-			
-			// Update landmarks 
-			corresponding_landmarks.at<double>(0, nr_keep) = Si_1.Xi.at<double>(0, j);
-			corresponding_landmarks.at<double>(1, nr_keep) = Si_1.Xi.at<double>(1, j);
-			corresponding_landmarks.at<double>(2, nr_keep) = Si_1.Xi.at<double>(2, j);
-			
-			nr_keep++;
-		}
-	}
-	cout << "Number of keypoints left = " << keypoints_i.cols << endl;
-	waitKey(5000);
-	*/
 	
 	cout << "Print of keypoints_i" << endl;
-	for (int r = 0; r < keypoints_i.rows; r++) {
-		for (int c = 0; c < keypoints_i.cols; c++) {
-			cout << keypoints_i.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;		
-	}
-	cout << "" << endl;	
+	cout << keypoints_i << endl;
+	
 	cout << "Print of corresponding_landmarks" << endl;
-	for (int r = 0; r < corresponding_landmarks.rows; r++) {
-		for (int c = 0; c < corresponding_landmarks.cols; c++) {
-			cout << corresponding_landmarks.at<double>(r,c) << ", ";
-		}
-		cout << "" << endl;		
-	}
-	cout << "" << endl;	
-	waitKey(5000);
-	//waitKey(0);
-	
-	
-	// Delete landmarks for those points that were not matched 
-	
+	cout << corresponding_landmarks << endl;	
 	
 	// Estimate the new pose using RANSAC and P3P algorithm 
 	Mat transformation_matrix, best_inlier_mask;
 	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(keypoints_i, corresponding_landmarks, K);
 	
 	// Remove points that are determined as outliers from best_inlier_mask by using best_inlier_mask
+	cout << "best_inlier_mask" << endl;
+	cout << best_inlier_mask << endl;
 	
+	vector<Mat> keypoint_inlier;
+	vector<Mat> landmark_inlier;
+	MatType(best_inlier_mask);
+	cout << (double) best_inlier_mask.at<uchar>(0,0) << endl;
+	for (int i = 0; i < best_inlier_mask.cols; i++) {
+		if ((double) best_inlier_mask.at<uchar>(0,i) > 0) {
+			keypoint_inlier.push_back(keypoints_i.col(i));
+			landmark_inlier.push_back(corresponding_landmarks.col(i));
+		}
+	}
+	hconcat(keypoint_inlier, keypoints_i);
+	hconcat(landmark_inlier, corresponding_landmarks);
 	
 	
 	// Update keypoints in state 
-	//Si.k = keypoints_i.cols;
 	Si_1.k = keypoints_i.cols;
 	//vconcat(keypoints_i.row(1), keypoints_i.row(0), Si.Pi); // Apparently you have to switch rows
 	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si_1.Pi); // Apparently you have to switch rows
 	//keypoints_i.copyTo(Si.Pi); 
 	//corresponding_landmarks.copyTo(Si.Xi);
 	corresponding_landmarks.copyTo(Si_1.Xi);
+	
+	cout << "inliers " << endl;
+	cout << Si_1.Pi << endl;
+	cout << Si_1.Xi << endl;
 	
 	/*
 	// Triangulate new points
