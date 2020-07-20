@@ -45,8 +45,31 @@ void *functionKLT(void *threadarg) {
 	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, my_data->dwdx, KLT_r_T, KLT_num_iters, KLT_lambda);
 	   double a = delta_keypoint.at<double>(0,0) + my_data->thread_mat.at<double>(1,i);
 	   double b = delta_keypoint.at<double>(1,0) + my_data->thread_mat.at<double>(0,i);
-	   my_data->thread_mat.at<double>(1,i) = b; // x-coordinate in image
-	   my_data->thread_mat.at<double>(0,i) = a; // y-coordinate in image
+	   //my_data->thread_mat.at<double>(1,i) = b;
+	   //my_data->thread_mat.at<double>(0,i) = a;
+	   if (a > 0 && b > 0) {
+		   my_data->thread_mat.at<double>(1,i) = b;
+		   my_data->thread_mat.at<double>(0,i) = a;
+	   }
+	   else if (a > 0) {
+		   my_data->thread_mat.at<double>(1,i) = my_data->thread_mat.at<double>(0,i);
+		   my_data->thread_mat.at<double>(0,i) = a; // y-coordinate in image
+	   }
+	   else if (b > 0) {
+		   my_data->thread_mat.at<double>(0,i) = my_data->thread_mat.at<double>(1,i);
+		   my_data->thread_mat.at<double>(1,i) = b; // To avoid negative coordinates // x-coordinate in image
+	   }
+	   
+	   /*
+	   if (b > 0) {
+		   my_data->thread_mat.at<double>(1,i) = b; // To avoid negative coordinates // x-coordinate in image
+		   my_data->thread_mat.at<double>(0,i) = my_data->thread_mat.at<double>(1,i);
+	   }
+	   if (a > 0) {
+		   my_data->thread_mat.at<double>(0,i) = a; // y-coordinate in image
+		   my_data->thread_mat.at<double>(1,i) = my_data->thread_mat.at<double>(0,i);
+	   } 
+	   */
 	   my_data->keep_point = delta_keypoint.at<double>(2,0);
    }
    pthread_exit(NULL);
@@ -2197,9 +2220,6 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	
 	//cout << extracted_keypoints << endl;
 	
-	//cout << "Si.num_candidates = " << Si.num_candidates << endl;
-		
-	
 	// Parallelizaiton of code 	
 	cout << "Parallelization of continuousCandidateKeypoints" << endl;
 	int NUM_THREADS = Si.num_candidates;
@@ -2216,16 +2236,14 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	void* ret = NULL;
 	for (int k = 0; k < NUM_THREADS; k++) {
 		pthread_join(threads[k], &ret);
-		cout << "td[k].keep_point = " << td[k].keep_point << endl;
 		if (td[k].keep_point != 1) {
 			failed_candidates.at<double>(0,k) = 1;
 			//cout << "Mistake 1" << endl;
 		}
-		//Matcontainer.push_back(td[k].thread_mat);
-		//cout << "Mistake here = " << k << endl;
 	}
 	
 	/*
+	 * 
 	cout << "continuousCandidateKeypoints" << endl;
 	// Track candidate keypoints 
 	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
@@ -2254,79 +2272,108 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 				failed_candidates.at<double>(0,i) = 1;
 			}
 		}
-		
+
 	}
 	*/
+	Mat row0, row1;
+	Si.Ci.row(0).copyTo(row0);
+	Si.Ci.row(1).copyTo(row1);
+	vconcat(row1, row0, Si.Ci); // y-coordinate in row 0 and x-coordinate in row 1
 	
 	cout << "Si.Ci" << endl;
 	cout << Si.Ci << endl;
 	cout << "failed_candidates" << endl;
 	cout << failed_candidates << endl;
 
-	cout << "Mistake 3" << endl;
-	// Delete un-tracked candidate keypoints 
-	// We just overwrite those points 
-	cout << "Dimensions of failed_candidates = (" << failed_candidates.rows << "," << failed_candidates.cols << ")" << endl;
-	cout << "Dimensions of extracted_keypoints = (" << extracted_keypoints.rows << "," << extracted_keypoints.cols << ")" << endl;
+	// Delete un-tracked candidate keypoints by overwriting the points
 	failed_candidates = failed_candidates + extracted_keypoints;
 	
 	cout << "failed_candidates" << endl;
 	cout << failed_candidates << endl;
 	
-	// Non maximum suppression of candidate keypoints 
-	Mat tempMat = Mat::zeros(2, countNonZero(failed_candidates), CV_64FC1); 
-	cout << "Dimensions of tempMat = (" << tempMat.rows << "," << tempMat.cols << ")" << endl; 
-	for (int i = 0; i < countNonZero(failed_candidates); i++) {
-		if (failed_candidates.at<double>(0,i) == 1) {
-			tempMat.at<double>(0,i) = Si.Ci.at<double>(0,i);
-			tempMat.at<double>(1,i) = Si.Ci.at<double>(1,i);
-		}
-	}
 	
-	cout << "tempMat" << endl;
-	cout << tempMat << endl;
-	
-	cout << "Dimensions of Si.Pi = (" << Si.Pi.rows << "," << Si.Pi.cols << ")" << endl;
-	Mat suprression;
-	if (tempMat.cols == 0) {
-		Si.Pi.copyTo(suprression);
-	}
-	else {
-		hconcat(Si.Pi, tempMat, suprression);
-	}	
-	cout << "Done here " << endl;
 	// Find new candidate keypoints 
-	Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
-	int n = Si.num_candidates - nr_keep;
-	cout << "Before Harris " << endl;
-	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, suprression);
-	cout << "After Harris" << endl;
-	cout << "Dimensions of candidate_keypoints = (" << candidate_keypoints.rows << "," << candidate_keypoints.cols << ")" << endl;
-	//candidate_keypoints = candidate_keypoints.t();
-	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
-	
-	int temp = 0;
-	for (int i = 0; i < Si.num_candidates; i++) {
-		if (failed_candidates.at<double>(0,i) > 0) {
-			// Update current keypoint position
-			Si.Ci.at<double>(1,i) = candidate_keypoints.at<double>(1,temp); // Check if this is right 
-			Si.Ci.at<double>(0,i) = candidate_keypoints.at<double>(0,temp);
-			
-			// Update first coordinates of first observation of keypoint
-			Si.Fi.at<double>(1,i) = candidate_keypoints.at<double>(1,temp);
-			Si.Fi.at<double>(0,i) = candidate_keypoints.at<double>(0,temp);
-			
-			// Update camera pose at the first observation of keypoint
-			for (int j = 0; j < t_C_W_vector.rows; j++) {
-				Si.Ti.at<double>(j,i) = t_C_W_vector.at<double>(j,0);
+	int n = countNonZero(failed_candidates);
+	if (n > 0) { // If n is greater than zero - meaning that some keypoints failed
+		
+		// Non maximum suppression of candidate keypoints 
+		Mat tempMat = Mat::zeros(2, countNonZero(failed_candidates), CV_64FC1); 
+		cout << "Dimensions of tempMat = (" << tempMat.rows << "," << tempMat.cols << ")" << endl; 
+		for (int i = 0; i < countNonZero(failed_candidates); i++) {
+			if (failed_candidates.at<double>(0,i) == 1) {
+				//tempMat.at<double>(0,i) = (Si.Ci.at<double>(0,i));
+				//tempMat.at<double>(1,i) = (Si.Ci.at<double>(1,i));
+				tempMat.at<double>(0,i) = (Si.Ci.at<double>(0,i)); // y-coordinate
+				tempMat.at<double>(1,i) = (Si.Ci.at<double>(1,i)); // x-coordinate
 			}
-			
-			
-			temp++;
+		}
+		cout << "tempMat" << endl;
+		cout << tempMat << endl;
+		
+		// Concatenate failed candidate keypoints as well as current keypoints in Si.Pi
+		Mat suprression;
+		if (tempMat.cols == 0) {
+			Si.Pi.copyTo(suprression);
+		}
+		else {
+			hconcat(Si.Pi, tempMat, suprression);
+		}	
+		
+		// Create a vector of current pose 
+		Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
+		
+		// Find candidate-keypoints
+		Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, suprression);
+		vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
+		int temp = 0;
+		for (int i = 0; i < Si.num_candidates; i++) {
+			if (failed_candidates.at<double>(0,i) > 0) {
+				// Update current keypoint position
+				Si.Ci.at<double>(1,i) = candidate_keypoints.at<double>(1,temp); // x-coordinate
+				Si.Ci.at<double>(0,i) = candidate_keypoints.at<double>(0,temp); // y-coordinate
+				
+				// Update first coordinates of first observation of keypoint
+				Si.Fi.at<double>(1,i) = candidate_keypoints.at<double>(1,temp); // x-coordinate
+				Si.Fi.at<double>(0,i) = candidate_keypoints.at<double>(0,temp); // y-coordinate
+				
+				// Update camera pose at the first observation of keypoint
+				t_C_W_vector.copyTo(Si.Ti.col(i));
+				/*
+				for (int j = 0; j < t_C_W_vector.rows; j++) {
+					Si.Ti.at<double>(j,i) = t_C_W_vector.at<double>(j,0);
+				}
+				*/
+				
+				temp++;
+			}
 		}
 	}
+	
+	/*
+	cout << "number of keypoints that should be found = " << n << endl;
+	cout << "nonzero elements in failed_candidates = " << countNonZero(failed_candidates) << endl;
+
+	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, suprression);
+	cout << "Dimensions of candidate_keypoints = (" << candidate_keypoints.rows << "," << candidate_keypoints.cols << ")" << endl;
+	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
+	cout << candidate_keypoints << endl;
+	
+	for (int k = 0; k < Si.Ci.cols; k++) {
+		double y = Si.Ci.at<double>(0, k);
+		double x = Si.Ci.at<double>(1, k);
+		circle (Ii, Point(x,y), 5, Scalar(200), 2,8,0);
+	}
+	imshow("New candidates Ii", Ii);
+	waitKey(0);
+	*/
 	
 	cout << "End continuousCandidateKeypoints" << endl;
+	cout << "Si.Ci" << endl;
+	cout << Si.Ci << endl;
+	cout << "Si.Fi" << endl;
+	cout << Si.Fi << endl;
+	cout << "Si.Ti" << endl;
+	cout << Si.Ti << endl;
 	return Si;
 }
 
@@ -2396,18 +2443,19 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 	Mat a, b; // a = previous_vector, b = current_vector;
 	double length_prev_vector, length_current_vector;
 	
+	// Paralleliser det her måske
 	// Beregn vinklen mellem vektorerne current viewpoint og den første observation af keypointet
 	double fraction, alpha;
 	for (int i = 0; i < Si.num_candidates; i++) {
 		// First occurrence of keypoint
-		keypoint_last_occur.at<double>(0,0) = Si.Fi.at<double>(0,i);
-		keypoint_last_occur.at<double>(1,0) = Si.Fi.at<double>(1,i);
+		keypoint_last_occur.at<double>(0,0) = Si.Fi.at<double>(0,i); // y-coordinate
+		keypoint_last_occur.at<double>(1,0) = Si.Fi.at<double>(1,i); // x-coordinate
 		
 		cout << "First occurence of keypoint =(" << keypoint_last_occur.at<double>(0,0) << "," << keypoint_last_occur.at<double>(1,0) << ")" << endl;
 	
 		// Newest occurrence of keypoint
-		keypoint_newest_occcur.at<double>(0,0) = Si.Ci.at<double>(0,i);
-		keypoint_newest_occcur.at<double>(1,0) = Si.Ci.at<double>(1,i);
+		keypoint_newest_occcur.at<double>(0,0) = Si.Ci.at<double>(0,i); // y-coordinate
+		keypoint_newest_occcur.at<double>(1,0) = Si.Ci.at<double>(1,i); // x--coordinate
 		
 		cout << "Newest occurence of keypoint =(" << keypoint_newest_occcur.at<double>(0,0) << "," << keypoint_newest_occcur.at<double>(1,0) << ")" << endl;
 		
@@ -2418,17 +2466,42 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 		cout << "Bearing vector 1 " << bearing1 << endl;
 		cout << "Bearing vector 2 " << bearing2 << endl;
 		
+		cout << "K" << endl;
+		cout << K << endl;
+		cout << "K.inv() " << endl;
+		cout << K.inv() << endl;
+		
+		waitKey(0);
+		
 		// Finding length of vectors 
 		double length_first_vector = sqrt(pow(bearing1.at<double>(0,0),2.0) + pow(bearing1.at<double>(1,0),2.0) + pow(bearing1.at<double>(2,0),2.0));
 		double length_current_vector = sqrt(pow(bearing2.at<double>(0,0),2.0) + pow(bearing2.at<double>(1,0),2.0) + pow(bearing2.at<double>(2,0),2.0));
+		
+		cout << "length_first_vector" << endl;
+		cout << length_first_vector << endl;
+		
+		cout << "length_current_vector" << endl;
+		cout << length_current_vector << endl;
 		
 		// Determine the angle
 		// The angle is in radians 
 		// CHANGES NEEDED HERE
 		double v = bearing1.at<double>(0,0)*bearing2.at<double>(0,0)+bearing1.at<double>(1,0)*bearing2.at<double>(1,0)+bearing1.at<double>(2,0)*bearing2.at<double>(2,0); // This value should be changed
-		alpha = acos((v)/(length_prev_vector * length_current_vector)) * 360/(2*M_PI);
+		cout << "v = " << v << endl;
 		
+		if (v/(length_prev_vector * length_current_vector) > 1) {
+			alpha = acos(1) * 360/(2*M_PI);
+		}
+		else if (v/(length_prev_vector * length_current_vector) < -1) {
+			alpha = acos(-1) * 360/(2*M_PI);
+		}
+		else {
+			alpha = acos(v/(length_prev_vector * length_current_vector)) * 360/(2*M_PI);
+		}
+	
 		cout << "alpha = " << alpha << endl;
+		
+		waitKey(0);
 		
 		if (alpha > threshold_angle) {
 			extracted_keypoints.at<double>(0,i) = 1;

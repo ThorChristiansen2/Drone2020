@@ -650,7 +650,7 @@ int main ( int argc,char **argv ) {
 	state Si;
 	Mat Ii;
 	double threshold_angle = 20; // In degrees
-	Mat extracted_keypoints = Mat::zeros(1, 100, CV_64FC1); // Remeber that 100 should be replaced by Si.num_candidates in a smart way
+	Mat extracted_keypoints = Mat::zeros(1, num_candidate_keypoints, CV_64FC1); // Remeber that 100 should be replaced by Si.num_candidates in a smart way
 	
 	// Mat Ii_1 = I_i1;
 	// For test 
