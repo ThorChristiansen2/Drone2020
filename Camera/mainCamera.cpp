@@ -2388,16 +2388,18 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
  * P - 4x1 Matrix which contains the landmark as [Xw, Yw, Zw, 1] in world coordinate frame
  * Needs to be scaled correctly (like mulitplied with a constant factor) in order to work.
  */
-Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat keypoint0, Mat keypoint1) {
+Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat imagepoint0, Mat imagepoint1) {
 	Mat P;
 	Mat Q;
 	
+	/*
 	Mat imagepoint0 = Mat::ones(3, 1, CV_64FC1);
 	imagepoint0.at<double>(0,0) = keypoint0.at<double>(0,0);
 	imagepoint0.at<double>(1,0) = keypoint0.at<double>(1,0);
 	Mat imagepoint1 = Mat::ones(3, 1, CV_64FC1);
 	imagepoint1.at<double>(0,0) = keypoint1.at<double>(0,0);
 	imagepoint1.at<double>(1,0) = keypoint1.at<double>(1,0);
+	*/
 	
 	Mat M0 = K*tau;
 	Mat M1 = K*T_WC;
@@ -2441,7 +2443,7 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 	Mat keypoint_newest_occcur = Mat::ones(3, 1, CV_64FC1);
 	Mat tau;
 	Mat a, b; // a = previous_vector, b = current_vector;
-	double length_prev_vector, length_current_vector;
+	double length_first_vector, length_current_vector;
 	
 	// Paralleliser det her måske
 	// Beregn vinklen mellem vektorerne current viewpoint og den første observation af keypointet
@@ -2474,8 +2476,8 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 		waitKey(0);
 		
 		// Finding length of vectors 
-		double length_first_vector = sqrt(pow(bearing1.at<double>(0,0),2.0) + pow(bearing1.at<double>(1,0),2.0) + pow(bearing1.at<double>(2,0),2.0));
-		double length_current_vector = sqrt(pow(bearing2.at<double>(0,0),2.0) + pow(bearing2.at<double>(1,0),2.0) + pow(bearing2.at<double>(2,0),2.0));
+		length_first_vector = sqrt(pow(bearing1.at<double>(0,0),2.0) + pow(bearing1.at<double>(1,0),2.0) + pow(bearing1.at<double>(2,0),2.0));
+		length_current_vector = sqrt(pow(bearing2.at<double>(0,0),2.0) + pow(bearing2.at<double>(1,0),2.0) + pow(bearing2.at<double>(2,0),2.0));
 		
 		cout << "length_first_vector" << endl;
 		cout << length_first_vector << endl;
@@ -2488,18 +2490,21 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 		// CHANGES NEEDED HERE
 		double v = bearing1.at<double>(0,0)*bearing2.at<double>(0,0)+bearing1.at<double>(1,0)*bearing2.at<double>(1,0)+bearing1.at<double>(2,0)*bearing2.at<double>(2,0); // This value should be changed
 		cout << "v = " << v << endl;
-		
-		if (v/(length_prev_vector * length_current_vector) > 1) {
+		cout << "v / 1.5699 = " << v/1.5699 << endl;
+		cout << "length_prev_vector*length_current_vector = " << length_first_vector*length_current_vector << endl;
+		cout << "(v/.(length_prev_vector*length_current_vector)) = " << (float) (v/(length_first_vector*length_current_vector)) << endl; 
+
+		if ((v/(length_first_vector * length_current_vector)) > 1) {
 			alpha = acos(1) * 360/(2*M_PI);
 		}
-		else if (v/(length_prev_vector * length_current_vector) < -1) {
+		else if ((v/(length_first_vector * length_current_vector)) < -1) {
 			alpha = acos(-1) * 360/(2*M_PI);
 		}
 		else {
-			alpha = acos(v/(length_prev_vector * length_current_vector)) * 360/(2*M_PI);
+			alpha = acos((v/(length_first_vector * length_current_vector))) * 360/(2*M_PI);
 		}
 	
-		cout << "alpha = " << alpha << endl;
+		cout << "alpha  = " << alpha << endl;
 		
 		waitKey(0);
 		
