@@ -31,6 +31,7 @@
 
 using namespace std;
 using namespace std::complex_literals;
+using namespace std::chrono;
 //using namespace Numeric_lib;
 
 void *functionKLT(void *threadarg) {
@@ -74,6 +75,70 @@ void *functionKLT(void *threadarg) {
    }
    pthread_exit(NULL);
 }
+
+void *functionHarris(void *threadarg) {
+   struct harris_data *my_harris;
+   my_harris = (struct harris_data *) threadarg;
+   
+   int nr_rows = my_harris->thread_dst.rows;
+   int nr_cols = my_harris->thread_dst.cols;
+   int nr_iter = my_harris->num_keypoints;
+   int i, r, c;
+   int NMBOX = my_harris->thread_non_max_suppres;
+   
+   for (i = 0; i < nr_iter; i++) {
+	   int max = 0;
+	   int x = 0; 
+	   int y = 0;
+	   for (r = 0; r < nr_rows; r++) {
+		   for (c = 0; c < nr_rows; c++) {
+			   if ((double) my_harris->thread_dst.at<float>(r,c) > max) {
+					max = (double) my_harris->thread_dst.at<float>(r,c) ;
+					y = r;
+					x = c;
+						
+				}
+		   }
+	   }
+	   for (r = -NMBOX; r <  NMBOX; r++) {
+		   for (c = -NMBOX; c < NMBOX; c++) {
+			   my_harris->thread_dst.at<float>(y+r,x+c) = 0;
+		   }
+	   }
+	   my_harris->matrice.at<double>(0,i) = max;
+	   my_harris->matrice.at<double>(1,i) = y + my_harris->left_corner_y;
+	   my_harris->matrice.at<double>(2,i) = x + my_harris->left_corner_x;
+   }
+   
+   
+   
+   pthread_exit(NULL);
+}
+
+
+
+
+/* Function that is supposed to return a matrix of size 4xM with coordinates corresponding to
+ * the upper right and lower left corners of the matrix
+ * inputs:
+ * int number_subimages;
+ * int boundary --> Boundary that is not included in the original image
+ * int height --> Height of one subpart of the image
+ * int width --> Widht of one subpart of the image
+ * int dim1 --> Height of the input image
+ * int dim2 --> Widht of the input image
+ * 
+ * Outputs:
+ * A matrix of 4xM with 
+ */
+ /*
+Mat subImage(int number_subimages, int boundary, int height, int width, int dim1, int dim2) [
+	Mat indicies = Mat::zeros(4, number_subimages, CV_64FC1);
+
+	
+	return indicies;
+}
+*/
 
 // Match SIFT Descriptors 
 Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
@@ -296,8 +361,6 @@ Matrix extractMaxHeap(Matrix Corners, int n) {
  */
 Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression) {
 	
-	// Define variables
-	const char* corners_window = "Corners detected";
 	
 	// Maybe use minMaxLoc(img, &minVal, &maxVal); for at finde max og minimum, som gemmes i værdierne minVal og maxVal. 	
 	
@@ -314,11 +377,11 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression)
 	
 	Mat dst = Mat::zeros( src.size(), CV_32FC1 );
 	cornerHarris (src_gray, dst, blockSize, apertureSize, k);
-
+	
 	Mat dst_norm, dst_norm_scaled;
 	normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
 	convertScaleAbs( dst_norm, dst_norm_scaled );
-
+	
 	// Find corners and return 
 	int nr_corners = 0;
 		
@@ -336,19 +399,72 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression)
 	if (suppression.cols != 0) {
 		// This operation can maybe be parallelaized
 		for (int c = 0; c < suppression.cols; c++) {
-			row_nr = suppression.at<double>(0,c);
-			col_nr = suppression.at<double>(1,c);
-			for (int i = -3; i < 4; i++) {
-				for (int j = -3; j < 4; j++) {
-					dst_norm.at<float>(row_nr + i, col_nr + j) = 0;
+			if (row_nr < dst_norm.rows && col_nr < dst_norm.cols) {
+				row_nr = suppression.at<double>(0,c);
+				col_nr = suppression.at<double>(1,c);
+				for (int i = -3; i < 4; i++) {
+					for (int j = -3; j < 4; j++) {
+						dst_norm.at<float>(row_nr + i, col_nr + j) = 0;
+					}
 				}
 			}
 		}
 	}
-		
-		
-		//Mat keypoints = Mat::zeros(keypoints_limit, 3, CV_64FC1);
+
+	
+	
+	/*
+	 * 
+	 * NB: JUSTER FOR COORDINATES, SÅ DER SKLA LÆGGES Y OG X TIL FOR BILLEDET
+	 * 
+	 */
+	
+	//Define number of keypoints
+	// possible mistake with dividing the keypoints into cols.
 	Mat keypoints = Mat::zeros(3, keypoints_limit, CV_64FC1);
+	
+	// Create indices matrix
+	int NUM_THREADS = Harris_threads;
+	Mat indicies = Mat::zeros(2, Harris_threads, CV_64FC1);
+	int index = 0;
+	for (int r = 0; r < 5; r++) {
+		for (int c = 0; c < 6; c++) {
+			indicies.at<double>(0,index) = r*188 + boundaries-1;			// y1
+			indicies.at<double>(1,index) = c*210 + boundaries-1;			// x1
+			index++;
+		}
+	}
+	
+	
+	pthread_t threads[NUM_THREADS];
+	struct harris_data td[NUM_THREADS];
+	int i, rc, q;
+	q = keypoints_limit / NUM_THREADS; // Potential mistake, when it does not become a possible division
+	for (i = 0; i < NUM_THREADS; i++) {
+		td[i].num_keypoints  = q;
+		
+		td[i].matrice = keypoints.colRange(i*q,(i+1)*q);
+
+		td[i].left_corner_y = indicies.at<double>(0,i);
+		td[i].left_corner_x = indicies.at<double>(1,i);
+
+		td[i].thread_dst = dst_norm.colRange(indicies.at<double>(1,i),indicies.at<double>(1,i)+210).rowRange(indicies.at<double>(0,i),indicies.at<double>(0,i)+188);
+
+		td[i].thread_non_max_suppres = NMSBox;
+		
+		
+		rc = pthread_create(&threads[i], NULL, functionHarris, (void *)&td[i]);
+	}
+	void* ret = NULL;
+	
+	for (int k = 0; k < NUM_THREADS; k++) {
+		pthread_join(threads[k], &ret);
+	}
+	
+	// Test REct region for at se, om du får det rigtige. 
+	
+	
+	/*
 	for (int count = 0; count < keypoints_limit; count++) {
 		double max = 0; 
 		int x = 0; 
@@ -361,95 +477,20 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression)
 					x = j;
 						
 				}
-					/*
-					CornerResponse = (int) dst_norm.at<float>(i,j);
-					if ( CornerResponse > thres && nr_corners < keypoints_limit-1) {
-						//cout << "intensity for corner " << nr_corners << " at (" << i << "," << j << "): " << (int) dst_norm.at<float>(i,j) << endl;
-						// Insert node in heap
-						Corners = insertNodeHeap(Corners, CornerResponse,i,j,nr_corners+1);
-						//cout << "Heap Corners intensity " << Corners(nr_corners+1,0)  << " at (" << Corners(nr_corners+1,1) << "," << Corners(nr_corners+1,2) << ")" << endl;
-						nr_corners++;
-					}
-					*/
+
 				}
 			}
-			//cout << "Keypoints extracted" << endl;
-			//keypoints.at<double>(count, 0) = max;
-			//keypoints.at<double>(count, 1) = y;
-			//keypoints.at<double>(count, 2) = x;
+
 		keypoints.at<double>(0, count) = max;
 		keypoints.at<double>(1, count) = y;
 		keypoints.at<double>(2, count) = x;
-			/* 
-			cout << "Keypoint at (y,x) = (" << y << "," << x << ") with intensity = " << max << endl;
-			waitKey(0);
-			for (int nn = y-NMSBox; nn <= y + NMSBox; nn++) {
-				for (int mm = x - NMSBox; mm <= x + NMSBox; mm++) {
-					cout << (double) dst_norm.at<float>(nn,mm) << ", ";
-				}
-				cout << "" << endl;
-			}
-			waitKey(0);
-			*/
+	
 		nonMaximumSuppression(dst_norm, y-NMSBox, x-NMSBox, y+NMSBox+1, x+NMSBox+1);
-			/*
-			for (int nn = y-NMSBox; nn <= y + NMSBox; nn++) {
-				for (int mm = x - NMSBox; mm <= x + NMSBox; mm++) {
-					cout << (double) dst_norm.at<float>(nn,mm) << ", ";
-				}
-				cout << "" << endl;
-			}
-			waitKey(0);
-			*/
+
 	}
+	*/
 		
-		/*
-		cout << "Number of corners: " << nr_corners << endl;
-		//printfunction(Corners,nr_corners);
-		
-		
-		// Maybe reduce size of corners Corners = Corners.slice(0,nr_corners);
-		Matrix keypoints(nr_corners,3); // Maybe you don't need to store the intensity value too?
-		keypoints(1,1) = 0;
-		keypoints(1,2) = 0;
-		int n = nr_corners;
-		bool Discard_Point = false;
-		int corners_left = 0;
-		// Extract maximum and automatically enforce non-maximum suppression 
-		//cout << "Going in to for loop" << endl;
-		for (int m = 0; m < nr_corners; m++) {
-			//cout << "Begin deleting corners" << endl;
-			keypoints(m,1) = 0;
-			keypoints(m,2) = 0;
-			Corners = extractMaxHeap(Corners, n);
-			int intensity = Corners(n,0);
-			int y_temp = Corners(n,1);
-			int x_temp = Corners(n,2);
-			n--;
-			Discard_Point = false;
-			for (int l = 0; l <= m; l++) { // Maybe you should change m to corners_left
-				int y = keypoints(l,1);
-				int x = keypoints(l,2);
-				//cout << "(x,y) = " << x << "," << y << endl;
-				if ((x_temp >= x - NMSBox && x_temp <= x + NMSBox) && (y_temp >= y-NMSBox && y_temp <= y+NMSBox)) {
-					// Discard point if it is within another maximum
-					Discard_Point = true;
-					break;
-				}
-			}
-			if (Discard_Point == false) {
-				//cout << "Point being inserted" << endl;
-				keypoints(corners_left,0) = intensity;
-				keypoints(corners_left,1) = y_temp;
-				keypoints(corners_left,2) = x_temp;
-				corners_left++;
-				//cout << "Keypoints printed" << endl;
-				//printfunction(keypoints,corners_left);
-			}
-		}
-		cout << "Number of corners left: " <<  corners_left << endl;
-		return keypoints.slice(0,corners_left);
-		*/
+	
 	return keypoints;
 	
 	//cout << "End of Harris " << endl;	
@@ -524,7 +565,7 @@ Matrix circularShift(Matrix histogram) {
 	return histogram;
 }
 //FindDescriptors(Mat src_gray, Mat keypoints)
-
+/*
 // Find SIFT Desriptors using Parallelization
 void *FindDescriptors(void *threadarg) {
 	// SIT = SIFT_Descriptor_thread
@@ -652,6 +693,7 @@ void *FindDescriptors(void *threadarg) {
 	
 	pthread_exit(NULL);
 }
+*/
 
 
 // Find SIFT Desriptors  without parallelization
@@ -1845,10 +1887,11 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	
 	// Other parameters 
 	double num_iterations;
-	int pixel_tolerance = 10; 
+	int pixel_tolerance = ransac_pixel_tolerance; 
 	double k = 3.0;
-	int min_inlier_count = 15; // This parameter should be tuned for the implementation
+	int min_inlier_count = ransac_min_inlier_count; // This parameter should be tuned for the implementation
 	double record_inlier = 0;
+
 		
 	if (adaptive_ransac) {
 		num_iterations = 1000;
@@ -2221,7 +2264,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	//cout << extracted_keypoints << endl;
 	
 	// Parallelizaiton of code 	
-	cout << "Parallelization of continuousCandidateKeypoints" << endl;
+	//cout << "Parallelization of continuousCandidateKeypoints" << endl;
 	int NUM_THREADS = Si.num_candidates;
 	pthread_t threads[NUM_THREADS];
 	struct thread_data td[NUM_THREADS];
@@ -2280,16 +2323,20 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	Si.Ci.row(1).copyTo(row1);
 	vconcat(row1, row0, Si.Ci); // y-coordinate in row 0 and x-coordinate in row 1
 	
+	/*
 	cout << "Si.Ci" << endl;
 	cout << Si.Ci << endl;
 	cout << "failed_candidates" << endl;
 	cout << failed_candidates << endl;
+	*/
 
 	// Delete un-tracked candidate keypoints by overwriting the points
 	failed_candidates = failed_candidates + extracted_keypoints;
 	
+	/*
 	cout << "failed_candidates" << endl;
 	cout << failed_candidates << endl;
+	*/
 	
 	
 	// Find new candidate keypoints 
@@ -2298,7 +2345,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 		
 		// Non maximum suppression of candidate keypoints 
 		Mat tempMat = Mat::zeros(2, countNonZero(failed_candidates), CV_64FC1); 
-		cout << "Dimensions of tempMat = (" << tempMat.rows << "," << tempMat.cols << ")" << endl; 
+		//cout << "Dimensions of tempMat = (" << tempMat.rows << "," << tempMat.cols << ")" << endl; 
 		for (int i = 0; i < countNonZero(failed_candidates); i++) {
 			if (failed_candidates.at<double>(0,i) == 1) {
 				//tempMat.at<double>(0,i) = (Si.Ci.at<double>(0,i));
@@ -2307,8 +2354,8 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 				tempMat.at<double>(1,i) = (Si.Ci.at<double>(1,i)); // x-coordinate
 			}
 		}
-		cout << "tempMat" << endl;
-		cout << tempMat << endl;
+		//cout << "tempMat" << endl;
+		//cout << tempMat << endl;
 		
 		// Concatenate failed candidate keypoints as well as current keypoints in Si.Pi
 		Mat suprression;
@@ -2367,13 +2414,8 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat ext
 	waitKey(0);
 	*/
 	
+	cout << "Number of candidate keypoints = " << Si.Ci.cols << endl;
 	cout << "End continuousCandidateKeypoints" << endl;
-	cout << "Si.Ci" << endl;
-	cout << Si.Ci << endl;
-	cout << "Si.Fi" << endl;
-	cout << Si.Fi << endl;
-	cout << "Si.Ti" << endl;
-	cout << Si.Ti << endl;
 	return Si;
 }
 
@@ -2452,47 +2494,23 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 		// First occurrence of keypoint
 		keypoint_last_occur.at<double>(0,0) = Si.Fi.at<double>(0,i); // y-coordinate
 		keypoint_last_occur.at<double>(1,0) = Si.Fi.at<double>(1,i); // x-coordinate
-		
-		cout << "First occurence of keypoint =(" << keypoint_last_occur.at<double>(0,0) << "," << keypoint_last_occur.at<double>(1,0) << ")" << endl;
-	
+
 		// Newest occurrence of keypoint
 		keypoint_newest_occcur.at<double>(0,0) = Si.Ci.at<double>(0,i); // y-coordinate
 		keypoint_newest_occcur.at<double>(1,0) = Si.Ci.at<double>(1,i); // x--coordinate
-		
-		cout << "Newest occurence of keypoint =(" << keypoint_newest_occcur.at<double>(0,0) << "," << keypoint_newest_occcur.at<double>(1,0) << ")" << endl;
-		
+
 		// Finding the angle using bearing vectors 
 		Mat bearing1 = K.inv() * keypoint_last_occur;
 		Mat bearing2 = K.inv() * keypoint_newest_occcur;
-		
-		cout << "Bearing vector 1 " << bearing1 << endl;
-		cout << "Bearing vector 2 " << bearing2 << endl;
-		
-		cout << "K" << endl;
-		cout << K << endl;
-		cout << "K.inv() " << endl;
-		cout << K.inv() << endl;
-		
-		waitKey(0);
 		
 		// Finding length of vectors 
 		length_first_vector = sqrt(pow(bearing1.at<double>(0,0),2.0) + pow(bearing1.at<double>(1,0),2.0) + pow(bearing1.at<double>(2,0),2.0));
 		length_current_vector = sqrt(pow(bearing2.at<double>(0,0),2.0) + pow(bearing2.at<double>(1,0),2.0) + pow(bearing2.at<double>(2,0),2.0));
 		
-		cout << "length_first_vector" << endl;
-		cout << length_first_vector << endl;
-		
-		cout << "length_current_vector" << endl;
-		cout << length_current_vector << endl;
-		
 		// Determine the angle
 		// The angle is in radians 
 		// CHANGES NEEDED HERE
 		double v = bearing1.at<double>(0,0)*bearing2.at<double>(0,0)+bearing1.at<double>(1,0)*bearing2.at<double>(1,0)+bearing1.at<double>(2,0)*bearing2.at<double>(2,0); // This value should be changed
-		cout << "v = " << v << endl;
-		cout << "v / 1.5699 = " << v/1.5699 << endl;
-		cout << "length_prev_vector*length_current_vector = " << length_first_vector*length_current_vector << endl;
-		cout << "(v/.(length_prev_vector*length_current_vector)) = " << (float) (v/(length_first_vector*length_current_vector)) << endl; 
 
 		if ((v/(length_first_vector * length_current_vector)) > 1) {
 			alpha = acos(1) * 360/(2*M_PI);
@@ -2503,10 +2521,6 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 		else {
 			alpha = acos((v/(length_first_vector * length_current_vector))) * 360/(2*M_PI);
 		}
-	
-		cout << "alpha  = " << alpha << endl;
-		
-		waitKey(0);
 		
 		if (alpha > threshold_angle) {
 			extracted_keypoints.at<double>(0,i) = 1;
@@ -2517,10 +2531,14 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 			
 			traingulated_landmark = findLandmark(K, tau, T_WC, keypoint_last_occur, keypoint_newest_occcur); // Check if tau should be changed to matrix
 			
+			traingulated_landmark.copyTo(newLandmarks.col(temp));
+			
+			/*
 			newLandmarks.at<double>(0,temp) = traingulated_landmark.at<double>(0,0);
 			newLandmarks.at<double>(1,temp) = traingulated_landmark.at<double>(1,0);
 			newLandmarks.at<double>(2,temp) = traingulated_landmark.at<double>(2,0);
 			newLandmarks.at<double>(3,temp) = traingulated_landmark.at<double>(3,0);
+			*/
 			
 			temp++;
 		}
@@ -2541,38 +2559,17 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 	}
 	
 	// 
-	
-	// Append new keypoints
-	hconcat(Si.Pi, temp_newKeypoints, Si.Pi);
-	
-	// Append new 3D landmarks 
-	hconcat(Si.Xi, temp_newLandmarks, Si.Xi);
+	if (temp > 0) {
+		// Append new keypoints
+		hconcat(Si.Pi, temp_newKeypoints, Si.Pi);
+		
+		// Append new 3D landmarks 
+		hconcat(Si.Xi, temp_newLandmarks, Si.Xi);
+	}
 	
 	return make_tuple(Si, extracted_keypoints);
 }
 
-/*
-void *PrintHello(void *threadid) {
-	long tid; 
-	tid = (long)threadid;
-	cout << "Hello World! Thread ID, " << tid << endl;
-	pthread_exit(NULL);
-}
-*/
-/*
-void *PrintHello(void *threadarg) {
-	struct thread_data *my_data;
-	my_data = (struct thread_data *) threadarg;
-	
-	cout << "Thread ID : " << my_data->thread_id << endl;
-	cout << "Matrix : " << my_data->thread_mat << endl;
-	//cout << " my data = " << my_data->thread_mat.at<double>(0,0) << endl;
-	//cout << "Sum : " << my_data->thread_mat.at<double>(0,0) + my_data->thread_mat.at<double>(0,1) + my_data->thread_mat.at<double>(1,0) + my_data->thread_mat.at<double>(1,1);
-	my_data->thread_sum = my_data->thread_mat.at<double>(0,0) + my_data->thread_mat.at<double>(0,1) + my_data->thread_mat.at<double>(1,0) + my_data->thread_mat.at<double>(1,1);
-	
-	pthread_exit(NULL);
-}
-*/
 
 
 

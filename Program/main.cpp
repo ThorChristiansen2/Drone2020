@@ -4,7 +4,6 @@
 #include <unistd.h>
 
 // Include directories for raspicam
-#include <ctime>
 #include <cstdlib>
 #include <fstream>
 #include <sstream>
@@ -121,6 +120,8 @@ void *functionKLT(void *threadarg) {
 tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cout << "Begin initialization" << endl;
 	
+	high_resolution_clock::time_point t11 = high_resolution_clock::now();
+	
 	// Transform color images to gray images
 	Mat I_i0_gray, I_i1_gray;
 	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
@@ -128,14 +129,21 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	Mat emptyMatrix;
 	
-	
+	//high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	// Get Feature points
-	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 200, emptyMatrix); // Number of maximum keypoints
+	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 210, emptyMatrix); // Number of maximum keypoints
+	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	//duration<double> time_span = duration_cast<duration<double>>(t2-t1);
+	//cout << "Finding keypoints_I_i0 took = " << time_span.count() << " seconds" << endl;
+	
+	
 	/*
 	const char* text0 = "Detected corners in frame I_i0";
 	drawCorners(I_i0, keypoints_I_i0, text0);
-	waitKey(0);
+	waitKey(0
 	*/
+	
+	
 	
 	/*
 	// ######################### KLT ######################### 
@@ -194,32 +202,44 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	*/
 	
 	
-	
+	//high_resolution_clock::time_point t3 = high_resolution_clock::now();
 	// ######################### SIFT ######################### 
-	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 200, emptyMatrix); // Number of keypoints that is looked for
+	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 210, emptyMatrix); // Number of keypoints that is looked for
+	//high_resolution_clock::time_point t4 = high_resolution_clock::now();
+	//duration<double> time_span1 = duration_cast<duration<double>>(t4-t3);
+	//cout << "Finding keypoints_I_i1 took = " << time_span1.count() << " seconds" << endl;
 	/*
 	const char* text1 = "Detected corners in frame I_i1";
 	drawCorners(I_i1, keypoints_I_i1, text1);
 	waitKey(0);
-	cout << "Done with finding keypoints " << endl;
-	cout << "drawCorners found" << endl;
 	*/
+	
 	
 
 	//Finding SIFT::descriptors without parallelization 
 	// Maybe use KLT instead 
+	//high_resolution_clock::time_point t5 = high_resolution_clock::now();
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	//cout << "descriptors_I_i0 found" << endl;
+	//high_resolution_clock::time_point t6 = high_resolution_clock::now();
+	//duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
+	//cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
 	
+	//high_resolution_clock::time_point t7 = high_resolution_clock::now();
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
-	
+	//high_resolution_clock::time_point t8 = high_resolution_clock::now();
+	//duration<double> time_span3 = duration_cast<duration<double>>(t8-t7);
+	//cout << "Finding descriptors_I_i0 took = " << time_span3.count() << " seconds" << endl;
 	
 	//cout << "descriptors_I_i1 found" << endl;
 	
 	
-	
+	//high_resolution_clock::time_point t9 = high_resolution_clock::now();
 	// Match descriptors 
 	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+	//high_resolution_clock::time_point t10 = high_resolution_clock::now();
+	//duration<double> time_span4 = duration_cast<duration<double>>(t10-t9);
+	//cout << "Finding matches took = " << time_span4.count() << " seconds" << endl;
 	
 	// Find Point correspondences
 	// Points from image 0 in row 1 and row 2 
@@ -236,32 +256,6 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	vector<Point2f> points1(N);
 	vector<Point2f> points2(N);
 	for (int i = 0; i < N; i++) {
-		
-		
-		// ########## KLT ##########
-		/*
-		 * 
-		points1[i] = Point2f(keypoints_I_i1.at<double>(0,i),keypoints_I_i1.at<double>(1,i));
-		points2[i] = Point2f(keypoints_I_i0_new.at<double>(0,i),keypoints_I_i0_new.at<double>(1,i));
-		
-		points1Mat.at<double>(0,i) = keypoints_I_i1.at<double>(0,i);
-		points1Mat.at<double>(1,i) = keypoints_I_i1.at<double>(1,i); 
-		points2Mat.at<double>(0,i) = keypoints_I_i0_new.at<double>(0,i);
-		points2Mat.at<double>(1,i) = keypoints_I_i0_new.at<double>(1,i);
-		
-		
-		
-		double x = keypoints_I_i1.at<double>(0,i);
-		double y = keypoints_I_i1.at<double>(1,i);
-		double x2 = keypoints_I_i0_new.at<double>(0,i);
-		double y2 = keypoints_I_i0_new.at<double>(1,i);
-		
-		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
-		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
-		*/
-		
-		
 		// Config1
 		//  #### SIFT #### 
 		// Be aware of differences in x and y
@@ -273,90 +267,15 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(1, matches(i,0)); // y-coordinate in image
 		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(2, matches(i,0)); // x-coordinate in image
 		
-	
+		/*
 		double y = keypoints_I_i1.at<double>(1, matches(i,0));
 		double x = keypoints_I_i1.at<double>(2, matches(i,0));
 		double y2 = keypoints_I_i0.at<double>(1, matches(i,1));
 		double x2 = keypoints_I_i0.at<double>(2, matches(i,1));
 		line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
 		circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
-		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
-		
-		// SIFT but switching the order of points 
-		
-		
-		/*
-		// Config2
-		//  #### SIFT #### 
-		// Be aware of differences in x and y
-		points1[i] = Point2f(keypoints_I_i0(matches(i,1),2),keypoints_I_i0(matches(i,1),1));
-		points2[i] = Point2f(keypoints_I_i1(matches(i,0),2),keypoints_I_i1(matches(i,0),1));
-		
-		points1Mat.at<double>(0,i) = keypoints_I_i0(matches(i,1),1);
-		points1Mat.at<double>(1,i) = keypoints_I_i0(matches(i,1),2); 
-		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),1);
-		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),2);
-		
-	
-		double x = keypoints_I_i1(matches(i,0),1);
-		double y = keypoints_I_i1(matches(i,0),2);
-		double x2 = keypoints_I_i0(matches(i,1),1);
-		double y2 = keypoints_I_i0(matches(i,1),2);
-		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
-		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
+		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
 		*/
-		
-		
-		/*
-		// Config3
-		//  #### SIFT #### 
-		// Be aware of differences in x and y
-		points1[i] = Point2f(keypoints_I_i0(matches(i,1),1),keypoints_I_i0(matches(i,1),2));
-		points2[i] = Point2f(keypoints_I_i1(matches(i,0),1),keypoints_I_i1(matches(i,0),2));
-		
-		points1Mat.at<double>(0,i) = keypoints_I_i0(matches(i,1),2);
-		points1Mat.at<double>(1,i) = keypoints_I_i0(matches(i,1),1); 
-		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),2);
-		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),1);
-		
-	
-		double x = keypoints_I_i1(matches(i,0),1);
-		double y = keypoints_I_i1(matches(i,0),2);
-		double x2 = keypoints_I_i0(matches(i,1),1);
-		double y2 = keypoints_I_i0(matches(i,1),2);
-		
-		
-		*/
-		
-		
-		// Config4
-		/*
-		//  #### SIFT #### 
-		// Be aware of differences in x and y
-		points1[i] = Point2f(keypoints_I_i0(matches(i,1),2),keypoints_I_i0(matches(i,1),1));
-		points2[i] = Point2f(keypoints_I_i1(matches(i,0),2),keypoints_I_i1(matches(i,0),1));
-		
-		points1Mat.at<double>(0,i) = keypoints_I_i0(matches(i,1),2);
-		points1Mat.at<double>(1,i) = keypoints_I_i0(matches(i,1),1); 
-		points2Mat.at<double>(0,i) = keypoints_I_i1(matches(i,0),2);
-		points2Mat.at<double>(1,i) = keypoints_I_i1(matches(i,0),1);
-		
-	
-		double x = keypoints_I_i1(matches(i,0),1);
-		double y = keypoints_I_i1(matches(i,0),2);
-		double x2 = keypoints_I_i0(matches(i,1),1);
-		double y2 = keypoints_I_i0(matches(i,1),2);
-		line(I_i1,Point(y,x),Point(y2,x2),Scalar(0,255,0),3);
-		circle (I_i1, Point(y,x), 5,  Scalar(0,0,255), 2,8,0);
-		circle (I_i0, Point(y2,x2), 5, Scalar(0,0,255), 2,8,0);
-		*/
-		
-		
-		// SIFT but switching the order of points 
-		
-		
-		
 		
 	}
 	//imshow("Match",I_i1);
@@ -366,15 +285,6 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// Find fudamental matrix 
 	vector<uchar> pArray(N);
 	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.95, 5000, pArray); // 3 can be changed to 1
-	
-	/*
-	cout << "Output Mask " << endl;
-	for (int i = 0; i < N; i++) {
-		cout << (double) pArray[i] << ", ";
-	}
-	cout << "" << endl;
-	cout << "Nonzero elements = " << countNonZero(pArray) << endl;
-	*/
 	
 	int N_inlier = countNonZero(pArray);
 	//cout << "N_inlier = " << N_inlier << endl;
@@ -396,13 +306,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// Update of reliably matched keypoints
 	Si_1.Pi = points2Mat;
-	
-	/*
-	cout << "Print of Si_1 Keypoints " << endl;
-	cout << Si_1.Pi << endl;
-	cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
-	*/
-	
+		
 	// Estimate Essential Matrix
 	Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);	
 	
@@ -431,8 +335,17 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	/*
 	cout << "Print of 3D landmarks " << endl;
 	cout << Si_1.Xi << endl;
-	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
+	cout << "Number of landmarks = " << Si_1.Xi.cols << endl
 	*/
+	
+	cout << "Initializaiton" << endl;
+	cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
+	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
+	
+	
+	high_resolution_clock::time_point t12 = high_resolution_clock::now();
+	duration<double> time_span5 = duration_cast<duration<double>>(t12-t11);
+	cout << "rest of initialization matches took = " << time_span5.count() << " seconds" << endl;
 	
 	// return state of drone as well as transformation_matrix;
 	return make_tuple(Si_1, transformation_matrix);
@@ -451,6 +364,10 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat Ii_gray, Ii_1_gray;
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );
+	
+	imshow("processFrame Ii_1", Ii_1);
+	imshow("processFrame Ii", Ii);
+	waitKey(0);
 	
 	int nr_keep = 0;
 	//Mat kpold = Mat::zeros(3, Si_1.k, CV_64FC1);
@@ -510,17 +427,18 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cout << keypoints_i << endl;
 	cout << "Print of corresponding_landmarks" << endl;
 	cout << corresponding_landmarks << endl;	
-	*/
-	cout << "keypoints_i" << endl;
-	cout << keypoints_i << endl;
-	
-	cout << "corresponding_landmarks" << endl;
-	cout << corresponding_landmarks << endl;
+	*/	
+	cout << "Process Frame" << endl;
+	cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
+	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	
 	
 	// Estimate the new pose using RANSAC and P3P algorithm 
 	Mat transformation_matrix, best_inlier_mask;
 	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(keypoints_i, corresponding_landmarks, K);
+	
+	cout << "best_inlier_mask " << endl;
+	cout << best_inlier_mask << endl;
 	
 	// Remove points that are determined as outliers from best_inlier_mask by using best_inlier_mask
 	//cout << "best_inlier_mask" << endl;
@@ -587,9 +505,14 @@ int main ( int argc,char **argv ) {
 	cout << "Frame I_i0 captured" <<endl;
 	//I_i0.convertTo(I_i0, CV_64FC1);
 	imshow("Frame I_i0 displayed", I_i0);
-	imwrite("cam0.png", I_i0);
-	waitKey(0);	// Ensures it is sufficiently far away from initial frame
-	waitKey(5000);
+	waitKey(0);
+	
+	cout << "Size of image = " << I_i0.rows << "," << I_i0.cols << ")" << endl;
+	
+	//imwrite("cam0.png", I_i0);
+	//waitKey(0);	// Ensures it is sufficiently far away from initial frame
+	//waitKey(5000);
+	
 	
 	// First frame 1
 	cout << "Prepare to take image 1" << endl; 
@@ -597,43 +520,101 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	cout << "Frame I_i1 captured" <<endl;
 	imshow("Frame I_i1 displayed", I_i1);
-	imwrite("cam1.png", I_i1);
 	waitKey(0);
-	waitKey(5000);
-	
-	Mat I_i2;
-	// First frame 1
-	cout << "Prepare to take image 1" << endl; 
-	Camera.grab();
-	Camera.retrieve ( I_i2 ); // Frame 1 
-	cout << "Frame I_i1 captured" <<endl;
-	imshow("Frame I_i1 displayed", I_i2);
-	imwrite("cam1.png", I_i2);
-	waitKey(0);
-	waitKey(5000);
 	*/
 	
- 
 	
+	 
 	
 	// Test billeder
 	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
-	//imshow("Frame I_i0 displayed", I_i0);
-	//waitKey(0);
+	imshow("Frame I_i0 displayed", I_i0);
+	waitKey(0);
 	
 	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
-	//imshow("Frame I_i1 displayed", I_i1);
-	//waitKey(0);
+	imshow("Frame I_i1 displayed", I_i1);
+	waitKey(0);
 	
 	
+	/*
+	int y1 = 3;
+	int x1 = 1;
+	int y2 = 5;
+	int x2 = 5;
 	
-	// ADVARSEL: POTENTIEL FEJL MED HVORDAN KEYPOINTS ER STRUKTURERET PÅ. mÅSEK SKAL DER BYTTES OM PÅ RÆKKER. 
+	cout << "Entire image" << endl;
+	for (int r = 0; r < 10; r++) {
+		for (int c = 0; c < 10; c++) {
+			cout << (double) I_i0_gray.at<uchar>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "Subpart of I_i0" << endl;
+	MatType(I_i0_gray);
+	for (int r = y1; r < y2; r++) {
+		for (int c = x1; c < x2; c++) {
+			cout << (double) I_i0_gray.at<uchar>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	 Make a region of the proper size. 
+	 
+	  Start point in point (x1,y1) width = y2-y1 and height x2-x1. 
+	 
+	// Rect region(x1,y1,x2-x1,y2-y1);
 	
+	//Rect region(x1,y1,x2-x1,y2-y1);
+	//Rect region(x1,y1,y2-y1,x2-x1);
+	//Rect region(y1,x1,x2-x1,y2-y1);
+	//Rect region(y1,x1,y2-y1,x2-x1);
 	
+	// NB: THIS ONLY WORKS FOR GRAY-SCALE IMAGES, WHERE THERE IS ONLY ONE CHANNEL
+	//Mat subImg(I_i0, region);
+	//Mat subImg = I_i0(Range(y1,y2),Range(x1,x2));
+	Mat subImg = I_i0_gray.colRange(x1,x2).rowRange(y1,y2);
+	cout << "subImg" << endl;
+	//cout << subImg << endl;	
+	MatType(subImg);
+	cout << "Dimensions of subImg = (" << subImg.rows << "," << subImg.cols << ")" << endl;	
+	for (int i = 0; i < subImg.rows; i++) {
+		for (int j = 0; j < subImg.cols; j++) {
+			cout << (double) subImg.at<uchar>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	subImg.at<uchar>(1,2) = 0;
+	cout << "subImg" << endl;
+	for (int i = 0; i < subImg.rows; i++) {
+		for (int j = 0; j < subImg.cols; j++) {
+			cout << (double) subImg.at<uchar>(i,j) << ", ";
+		}
+		cout << "" << endl;
+	}
+	cout << "I_i0" << endl;
+	for (int r = y1; r < y2; r++) {
+		for (int c = x1; c < x2; c++) {
+			cout << (double) I_i0_gray.at<uchar>(r,c) << ", ";
+		}
+		cout << "" << endl;
+	}
+	*/
+	
+	/*
+	// Test af Harris Corners
+	Mat I_i0_gray;
+	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
+	Mat emptyMatrix;
+	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 180, emptyMatrix);
+	const char* text0 = "Detected corners in frame I_i0";
+	drawCorners(I_i0, keypoints_I_i0, text0);
+	waitKey(0);
+	*/
+	
+
 	// ############### VO initializaiton ###############
-	// VO-pipeline: Initialization. Bootstraps the initial position. 
+	// VO-pipeline: Initialization. Bootstraps the initial position.	
 	state Si_1;
 	Mat transformation_matrix;
 	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
@@ -642,14 +623,17 @@ int main ( int argc,char **argv ) {
 	
 	
 	// ############### VO Continuous ###############
-	bool continueVOoperation = true;
+	bool continueVOoperation = false;
 	bool pipelineBroke = false;
 	bool output_T_ready = true;
 	
 	// Needed variables
 	state Si;
+	//Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
+	Mat Ii_1;
+	I_i1.copyTo(Ii_1);
 	Mat Ii;
-	double threshold_angle = 20; // In degrees
+	double threshold_angle = new_landmarks_threshold_angle; // In degrees
 	Mat extracted_keypoints = Mat::zeros(1, num_candidate_keypoints, CV_64FC1); // Remeber that 100 should be replaced by Si.num_candidates in a smart way
 	
 	// Mat Ii_1 = I_i1;
@@ -659,26 +643,32 @@ int main ( int argc,char **argv ) {
 	// Debug variable
 	int stop = 0;
 	int iter = 0;
-	Mat Ii_1 = imread("cam1.png", IMREAD_UNCHANGED);
 	
-	
-	while (continueVOoperation == true && pipelineBroke == false && stop < 2) {
+	while (continueVOoperation == true && pipelineBroke == false && stop < 5) {
 		cout << "Begin Continuous VO operation " << endl;
 		
-		/*
+		
 		// Take new image 
 		Camera.grab();
 		Camera.retrieve( Ii );
+		cout << "New image taken" << endl;
 		
+		
+		/*
 		imshow("New Frame", Ii);
 		cout << "New image aquired" << endl;
-		//waitKey(0);
+		waitKey(0);
+		
+		cout << "Continuous Operation" << endl;
+		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
+		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
+	
+		/*
+		Ii = imread("cam1.png", IMREAD_UNCHANGED);
+		imshow("Continous operation frame", Ii);
+		waitKey(0);
 		*/
 		
-		Ii = imread("cam1.png", IMREAD_UNCHANGED);
-		//imshow("Continous operation frame", Ii);
-		//waitKey(0);
-		//Ii.convertTo(Ii, CV_64FC1);
 		
 		// Estimate pose 
 		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K);
@@ -697,7 +687,7 @@ int main ( int argc,char **argv ) {
 			iter++;
 		}
 		else {
-			Ii = imread("cam2.png", IMREAD_UNCHANGED);
+			//Ii = imread("cam2.png", IMREAD_UNCHANGED);
 			
 			int r_T = KLT_r_T;
 			int n = 2*r_T + 1;
@@ -711,20 +701,13 @@ int main ( int argc,char **argv ) {
 					temp_index++;
 				} 
 			}
-			imshow("continuous Ii_1",Ii_1);
-			waitKey(0);
-			imshow("continuous Ii", Ii);
-			waitKey(0);
-			
 			// Find the Kroeneckerproduct 
 			Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
 			
-			cout << "Iter 2" << endl;
 			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix, extracted_keypoints, dwdx);
 			cout << "ContinuousCandidateKeypoints" << endl;
-			cout << Si.Ci << endl;
+			cout << "Number of keypoints = " << Si.Ci.cols << endl;
 			
-			waitKey(0);
 			tie(Si, extracted_keypoints) = triangulateNewLandmarks( Si, K, transformation_matrix, threshold_angle);
 		}
 		
@@ -746,12 +729,7 @@ int main ( int argc,char **argv ) {
 		}
 		imshow("Corners from Si.Ci", Ii);
 		waitKey(0);
-		*/
-		imshow("Ii_1",Ii_1);
-		waitKey(0);
-		imshow("Ii", Ii);
-		waitKey(0);
-		
+				
 		// Draw Corners from Si.Ci 
 		cout << "Si.Ci" << endl;
 		cout << Si.Ci << endl;
@@ -761,17 +739,15 @@ int main ( int argc,char **argv ) {
 		
 		cout << "Si.Ti" << endl;
 		//cout << Si.Ti << endl;
+		*/
 		
 		// Resert old values 
 		//Ii_1.copyTo(Ii);
 		Ii.copyTo(Ii_1);
 		Si_1 = Si;
 		cout << "Update of Si.num_candidates = " << Si.num_candidates << endl;
-		
-		cout << "Si_1.Pi and number of keypoints = " << Si_1.Pi.cols << endl;
-		cout << Si_1.Pi << endl;
-		cout << "Si_1.Xi and number of 3D landmarks = " << Si_1.Xi.cols << endl;
-		cout << Si_1.Xi << endl;
+		cout << "End of ContinVO. Numb. keypoints = " << Si_1.Pi.cols << endl;
+		cout << "End of ContinVO. Numb. landmarks = " << Si_1.Xi.cols << endl;
 		
 		// Debug variable
 		stop++;

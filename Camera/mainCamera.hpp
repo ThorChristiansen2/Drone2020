@@ -19,6 +19,9 @@
 //#include <iostream>
 #include "pthread.h"
 #include <cstdlib>
+#include <ctime>
+#include <ratio>
+#include <chrono>
 //#include "gperftools/profiler.h"
 
 using namespace cv;
@@ -28,17 +31,23 @@ using Matrix = Numeric_lib::Matrix<double,2>;
 using Vector = Numeric_lib::Matrix<double,1>;
 
 // Variables to define
+// Harris corner
+#define Harris_threads 30
+
 // KLT
 #define KLT_r_T 11
 #define KLT_num_iters 20
-#define KLT_lambda 0.1
+#define KLT_lambda 0.6
+
 // Num candidate keypoints
 #define num_candidate_keypoints 30
 
-/*
- * Usually, you have to write cv::Mat, but since you have written 'using 
- * namespace cv', this is not necessary. 
-*/ 
+// Ransac localization
+#define ransac_pixel_tolerance 15 
+#define ransac_min_inlier_count 10 
+
+// triangulateNewLandmarks
+#define new_landmarks_threshold_angle 20
 
 // For the continous operation at struct is made. 
 struct state {
@@ -61,6 +70,16 @@ struct state {
 };
 
 
+struct harris_data {
+		//int thread_id;
+		Mat matrice;
+		Mat thread_dst;
+		int num_keypoints;
+		int thread_non_max_suppres;
+		int left_corner_y;
+		int left_corner_x;
+};
+
 struct thread_data {
 		//int thread_id;
 		Mat Ii_1_gray;
@@ -71,11 +90,13 @@ struct thread_data {
 };
 
 // SIT = SIFT Descriptor thread struct
+/*
 struct SIT {
 	Mat image_gray; // 
 	Mat keypoints; 	// 2xM matrix
 	Mat descriptors;
 };
+*/
 
 namespace Harris {
 	Mat corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression); 

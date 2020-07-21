@@ -39,6 +39,12 @@ pthread.h
 ../Camera/pthread.h
 cstdlib
 -
+ctime
+-
+ratio
+-
+chrono
+-
 
 ../libfiles/src/say-hello/hello.hpp
 
@@ -50,8 +56,6 @@ say-hello/hello.hpp
 mainCamera.hpp
 /home/pi/GitHub/Drone2020/Program/mainCamera.hpp
 unistd.h
--
-ctime
 -
 cstdlib
 -
