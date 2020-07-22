@@ -367,12 +367,12 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression)
 	// Define variables related to Harris corner
 	int blockSize = 9; 
 	int apertureSize = 3;
-	double k = 0.08;		// Magic parameter 
+	double k = 0.04;		// Magic parameter 
 	//int thres = 200;	
 	// Parameters before: blocksize = 2, aperturesize = 3, thres = 200, k = 0.04
 	
 	// Variables related to Non Maximum suppression 
-	int NMSBox = 5;
+	int NMSBox = 7;
 	int boundaries = 10; // Boundaries in the image 
 	
 	Mat dst = Mat::zeros( src.size(), CV_32FC1 );

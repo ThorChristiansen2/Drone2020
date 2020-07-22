@@ -120,7 +120,6 @@ void *functionKLT(void *threadarg) {
 tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cout << "Begin initialization" << endl;
 	
-	high_resolution_clock::time_point t11 = high_resolution_clock::now();
 	
 	// Transform color images to gray images
 	Mat I_i0_gray, I_i1_gray;
@@ -129,85 +128,28 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	Mat emptyMatrix;
 	
-	//high_resolution_clock::time_point t1 = high_resolution_clock::now();
-	// Get Feature points
+	high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	
 	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 210, emptyMatrix); // Number of maximum keypoints
-	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
-	//duration<double> time_span = duration_cast<duration<double>>(t2-t1);
-	//cout << "Finding keypoints_I_i0 took = " << time_span.count() << " seconds" << endl;
 	
-	
+	high_resolution_clock::time_point t2 = high_resolution_clock::now();
+	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
+	cout << "Finding keypoints_I_i0 took = " << time_span.count() << " seconds" << endl;
 	/*
 	const char* text0 = "Detected corners in frame I_i0";
 	drawCorners(I_i0, keypoints_I_i0, text0);
 	waitKey(0
 	*/
-	
-	
-	
-	/*
-	// ######################### KLT ######################### 
-	cout << "KLT " << endl;
-	Mat kpold = Mat::zeros(3, keypoints_I_i0.dim1(), CV_64FC1);
-	
-	//cout << "Performing KLT " << endl;
-	int r_T = 15; 
-	int num_iters = 50; 
-	double lambda = 0.1;
-	int nr_keep = 0;
-	Mat delta_keypoint = Mat::zeros(3, 1, CV_64FC1);
-	Mat x_T = Mat::zeros(1, 2, CV_64FC1); // Interest point
-	for (int i = 0; i < keypoints_I_i0.dim1(); i++) {
-		//cout << "New iteration" << endl;
-		x_T.at<double>(0,0) = keypoints_I_i0(i,1);
-		x_T.at<double>(0,1) = keypoints_I_i0(i,2);
-		cout << "Coordinates x_T: (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ")" << endl;
 
-		delta_keypoint = KLT::trackKLTrobustly(I_i0_gray, I_i1_gray, x_T, r_T, num_iters, lambda);
-		
-		if (delta_keypoint.at<double>(2,0) == 1) {
-			nr_keep++;
-			kpold.at<double>(2,i) = 1; // The keypoint is reliably matched
-		}
-		cout << "Mistake " << endl;
-		cout << keypoints_I_i0(i,0);
-		kpold.at<double>(0,i) = delta_keypoint.at<double>(0,0) + keypoints_I_i0(i,1); // x 
-		kpold.at<double>(1,i) = delta_keypoint.at<double>(1,0) + keypoints_I_i0(i,2); // y
-		cout << "kpold: (" << kpold.at<double>(0,i) << "," << kpold.at<double>(1,i) << ") and keep = " << delta_keypoint.at<double>(2,0)  << endl;
-	}
-	cout << "Ready to draw corners" << endl;
-	for (int k = 0; k < kpold.cols; k++) {
-		double x = kpold.at<double>(0,k);
-		double y = kpold.at<double>(1,k);
-		circle (I_i1, Point(y,x), 5, Scalar(200), 2,8,0);
-	}
-	imshow("Corners with outliers", I_i1);
-	waitKey(0);
-	
-	//cout << "Done finding keypoints" << endl;
-	Mat keypoints_I_i1 = Mat::zeros(2, nr_keep, CV_64FC1);
-	Mat keypoints_I_i0_new = Mat::zeros(2, nr_keep, CV_64FC1);
-	
-	nr_keep = 0; 
-	for (int j = 0; j < keypoints_I_i1.cols; j++) {
-		if (kpold.at<double>(2,j) == 1) {
-			keypoints_I_i1.at<double>(0, nr_keep) = kpold.at<double>(0, j);
-			keypoints_I_i1.at<double>(1, nr_keep) = kpold.at<double>(1, j);
-			keypoints_I_i0_new.at<double>(0, nr_keep) = keypoints_I_i0(j,1);
-			keypoints_I_i0_new.at<double>(1, nr_keep) = keypoints_I_i0(j,2);
-			nr_keep++;
-		}
-	}
-	int N = nr_keep--;
-	*/
 	
 	
-	//high_resolution_clock::time_point t3 = high_resolution_clock::now();
-	// ######################### SIFT ######################### 
+	high_resolution_clock::time_point t3 = high_resolution_clock::now();
+	
 	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 210, emptyMatrix); // Number of keypoints that is looked for
-	//high_resolution_clock::time_point t4 = high_resolution_clock::now();
-	//duration<double> time_span1 = duration_cast<duration<double>>(t4-t3);
-	//cout << "Finding keypoints_I_i1 took = " << time_span1.count() << " seconds" << endl;
+	
+	high_resolution_clock::time_point t4 = high_resolution_clock::now();
+	duration<double> time_span1 = duration_cast<duration<double>>(t4-t3);
+	cout << "Finding keypoints_I_i1 took = " << time_span1.count() << " seconds" << endl;
 	/*
 	const char* text1 = "Detected corners in frame I_i1";
 	drawCorners(I_i1, keypoints_I_i1, text1);
@@ -215,37 +157,42 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	*/
 	
 	
-
+	// ######################### SIFT ######################### 
 	//Finding SIFT::descriptors without parallelization 
-	// Maybe use KLT instead 
-	//high_resolution_clock::time_point t5 = high_resolution_clock::now();
+	high_resolution_clock::time_point t5 = high_resolution_clock::now();
+	
 	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
-	//cout << "descriptors_I_i0 found" << endl;
-	//high_resolution_clock::time_point t6 = high_resolution_clock::now();
-	//duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
-	//cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
 	
-	//high_resolution_clock::time_point t7 = high_resolution_clock::now();
+	high_resolution_clock::time_point t6 = high_resolution_clock::now();
+	duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
+	cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
+	
+	
+	high_resolution_clock::time_point t7 = high_resolution_clock::now();
+	
 	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
-	//high_resolution_clock::time_point t8 = high_resolution_clock::now();
-	//duration<double> time_span3 = duration_cast<duration<double>>(t8-t7);
-	//cout << "Finding descriptors_I_i0 took = " << time_span3.count() << " seconds" << endl;
 	
-	//cout << "descriptors_I_i1 found" << endl;
+	high_resolution_clock::time_point t8 = high_resolution_clock::now();
+	duration<double> time_span3 = duration_cast<duration<double>>(t8-t7);
+	cout << "Finding descriptors_I_i0 took = " << time_span3.count() << " seconds" << endl;
 	
 	
-	//high_resolution_clock::time_point t9 = high_resolution_clock::now();
-	// Match descriptors 
+	
+	high_resolution_clock::time_point t9 = high_resolution_clock::now();
+	
+	// Match descriptors --> Optimize this part of the code because it takes the longest time to run
 	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
-	//high_resolution_clock::time_point t10 = high_resolution_clock::now();
-	//duration<double> time_span4 = duration_cast<duration<double>>(t10-t9);
-	//cout << "Finding matches took = " << time_span4.count() << " seconds" << endl;
+	
+	high_resolution_clock::time_point t10 = high_resolution_clock::now();
+	duration<double> time_span4 = duration_cast<duration<double>>(t10-t9);
+	cout << "Finding matches took = " << time_span4.count() << " seconds" << endl;
 	
 	// Find Point correspondences
 	// Points from image 0 in row 1 and row 2 
 	// Points from image 1 in row 3 and row 	
 	int N = matches.dim1();
 	
+	high_resolution_clock::time_point t11 = high_resolution_clock::now();
 	
 	cout << "Number of matched keypoints N in initializaiton = " << N << endl;
 	// For plotting
@@ -364,16 +311,45 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat Ii_gray, Ii_1_gray;
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );
-	
+
 	imshow("processFrame Ii_1", Ii_1);
 	imshow("processFrame Ii", Ii);
 	waitKey(0);
 	
+	Mat emptyMatrix;
+	
+	// Not necessary since you already have the keypoints
+	//Mat keypoints_Ii_1 = Harris::corner(Ii_1, Ii_1_gray, 210, emptyMatrix);
+	Matrix descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, keypoints_Ii_1);
+	
+	
+	Mat keypoints_Ii = Harris::corner(Ii, Ii_1_gray, 210, emptyMatrix);
+	Matrix descriptors_Ii = SIFT::FindDescriptors(Ii_1_gray, keypoints_Ii);
+	
+	// Match descriptors - Should be optimized
+	Matrix matches = SIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
+	
+	int N = matches.dim1();
+	Mat keypoints_i = Mat::zeros(2, N, CV_64FC1);
+	
+	Mat corresponding_landmarks;
+	for (int i = 0; i < N; i++) {
+		// Config1
+		//  #### SIFT #### 
+
+		keypoints_i.at<double>(0,i) = keypoints_Ii.at<double>(1, matches(i,0)); // y-coordinate in image
+		keypoints_i.at<double>(1,i) = keypoints_Ii.at<double>(2, matches(i,0)); // x-coordinate in image
+		
+	}
+	
+	
+	/*
 	int nr_keep = 0;
 	//Mat kpold = Mat::zeros(3, Si_1.k, CV_64FC1);
 	//Mat delta_keypoint;
 	
 	//high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	
 	
 	int NUM_THREADS = Si_1.k;
 	
@@ -421,6 +397,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	//cout << "Mistake hej" << endl;
 	hconcat(keypoint_container, keypoints_i);
 	hconcat(landmark_container, corresponding_landmarks);
+	*/
+	
 	
 	/*
 	cout << "Print of keypoints_i" << endl;
