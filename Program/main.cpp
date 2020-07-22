@@ -161,7 +161,13 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	//Finding SIFT::descriptors without parallelization 
 	high_resolution_clock::time_point t5 = high_resolution_clock::now();
 	
-	Matrix descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
+	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
+	
+	/*
+	cout << "descriptors_I_i0" << endl;
+	cout << descriptors_I_i0 << endl;
+	waitKey(0);
+	*/
 	
 	high_resolution_clock::time_point t6 = high_resolution_clock::now();
 	duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
@@ -170,7 +176,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	high_resolution_clock::time_point t7 = high_resolution_clock::now();
 	
-	Matrix descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
+	Mat descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
 	
 	high_resolution_clock::time_point t8 = high_resolution_clock::now();
 	duration<double> time_span3 = duration_cast<duration<double>>(t8-t7);
@@ -190,7 +196,16 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// Find Point correspondences
 	// Points from image 0 in row 1 and row 2 
 	// Points from image 1 in row 3 and row 	
-	int N = matches.dim1();
+	cout << "Dimensions of matches = (" << matches.dim1() << "," << matches.dim2() << ")" << endl;
+	int N = matches.dim2();
+	cout << "N = " << N << endl;
+	cout << "matches = " << endl;
+	for (int r = 0; r < matches.dim1(); r++) {
+		for (int c = 0; c < matches.dim2(); c++) {
+			cout << matches(r,c) << ", " << endl;
+		}
+		cout << "" << endl;
+	}
 	
 	high_resolution_clock::time_point t11 = high_resolution_clock::now();
 	
@@ -206,19 +221,19 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		// Config1
 		//  #### SIFT #### 
 		// Be aware of differences in x and y
-		points1[i] = Point2f(keypoints_I_i0.at<double>(0, matches(i,1)),keypoints_I_i0.at<double>(1, matches(i,1)));
-		points2[i] = Point2f(keypoints_I_i1.at<double>(0, matches(i,0)),keypoints_I_i1.at<double>(1, matches(i,0)));
+		points1[i] = Point2f(keypoints_I_i0.at<double>(0, matches(0,i)),keypoints_I_i0.at<double>(1, matches(0,i)));
+		points2[i] = Point2f(keypoints_I_i1.at<double>(0, matches(1,i)),keypoints_I_i1.at<double>(1, matches(1,i)));
 		
-		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(0, matches(i,1)); // y-coordinate in image 
-		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(1, matches(i,1)); // x-coordinate in image
-		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(0, matches(i,0)); // y-coordinate in image
-		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(1, matches(i,0)); // x-coordinate in image
+		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(0, matches(0,i)); // y-coordinate in image 
+		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(1, matches(0,i)); // x-coordinate in image
+		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(0, matches(1,i)); // y-coordinate in image
+		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(1, matches(1,i)); // x-coordinate in image
+
 		
-		
-		double y = keypoints_I_i1.at<double>(0, matches(i,0));
-		double x = keypoints_I_i1.at<double>(1, matches(i,0));
-		double y2 = keypoints_I_i0.at<double>(0, matches(i,1));
-		double x2 = keypoints_I_i0.at<double>(1, matches(i,1));
+		double y = keypoints_I_i1.at<double>(0, matches(1,i));
+		double x = keypoints_I_i1.at<double>(1, matches(1,i));
+		double y2 = keypoints_I_i0.at<double>(0, matches(0,i));
+		double x2 = keypoints_I_i0.at<double>(1, matches(0,i));
 		line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
 		circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
 		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
@@ -321,11 +336,11 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	// Not necessary since you already have the keypoints
 	//Mat keypoints_Ii_1 = Harris::corner(Ii_1, Ii_1_gray, 210, emptyMatrix);
-	Matrix descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
+	Mat descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
 	
 	
 	Mat keypoints_Ii = Harris::corner(Ii, Ii_gray, 210, emptyMatrix);
-	Matrix descriptors_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
+	Mat descriptors_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
 	
 	// Match descriptors - Should be optimized
 	Matrix matches = SIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
@@ -513,12 +528,12 @@ int main ( int argc,char **argv ) {
 	 
 	
 	// Test billeder
-	I_i0 = imread("cam1.png", IMREAD_UNCHANGED);
+	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
 	imshow("Frame I_i0 displayed", I_i0);
 	waitKey(0);
 	
-	I_i1 = imread("cam0.png", IMREAD_UNCHANGED);
+	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
@@ -608,8 +623,19 @@ int main ( int argc,char **argv ) {
 	cout << transformation_matrix << endl;
 	
 	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	// ############### VO Continuous ###############
-	bool continueVOoperation = true;
+	bool continueVOoperation = false;
 	bool pipelineBroke = false;
 	bool output_T_ready = true;
 	

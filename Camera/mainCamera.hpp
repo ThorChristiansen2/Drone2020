@@ -89,6 +89,16 @@ struct thread_data {
 		int keep_point;
 };
 
+struct thread_match {
+		//int thread_id;
+		int descriptor_n2_id;
+		Mat n2;
+		Mat n1;
+		int is_inlier;
+		double lowest_distance;
+		double match_in_n1;
+};
+
 // SIT = SIFT Descriptor thread struct
 /*
 struct SIT {
@@ -105,8 +115,8 @@ namespace Harris {
 }	// Harris Corner
 
 namespace SIFT {
-	Matrix FindDescriptors(Mat src, Mat keypoints);
-	Matrix matchDescriptors(Matrix descriptor1, Matrix descriptor2);
+	Mat FindDescriptors(Mat src_gray, Mat keypoints);
+	Matrix matchDescriptors(Mat descriptor1, Mat descriptor2);
 	
 }	// SIFT
 

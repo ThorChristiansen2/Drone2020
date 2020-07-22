@@ -76,6 +76,9 @@ void *functionKLT(void *threadarg) {
    pthread_exit(NULL);
 }
 
+/* Function used to parallelize code in Harris::Corner detector
+ * 
+ */
 void *functionHarris(void *threadarg) {
    struct harris_data *my_harris;
    my_harris = (struct harris_data *) threadarg;
@@ -114,6 +117,52 @@ void *functionHarris(void *threadarg) {
    pthread_exit(NULL);
 }
 
+void *functionMatch(void *threadarg) {
+   struct thread_match *my_data;
+   my_data = (struct thread_match *) threadarg;
+   
+   double min_d1 = std::numeric_limits<double>::infinity();
+   double match_d1;
+   double min_d2 = std::numeric_limits<double>::infinity();
+   
+   int nr_descriptors = my_data->n1.rows;
+   
+   int dimension = my_data->n1.cols;
+   for (int i = 0; i < nr_descriptors; i++) {
+	   double SSD = 0;
+	   for (int k = 0; k < dimension; k++) {
+		   SSD = SSD + pow(my_data->n1.at<double>(i,k) - my_data->n2.at<double>(0,k) ,2.0);
+	   }
+	   if (SSD < min_d1) {
+		   // Update minimum distance to d2
+		   min_d2 = min_d1;
+		   
+		   // Update minimum distance to d1 
+		   min_d1 = SSD;
+		   // Update id for match
+		   match_d1 = i;
+		
+	   }
+	   else if (SSD < min_d2) {
+		   min_d2 = SSD;
+	   }
+   }
+   cout << "min_d1 = " << min_d1 << endl;
+   cout << "min_d2 = " << min_d2 << endl;
+   cout << "match_d1 = " << match_d1 << endl;
+   
+   // Make 0.8 a variable that can be tuned 
+   if (min_d1/min_d2 < 0.8) {
+	   my_data->is_inlier = 1;
+	   my_data->lowest_distance = min_d1;
+	   my_data->match_in_n1 = match_d1;
+   }
+   cout << "is inlier = " << my_data->is_inlier << endl;
+   
+   pthread_exit(NULL);
+}
+
+
 
 
 
@@ -139,14 +188,108 @@ Mat subImage(int number_subimages, int boundary, int height, int width, int dim1
 }
 */
 
-// Match SIFT Descriptors 
+
+// Match SIFT Descriptors
+/* Objective: Function that matches keypoints in frame 2 to keypoints in frame 1 using the descriptors
+ * for the keypoints in frame 2 and the descriptors for the keypoints in frame 1
+ * Inputs:
+ * descriptor1 - Matrix (Bjarnes matrix) of size n1x128
+ * descriptor2 - Matrix (Bjarnes matrix) of size n2x128
+ * Output:
+ * Matrix of size 2 x min(n1,n2) depending on how many keypoints there are
+ */
+Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
+
+	cout << "Inside matchDescriptors " << endl;
+
+	int n1 = descriptor1.rows;	// Matrix containing descriptors for keypoints in image 0
+	int n2 = descriptor2.rows;	// Matrix containing descriptors for keypoints in image 1
+	
+	Matrix matches(2,n1);
+	cout << "dimensions of matches = (" << matches.dim1() << "," << matches.dim2() << ")" << endl;
+	waitKey(0);
+	
+	/*
+	 * 'int descriptor_n2_id;
+		Matrix n1;
+		int is_inlier;
+		double lowest_distance;
+		int match_in_n1;
+		*/
+		
+	cout << "descriptor1" << endl;
+	cout << descriptor1 << endl;
+	
+	int NUM_THREADS = n2;
+	pthread_t threads[NUM_THREADS];
+	struct thread_match td[NUM_THREADS];
+	int i, rc;
+	for (i = 0; i < NUM_THREADS; i++) {
+		td[i].descriptor_n2_id = i;
+		td[i].n2 = descriptor2.row(i);
+		td[i].n1 = descriptor1;
+		td[i].is_inlier = 0;
+		td[i].lowest_distance = 0;
+		td[i].match_in_n1 = 0;
+		
+		
+		rc = pthread_create(&threads[i], NULL, functionMatch, (void *)&td[i]);
+	}
+	void* ret = NULL;
+	int nr_matches = 0;
+	for (int k = 0; k < NUM_THREADS; k++) {
+		pthread_join(threads[k], &ret);
+		waitKey(0);
+		cout << "td[k].is_inlier = " << td[k].is_inlier << endl;
+		if (td[k].is_inlier == 1) {
+			
+			double distance = td[k].lowest_distance;
+			cout << "distance = " << distance << endl;
+			double index = td[k].match_in_n1;
+			cout << "index = " << index << endl;
+			cout << "Current matches(0,index) = " << matches(0,index) << endl;
+			if (matches(0,index) == 0) {
+				matches(0,index) = distance;
+				matches(1,index) = index;
+				nr_matches++;
+				
+			}
+			else if (distance < matches(0,index)) {
+				matches(0,index) = distance;
+				matches(1,index) = index;
+			}
+		}
+	}
+	
+	for (int r = 0; r < matches.dim1(); r++) {
+		for (int c = 0; c < matches.dim2(); c++) {
+			cout << matches(r,c) << ", " << endl;
+		}
+		cout << "" << endl;
+	}
+	
+	Matrix valid_matches(2, nr_matches);
+	int index = 0;
+	for (int q = 0; q < n1; q++) {
+		if (matches(0,q) != 0) {
+			valid_matches(0,index) = q;
+			valid_matches(1,index) = matches(1,q);
+		}
+	}
+	
+	
+	return valid_matches;
+}
+
+/*
+// Match SIFT Descriptors - Old function
 Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 
 	int n1 = descriptor1.dim1();	// Matrix containing descriptors for keypoints in image 0
 	int n2 = descriptor2.dim1();	// Matrix containing descriptors for keypoints in image 1
 	
 	// Threshold on the euclidean distance between keypoints 
-	double threshold = 1000;
+	double threshold = 200;
 	
 	// Match keypoints in frame 2 to keypoints in frame 1 
 	Matrix matches(n2,5);
@@ -226,6 +369,7 @@ Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 		
 	return valid_matches;
 }
+*/
 
 void MatType( Mat inputMat ) {
 	
@@ -696,14 +840,15 @@ void *FindDescriptors(void *threadarg) {
 
 
 // Find SIFT Desriptors  without parallelization
-Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
+Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	
 	// Simplification of SIFT
 	// Maybe the image should be smoothed first with a Gaussian Kernel
 	int n = keypoints.cols;
 	
 	// Initialize matrix containing keypoints descriptors
-	Matrix Descriptors(n,128);
+	//Matrix Descriptors(n,128);
+	Mat Descriptors = Mat::zeros(n, 128, CV_64FC1);
 	
 	// Find Image gradients
 	Mat grad_x, grad_y;
@@ -797,7 +942,9 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 				Histogram = circularShift(Histogram);
 				for (int ii = 0; ii < Histogram.dim2(); ii++) {
 					//Descriptors[i].slice(nindex*8,nindex*8+ii) = Histogram(0,ii);
-					Descriptors(i,nindex*8+ii) = Histogram(0,ii);
+					//Descriptors(i,nindex*8+ii) = Histogram(0,ii);
+					double value = Histogram(0,ii);
+					Descriptors.at<double>(i,nindex*8+ii) = value;
 				}
 				nindex++;
 			}
@@ -805,9 +952,17 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 		
 		// Normalizing the vector 
 		double SumOfSquares = 0;
-		for (int ii = 0; ii < Descriptors.dim2(); ii++) {
-			SumOfSquares = SumOfSquares + Descriptors(i,ii)*Descriptors(i,ii);
+		for (int ii = 0; ii < Descriptors.cols; ii++) {
+			SumOfSquares = SumOfSquares + Descriptors.at<double>(i,ii)*Descriptors.at<double>(i,ii);
 		}
+		
+		
+		for (int ii = 0; ii < Descriptors.cols; ii++) {
+			Descriptors.at<double>(i,ii) = Descriptors.at<double>(i,ii)/sqrt(SumOfSquares);
+		}
+		
+		
+		
 
 	// Scale the norms of the gradients by multiplying a the graidents with a gaussian
 	// centered in the keypoint and with Sigma_w = 1.5*16. 
