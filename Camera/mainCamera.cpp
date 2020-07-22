@@ -105,9 +105,8 @@ void *functionHarris(void *threadarg) {
 			   my_harris->thread_dst.at<float>(y+r,x+c) = 0;
 		   }
 	   }
-	   my_harris->matrice.at<double>(0,i) = max;
-	   my_harris->matrice.at<double>(1,i) = y + my_harris->left_corner_y;
-	   my_harris->matrice.at<double>(2,i) = x + my_harris->left_corner_x;
+	   my_harris->matrice.at<double>(0,i) = y + my_harris->left_corner_y;
+	   my_harris->matrice.at<double>(1,i) = x + my_harris->left_corner_x;
    }
    
    
@@ -147,7 +146,7 @@ Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 	int n2 = descriptor2.dim1();	// Matrix containing descriptors for keypoints in image 1
 	
 	// Threshold on the euclidean distance between keypoints 
-	double threshold = 400;
+	double threshold = 1000;
 	
 	// Match keypoints in frame 2 to keypoints in frame 1 
 	Matrix matches(n2,5);
@@ -421,7 +420,7 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression)
 	
 	//Define number of keypoints
 	// possible mistake with dividing the keypoints into cols.
-	Mat keypoints = Mat::zeros(3, keypoints_limit, CV_64FC1);
+	Mat keypoints = Mat::zeros(2, keypoints_limit, CV_64FC1);
 	
 	// Create indices matrix
 	int NUM_THREADS = Harris_threads;
@@ -729,8 +728,8 @@ Matrix SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	
 	// For each keypoint
 	for (int i = 0; i < n; i++) {
-		int y = keypoints.at<double>(1, i);
-		int x = keypoints.at<double>(2, i); 
+		int y = keypoints.at<double>(0, i);
+		int x = keypoints.at<double>(1, i); 
 
 		
 		// Extract a patch of size 16,16 from the image with x-gradients and y-gradients

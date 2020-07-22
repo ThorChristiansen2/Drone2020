@@ -30,7 +30,8 @@
  * See MatLab code week 3 for an efficient way to find Harris Corners 
  * When using KLT: Remember to use gray-scale images // Did not work with resizing the image with a factor of 4 
  * Implementation of ransac  in pose estimation in processFrame function 
- * Resize the images with a factor of 4 and also the resize the keypoints with a factor of 4 before processFrame to enhance speed
+ * 
+ * Optimize and make match descriptors better - see why there is something wrong with it
  * ########################
 */
 
@@ -87,8 +88,8 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
 // ####################### drawCorners #######################
 void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
 	for (int k = 0; k < keypoints.cols; k++) {
-		double y = keypoints.at<double>(1, k);
-		double x = keypoints.at<double>(2, k);
+		double y = keypoints.at<double>(0, k);
+		double x = keypoints.at<double>(1, k);
 		circle (img, Point(x,y), 5, Scalar(200), 2,8,0);
 	}
 	imshow(frame_name, img);
@@ -130,31 +131,30 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	
-	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 210, emptyMatrix); // Number of maximum keypoints
+	Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 180, emptyMatrix); // Number of maximum keypoints
 	
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
 	cout << "Finding keypoints_I_i0 took = " << time_span.count() << " seconds" << endl;
-	/*
+	
 	const char* text0 = "Detected corners in frame I_i0";
 	drawCorners(I_i0, keypoints_I_i0, text0);
-	waitKey(0
-	*/
+	waitKey(0);
 
 	
 	
 	high_resolution_clock::time_point t3 = high_resolution_clock::now();
 	
-	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 210, emptyMatrix); // Number of keypoints that is looked for
+	Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 180, emptyMatrix); // Number of keypoints that is looked for
 	
 	high_resolution_clock::time_point t4 = high_resolution_clock::now();
 	duration<double> time_span1 = duration_cast<duration<double>>(t4-t3);
 	cout << "Finding keypoints_I_i1 took = " << time_span1.count() << " seconds" << endl;
-	/*
+	
 	const char* text1 = "Detected corners in frame I_i1";
 	drawCorners(I_i1, keypoints_I_i1, text1);
 	waitKey(0);
-	*/
+
 	
 	
 	// ######################### SIFT ######################### 
@@ -206,27 +206,27 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		// Config1
 		//  #### SIFT #### 
 		// Be aware of differences in x and y
-		points1[i] = Point2f(keypoints_I_i0.at<double>(1, matches(i,1)),keypoints_I_i0.at<double>(2, matches(i,1)));
-		points2[i] = Point2f(keypoints_I_i1.at<double>(1, matches(i,0)),keypoints_I_i1.at<double>(2, matches(i,0)));
+		points1[i] = Point2f(keypoints_I_i0.at<double>(0, matches(i,1)),keypoints_I_i0.at<double>(1, matches(i,1)));
+		points2[i] = Point2f(keypoints_I_i1.at<double>(0, matches(i,0)),keypoints_I_i1.at<double>(1, matches(i,0)));
 		
-		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(1, matches(i,1)); // y-coordinate in image 
-		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(2, matches(i,1)); // x-coordinate in image
-		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(1, matches(i,0)); // y-coordinate in image
-		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(2, matches(i,0)); // x-coordinate in image
+		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(0, matches(i,1)); // y-coordinate in image 
+		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(1, matches(i,1)); // x-coordinate in image
+		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(0, matches(i,0)); // y-coordinate in image
+		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(1, matches(i,0)); // x-coordinate in image
 		
-		/*
-		double y = keypoints_I_i1.at<double>(1, matches(i,0));
-		double x = keypoints_I_i1.at<double>(2, matches(i,0));
-		double y2 = keypoints_I_i0.at<double>(1, matches(i,1));
-		double x2 = keypoints_I_i0.at<double>(2, matches(i,1));
+		
+		double y = keypoints_I_i1.at<double>(0, matches(i,0));
+		double x = keypoints_I_i1.at<double>(1, matches(i,0));
+		double y2 = keypoints_I_i0.at<double>(0, matches(i,1));
+		double x2 = keypoints_I_i0.at<double>(1, matches(i,1));
 		line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
 		circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
 		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
-		*/
+		
 		
 	}
-	//imshow("Match",I_i1);
-	//waitKey(0);
+	imshow("Match",I_i1);
+	waitKey(0);
 	
 	
 	// Find fudamental matrix 
@@ -316,30 +316,37 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	imshow("processFrame Ii", Ii);
 	waitKey(0);
 	
+	
 	Mat emptyMatrix;
 	
 	// Not necessary since you already have the keypoints
 	//Mat keypoints_Ii_1 = Harris::corner(Ii_1, Ii_1_gray, 210, emptyMatrix);
-	Matrix descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, keypoints_Ii_1);
+	Matrix descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
 	
 	
-	Mat keypoints_Ii = Harris::corner(Ii, Ii_1_gray, 210, emptyMatrix);
-	Matrix descriptors_Ii = SIFT::FindDescriptors(Ii_1_gray, keypoints_Ii);
+	Mat keypoints_Ii = Harris::corner(Ii, Ii_gray, 210, emptyMatrix);
+	Matrix descriptors_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
 	
 	// Match descriptors - Should be optimized
 	Matrix matches = SIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
 	
 	int N = matches.dim1();
-	Mat keypoints_i = Mat::zeros(2, N, CV_64FC1);
 	
-	Mat corresponding_landmarks;
+	Mat keypoints_i = Mat::zeros(2, N, CV_64FC1);
+	Mat corresponding_landmarks = Mat::zeros(3, N, CV_64FC1); 
+	cout << "After update" << endl;
 	for (int i = 0; i < N; i++) {
 		// Config1
 		//  #### SIFT #### 
-
-		keypoints_i.at<double>(0,i) = keypoints_Ii.at<double>(1, matches(i,0)); // y-coordinate in image
-		keypoints_i.at<double>(1,i) = keypoints_Ii.at<double>(2, matches(i,0)); // x-coordinate in image
+	
+		// Turn the kyepoints so it becomes (u,v)
+		keypoints_i.at<double>(0,i) = keypoints_Ii.at<double>(1, matches(i,0)); // x-coordinate in image
+		keypoints_i.at<double>(1,i) = keypoints_Ii.at<double>(0, matches(i,0)); // y-coordinate in image
 		
+		//Si_1.Xi.col(matches(i,0)).copyTo(corresponding_landmarks.col(i));
+		corresponding_landmarks.at<double>(0,i) = Si_1.Xi.at<double>(0, matches(i,0));
+		corresponding_landmarks.at<double>(1,i) = Si_1.Xi.at<double>(1, matches(i,0));
+		corresponding_landmarks.at<double>(2,i) = Si_1.Xi.at<double>(2, matches(i,0));
 	}
 	
 	
@@ -400,6 +407,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	*/
 	
 	
+	
 	/*
 	cout << "Print of keypoints_i" << endl;
 	cout << keypoints_i << endl;
@@ -407,8 +415,8 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cout << corresponding_landmarks << endl;	
 	*/	
 	cout << "Process Frame" << endl;
-	cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
-	cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
+	cout << "Number of keypoints = " << keypoints_i.cols << endl;
+	cout << "Number of landmarks = " << corresponding_landmarks.cols << endl;
 	
 	
 	// Estimate the new pose using RANSAC and P3P algorithm 
@@ -505,12 +513,12 @@ int main ( int argc,char **argv ) {
 	 
 	
 	// Test billeder
-	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
+	I_i0 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
 	imshow("Frame I_i0 displayed", I_i0);
 	waitKey(0);
 	
-	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
+	I_i1 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
@@ -601,7 +609,7 @@ int main ( int argc,char **argv ) {
 	
 	
 	// ############### VO Continuous ###############
-	bool continueVOoperation = false;
+	bool continueVOoperation = true;
 	bool pipelineBroke = false;
 	bool output_T_ready = true;
 	
@@ -622,30 +630,32 @@ int main ( int argc,char **argv ) {
 	int stop = 0;
 	int iter = 0;
 	
-	while (continueVOoperation == true && pipelineBroke == false && stop < 5) {
+	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
 		cout << "Begin Continuous VO operation " << endl;
 		
-		
+		/*
 		// Take new image 
 		Camera.grab();
 		Camera.retrieve( Ii );
 		cout << "New image taken" << endl;
+		*/
 		
 		
 		/*
 		imshow("New Frame", Ii);
 		cout << "New image aquired" << endl;
 		waitKey(0);
+		*/
 		
 		cout << "Continuous Operation" << endl;
 		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	
-		/*
+		
 		Ii = imread("cam1.png", IMREAD_UNCHANGED);
 		imshow("Continous operation frame", Ii);
 		waitKey(0);
-		*/
+		
 		
 		
 		// Estimate pose 
