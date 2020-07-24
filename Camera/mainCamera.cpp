@@ -268,7 +268,7 @@ Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 }
 */
 
-
+/*
 // Match SIFT Descriptors - Old function that works
 Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 
@@ -358,7 +358,7 @@ Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 		
 	return valid_matches;
 }
-
+*/
 
 /*
 // Match SIFT Descriptors - Old function
@@ -449,6 +449,154 @@ Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 	return valid_matches;
 }
 */
+
+// New attempt to write code 
+/*
+ * 
+ * 
+ * 
+ */
+Mat SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
+
+	int descriptor_length = descriptor2.cols;
+	
+	int n1 = descriptor1.rows;	// Matrix containing descriptors for keypoints in image 0
+	int n2 = descriptor2.rows;	// Matrix containing descriptors for keypoints in image 1
+	
+	// To determine 
+	Mat match_n2 = Mat::zeros(n2, 5, CV_64FC1);
+	// 0 - Index of best match in n1 
+	// 1 - SSD for best match in n1
+	// 2 - Index of second best match in n1
+	// 3 - SSD for second best match in n1 
+	// 4 - Bool used to control whether the keypoint should be counted as an inlier
+	
+	Mat multiple_matches_n1 = Mat::zeros(n1, 2, CV_64FC1);
+	
+	int iter_n2, iter_n1, i;
+	for (iter_n2 = 0; iter_n2 < n2; iter_n2++) {
+		
+		// Closest match
+		int best_index_n1 = 0;
+		double d1 = std::numeric_limits<double>::infinity();
+		
+		// Second closest match
+		int second_best_index_n1 = 0;
+		double d2 = std::numeric_limits<double>::infinity();
+		
+		match_n2.at<double>(iter_n2, 0) = best_index_n1;
+		match_n2.at<double>(iter_n2, 1) = d1;
+		match_n2.at<double>(iter_n2, 2) = second_best_index_n1;
+		match_n2.at<double>(iter_n2, 3) = d2;
+		
+		
+		for (iter_n1 = 0; iter_n1 < n1; iter_n1++) {
+			double SSD = 0;
+			
+			// Find the SSD between descriptor in n2 and current descriptor in n1
+			for (i = 0; i < descriptor_length; i++) {
+				SSD = SSD + pow( descriptor2.at<double>(iter_n2,i) - descriptor1.at<double>(iter_n1,i) ,2.0);
+			} 
+			
+			// If this SSD is less than the best match
+			if ( SSD < match_n2.at<double>(iter_n2, 1) ) {
+				
+				// It should be also be one that is the closest to that specific desciptor in n1
+				if ( multiple_matches_n1.at<double>(iter_n1,1) == 0 ) {
+					
+					// Update second best 
+					match_n2.at<double>(iter_n2, 2) = match_n2.at<double>(iter_n2, 0);
+					match_n2.at<double>(iter_n2, 3) = match_n2.at<double>(iter_n2, 1);
+					
+					// Update best
+					match_n2.at<double>(iter_n2, 0) = iter_n1;
+					match_n2.at<double>(iter_n2, 1) = SSD;
+					
+					// Update in multiple match
+					multiple_matches_n1.at<double>(iter_n1,0) = iter_n2;
+					multiple_matches_n1.at<double>(iter_n1,1) = SSD;
+					
+					match_n2.at<double>(iter_n2, 4) = 0;
+					
+				}
+				else if ( SSD < multiple_matches_n1.at<double>(iter_n1,1) ) {
+					// Save index of previous best 
+					int temp_index = multiple_matches_n1.at<double>(iter_n1,0);
+					
+					// Update second best 
+					match_n2.at<double>(iter_n2, 2) = match_n2.at<double>(iter_n2, 0);
+					match_n2.at<double>(iter_n2, 3) = match_n2.at<double>(iter_n2, 1);
+					
+					// Update best
+					match_n2.at<double>(iter_n2, 0) = iter_n1;
+					match_n2.at<double>(iter_n2, 1) = SSD;
+					
+					// Update in multiple match
+					multiple_matches_n1.at<double>(iter_n1,0) = iter_n2;
+					multiple_matches_n1.at<double>(iter_n1,1) = SSD;
+					
+					match_n2.at<double>(iter_n2, 4) = 0;
+					
+					// Reset the previous best value
+					if ( match_n2.at<double>(temp_index, 0) == iter_n1) {
+						
+						match_n2.at<double>(temp_index, 4) = 0;
+					}
+					
+					
+				}
+				else {
+					match_n2.at<double>(iter_n2, 4) = 2;
+				}
+				
+			}
+			else if ( SSD < match_n2.at<double>(iter_n2, 3) ) {
+				
+				// Update Second best
+				match_n2.at<double>(iter_n2, 2) = iter_n1;
+				match_n2.at<double>(iter_n2, 3) = SSD;
+			}
+				
+		}
+		
+			
+	}
+	
+	
+	// Calculate distance ratio
+	int nr_valid_matches = 0;
+	int k;
+	for (k = 0; k < n2; k++) {
+		if (match_n2.at<double>(k, 4) != 2) {
+			double distance1 = match_n2.at<double>(k, 1);
+			double distance2 = match_n2.at<double>(k, 3);
+			double ratio = distance1/distance2;
+			if (ratio < 0.8) {
+				match_n2.at<double>(k, 4) = 1;
+				
+				nr_valid_matches++;
+			}
+		}
+		
+	}
+	
+	// Make matrix with valid matches
+	Mat valid_matches = Mat::zeros(2, nr_valid_matches, CV_64FC1);
+	int temp_value = 0;
+	for (int j = 0; j < n2; j++) {
+		if (match_n2.at<double>(j, 4) == 1) {
+			
+			valid_matches.at<double>(0, temp_value) = match_n2.at<double>(j, 0);
+			valid_matches.at<double>(1, temp_value) = j;
+			
+			temp_value++;
+		}
+	}
+	
+	return valid_matches;
+	
+}
+
 
 void MatType( Mat inputMat ) {
 	
@@ -927,15 +1075,9 @@ void *FindDescriptors(void *threadarg) {
 // Find SIFT Desriptors  without parallelization
 Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	
-	imshow("src_gray", src_gray);
-	waitKey(0);
-	
 	Mat src_gray_blurred;
 	GaussianBlur(src_gray, src_gray_blurred, Size(3,3), 5,5);
-	
-	imshow("src_gray_blurred", src_gray_blurred);
-	waitKey(0);
-	
+
 	// Simplification of SIFT
 	// Maybe the image should be smoothed first with a Gaussian Kernel
 	int n = keypoints.cols;

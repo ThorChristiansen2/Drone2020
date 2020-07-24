@@ -129,15 +129,17 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	Mat temp0, temp1, emptyMatrix;
 	
-	high_resolution_clock::time_point t11 = high_resolution_clock::now();
-	//high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	
+	high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	
 	//Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 210, emptyMatrix); // Number of maximum keypoints
 	int dim1 = I_i0_gray.rows;
 	int dim2 = I_i0_gray.cols;
 	Mat I_i0_resized = I_i0_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
-	imshow("I_i0_resized", I_i0_resized);
-	waitKey(0);
+	
+	//imshow("I_i0_resized", I_i0_resized);
+	//waitKey(0);
+	
 	goodFeaturesToTrack(I_i0_resized, temp0, 200, 0.01, 10, noArray(), 3, true, 0.04);
 	Mat keypoints_I_i0 = Mat::zeros(2, temp0.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i0.cols; i++) {
@@ -170,23 +172,23 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	}
 	*/
 	
-	/*
+	
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
 	cout << "Finding keypoints_I_i0 took = " << time_span.count() << " seconds" << endl;
-	*/
 	
+	/*
 	Mat draw_I_i0;
 	I_i0.copyTo(draw_I_i0);
 	const char* text0 = "Detected corners in frame I_i0";
 	drawCorners(draw_I_i0, keypoints_I_i0, text0);
 	waitKey(0);
-	
+	*/
 	
 
 	
 	
-	//high_resolution_clock::time_point t3 = high_resolution_clock::now();
+	high_resolution_clock::time_point t3 = high_resolution_clock::now();
 	
 	//Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 210, emptyMatrix); // Number of keypoints that is looked 
 	
@@ -194,8 +196,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	dim1 = I_i1_gray.rows;
 	dim2 = I_i1_gray.cols;
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
-	imshow("I_i1_resized", I_i1_resized);
-	waitKey(0);
+	//imshow("I_i1_resized", I_i1_resized);
+	//waitKey(0);
 	goodFeaturesToTrack(I_i1_resized, temp1, 200, 0.01, 10, noArray(), 3, true, 0.04);
 	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i1.cols; i++) {
@@ -204,17 +206,18 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	}
 	
 	
-	/*
+	
 	high_resolution_clock::time_point t4 = high_resolution_clock::now();
 	duration<double> time_span1 = duration_cast<duration<double>>(t4-t3);
 	cout << "Finding keypoints_I_i1 took = " << time_span1.count() << " seconds" << endl;
-	*/
 	
+	/*
 	Mat draw_I_i1;
 	I_i1.copyTo(draw_I_i1);
 	const char* text1 = "Detected corners in frame I_i1";
 	drawCorners(draw_I_i1, keypoints_I_i1, text1);
 	waitKey(0);
+	*/
 	
 	
 
@@ -222,54 +225,77 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// ######################### SIFT ######################### 
 	//Finding SIFT::descriptors without parallelization 
-	//high_resolution_clock::time_point t5 = high_resolution_clock::now();
-	cout << "Before descriptors_I_i0" << endl;
+	high_resolution_clock::time_point t5 = high_resolution_clock::now();
+
 	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
-	cout << "after descriptors_I_i0" << endl;
+
 	/*
 	cout << "descriptors_I_i0" << endl;
 	cout << descriptors_I_i0 << endl;
 	waitKey(0);
 	*/
 
-	/*
+	
 	high_resolution_clock::time_point t6 = high_resolution_clock::now();
 	duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
 	cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
-	*/
 	
 	
-	//high_resolution_clock::time_point t7 = high_resolution_clock::now();
+	
+	high_resolution_clock::time_point t7 = high_resolution_clock::now();
 	
 	Mat descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
 	
-	/*
+	
 	high_resolution_clock::time_point t8 = high_resolution_clock::now();
 	duration<double> time_span3 = duration_cast<duration<double>>(t8-t7);
 	cout << "Finding descriptors_I_i0 took = " << time_span3.count() << " seconds" << endl;
-	*/
 	
 	
 	
-	//high_resolution_clock::time_point t9 = high_resolution_clock::now();
+	
+	high_resolution_clock::time_point t9 = high_resolution_clock::now();
 	
 	// Match descriptors --> Optimize this part of the code because it takes the longest time to run
-	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+	// Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+	Mat matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+
+	Mat matches2 = SIFT::matchDescriptors(descriptors_I_i1, descriptors_I_i0);
+
+	Mat valid_matches = Mat::zeros(2, matches.cols, CV_64FC1);
+	int temp_index = 0;
+	for (int i = 0; i < matches.cols; i++) {
+		int index_frame0 = matches.at<double>(0,i);
+		int index_frame1 = matches.at<double>(1,i);
+		
+		for (int q = 0; q < matches2.cols; q++) {
+			if (matches2.at<double>(1,q) == index_frame0) {
+				if (matches2.at<double>(0,q) == index_frame1) {
+					// Mutual match
+					valid_matches.at<double>(0,temp_index) = index_frame0;
+					valid_matches.at<double>(1,temp_index) = index_frame1;
+					temp_index++;
+				}
+			}
+		}
+	}
+	matches = valid_matches.colRange(0,temp_index);
 	
-	/*
+	
 	high_resolution_clock::time_point t10 = high_resolution_clock::now();
 	duration<double> time_span4 = duration_cast<duration<double>>(t10-t9);
 	cout << "Finding matches took = " << time_span4.count() << " seconds" << endl;
-	*/
+	
 	
 	// Find Point correspondences
 	// Points from image 0 in row 1 and row 2 
 	// Points from image 1 in row 3 and row 	
 
-	int N = matches.dim2();
+	//int N = matches.dim2();
+	int N = matches.cols;
 	cout << "Number of matches = " << N << endl;
 	
-	//high_resolution_clock::time_point t11 = high_resolution_clock::now();
+	high_resolution_clock::time_point t11 = high_resolution_clock::now();
 	
 	// For plotting
 	// For efficiency, you should maybe just use vectors instead of creating two new matrices
@@ -287,7 +313,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		// Config1
 		//  #### SIFT #### 
 		// Be aware of differences in x and y
-		/*
+		/* Did not work
 		points1[i] = Point2f(keypoints_I_i0.at<double>(0, matches(0,i)),keypoints_I_i0.at<double>(1, matches(0,i)));
 		points2[i] = Point2f(keypoints_I_i1.at<double>(0, matches(1,i)),keypoints_I_i1.at<double>(1, matches(1,i)));
 		
@@ -305,6 +331,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
 		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
 		*/
+		
+		/* This worked with old SIFT:MATCH!! 
 		points1[i] = Point2f(keypoints_I_i0.at<double>(0, matches(1,i)),keypoints_I_i0.at<double>(1, matches(1,i)));
 		points2[i] = Point2f(keypoints_I_i1.at<double>(0, matches(0,i)),keypoints_I_i1.at<double>(1, matches(0,i)));
 		
@@ -318,17 +346,40 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		double x = keypoints_I_i1.at<double>(1, matches(0,i));
 		double y2 = keypoints_I_i0.at<double>(0, matches(1,i));
 		double x2 = keypoints_I_i0.at<double>(1, matches(1,i));
-		//line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
+		line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
 		circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
 		//imshow("Draw circle I_i1", I_i1);
 		//waitKey(0);
 		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
 		//imshow("Draw circle I_i0", I_i0);
 		//waitKey(0);
+		*/
+		
+		points1[i] = Point2f(keypoints_I_i0.at<double>(0, matches.at<double>(0,i)),keypoints_I_i0.at<double>(1, matches.at<double>(0,i)));
+		points2[i] = Point2f(keypoints_I_i1.at<double>(0, matches.at<double>(1,i)),keypoints_I_i1.at<double>(1, matches.at<double>(1,i)));
+		
+		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(0, matches.at<double>(0,i)); // y-coordinate in image 
+		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(1, matches.at<double>(0,i)); // x-coordinate in image
+		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(0, matches.at<double>(1,i)); // y-coordinate in image
+		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(1, matches.at<double>(1,i)); // x-coordinate in image
+
+		/*
+		double y = keypoints_I_i1.at<double>(0, matches.at<double>(1,i));
+		double x = keypoints_I_i1.at<double>(1, matches.at<double>(1,i));
+		double y2 = keypoints_I_i0.at<double>(0, matches.at<double>(0,i));
+		double x2 = keypoints_I_i0.at<double>(1, matches.at<double>(0,i));
+		line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
+		circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+		//imshow("Draw circle I_i1", I_i1);
+		//waitKey(0);
+		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
+		//imshow("Draw circle I_i0", I_i0);
+		//waitKey(0);
+		*/
 		
 	}
-	imshow("Match",I_i1);
-	waitKey(0);
+	//imshow("Match",I_i1);
+	//waitKey(0);
 	
 	
 	// Find fudamental matrix 
@@ -339,7 +390,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	//cout << "N_inlier = " << N_inlier << endl;
 	Mat points1Mat = Mat::zeros(2, N_inlier, CV_64FC1);
 	Mat points2Mat = Mat::zeros(2, N_inlier, CV_64FC1);
-	int temp_index = 0;
+	temp_index = 0;
 	for (int i = 0; i < N; i++) {
 		if ((double) pArray[i] == 1) {
 			points1Mat.at<double>(0,temp_index) = temp_points1Mat.at<double>(0,i); // y-coordinate in image
@@ -347,12 +398,14 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 			points2Mat.at<double>(0,temp_index) = temp_points2Mat.at<double>(0,i); // y-coordinate in image
 			points2Mat.at<double>(1,temp_index) = temp_points2Mat.at<double>(1,i); // x-coordinate in image
 			
+			/*
 			circle (a, Point(points1Mat.at<double>(1,temp_index),points1Mat.at<double>(0,temp_index)), 5, Scalar(0,0,255), 2,8,0);
 			imshow("a", a);
 			waitKey(0);
 			circle (b, Point(points2Mat.at<double>(1,temp_index),points2Mat.at<double>(0,temp_index)), 5,  Scalar(0,0,255), 2,8,0);
 			imshow("b", b);
 			waitKey(0);
+			*/
 	
 			
 			temp_index++;
@@ -446,15 +499,16 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	waitKey(0);
 	
 	// Match descriptors - Should be optimized
-	Matrix matches = SIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
+	Mat matches = SIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
 	
-	int N = matches.dim2();
+	int N = matches.cols;
 	
 	cout << "N is = " << N << endl;
 	
 	Mat keypoints_i = Mat::zeros(2, N, CV_64FC1);
 	Mat corresponding_landmarks = Mat::zeros(3, N, CV_64FC1); 
 	cout << "After update" << endl;
+	/*
 	for (int i = 0; i < N; i++) {
 		// Config1
 		//  #### SIFT #### 
@@ -477,6 +531,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		circle (Ii, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
 		circle (Ii_1, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
 	}
+	*/
 	imshow("matches in processFrame", Ii);
 	waitKey(0);
 	

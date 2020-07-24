@@ -120,7 +120,8 @@ namespace Harris {
 
 namespace SIFT {
 	Mat FindDescriptors(Mat src_gray, Mat keypoints);
-	Matrix matchDescriptors(Mat descriptor1, Mat descriptor2);
+	//Matrix matchDescriptors(Mat descriptor1, Mat descriptor2);
+	Mat matchDescriptors(Mat descriptor1, Mat descriptor2);
 	
 }	// SIFT
 
