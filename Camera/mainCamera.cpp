@@ -200,7 +200,7 @@ Mat subImage(int number_subimages, int boundary, int height, int width, int dim1
  * Output:
  * Matrix of size 2 x min(n1,n2) depending on how many keypoints there are
  */
- /*
+/*
 Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 
 	int n1 = descriptor1.rows;	// Matrix containing descriptors for keypoints in image 0
@@ -268,7 +268,8 @@ Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 }
 */
 
-// Match SIFT Descriptors - Old function
+
+// Match SIFT Descriptors - Old function that works
 Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 
 	int n1 = descriptor1.rows;	// Matrix containing descriptors for keypoints in image 0
@@ -342,19 +343,22 @@ Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 	}
 	
 	// Create matrix with the keypoints that are valid and which are returned.
-	Matrix valid_matches(count,2);
+	Matrix valid_matches(2,count);
 	cout << "Count of valid matches  = " << count << endl;
 	int index = 0;
 	for (int i = 0; i < n2; i++) {
 		if (matches(i,4) == 1) {
-			valid_matches(index,0) = i;
-			valid_matches(index,1) = matches(i,0);
+			valid_matches(0,index) = i;
+			valid_matches(1,index) = matches(i,0);
 			index++;
 		}
 	}
+	
+	
 		
 	return valid_matches;
 }
+
 
 /*
 // Match SIFT Descriptors - Old function
@@ -923,6 +927,15 @@ void *FindDescriptors(void *threadarg) {
 // Find SIFT Desriptors  without parallelization
 Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	
+	imshow("src_gray", src_gray);
+	waitKey(0);
+	
+	Mat src_gray_blurred;
+	GaussianBlur(src_gray, src_gray_blurred, Size(3,3), 5,5);
+	
+	imshow("src_gray_blurred", src_gray_blurred);
+	waitKey(0);
+	
 	// Simplification of SIFT
 	// Maybe the image should be smoothed first with a Gaussian Kernel
 	int n = keypoints.cols;
@@ -940,8 +953,8 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	int ddepth = CV_16S;
 	
 	// Find the gradients in the Sobel operator by using the OPENCV function
-	Sobel(src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
-	Sobel(src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
+	Sobel(src_gray_blurred, grad_y, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
+	Sobel(src_gray_blurred, grad_x, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
 	
 	// Converting back to CV_8U
 	convertScaleAbs(grad_x, abs_grad_x);
@@ -956,30 +969,226 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	for (int i = 0; i < n; i++) {
 		int y = keypoints.at<double>(0, i);
 		int x = keypoints.at<double>(1, i); 
-
+		//cout << "Point is = (" << y << "," << x << ")" << endl;
+		//waitKey(0);
+		
+		//MatType(src_gray);
+		//MatType(grad_x);
+		//MatType(grad_y);
+		
+		//cout << "Intensity at point (" << y << "," << x << ")" << (double) src_gray.at<uchar>(y,x) << endl;
+		/*
+		cout << "src_gray" << endl;
+		for (int r = y-10; r <y+10; r++) {
+			for (int c = x-10; c < x+10; c++) {
+				cout << (double) src_gray.at<uchar>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		} 
+		*/
+		grad_y = (-1)*grad_y;
+		/*
+		cout << "grad_y" << endl;
+		for (int r = y-10; r <y+10; r++) {
+			for (int c = x-10; c < x+10; c++) {
+				cout << (double) grad_y.at<short>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		} 
+		*/
+		grad_x = (-1)*grad_x;
+		/*
+		cout << "grad_x" << endl;
+		for (int r = y-10; r <y+10; r++) {
+			for (int c = x-10; c < x+10; c++) {
+				cout << (double) grad_x.at<short>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		} 
+		waitKey(0);
+		*/
 		
 		// Extract a patch of size 16,16 from the image with x-gradients and y-gradients
 		Mat Patch_Ix, Patch_Iy;
 
 		Patch_Ix = selectRegionOfInterest(grad_x, y-7, x-7, y+8, x+8);
 		Patch_Iy = selectRegionOfInterest(grad_y, y-7, x-7, y+8, x+8);
+		
+		//MatType(Patch_Ix);
+		//MatType(Patch_Iy);
+		
+		//cout << "Dimension of Patch_Ix = (" << Patch_Ix.rows << "," << Patch_Ix.cols << ")" << endl;
+		//cout << "Dimension of Patch_Ix = (" << Patch_Iy.rows << "," << Patch_Iy.cols << ")" << endl;
+		
+		/*
+		cout << "Patch_Ix" << endl;
+		for (int r = 0; r < Patch_Ix.rows; r++) {
+			for (int c = 0; c < Patch_Ix.cols; c++) {
+				cout << (double) Patch_Ix.at<short>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		*/
+		/*
+		cout << "Patch_Iy" << endl;
+		for (int r = 0; r < Patch_Iy.rows; r++) {
+			for (int c = 0; c < Patch_Iy.cols; c++) {
+				cout << (double) Patch_Iy.at<short>(r,c) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
+		waitKey(0);
+		*/
+		
 		// This is the scaled gradients 
 		Mat Gradients = Mat::zeros(Size(16,16),CV_64FC1);
 		// This is the orientations (angles of the gradients in radians)
 		Mat Orientations = Mat::zeros(Size(16,16),CV_64FC1);
 
+		//cout << "Test angle = " << atan2(-0.2,-5) << endl;
+
 		for (int coor_y = 0; coor_y < 16; coor_y++) {
 			for (int coor_x = 0; coor_x < 16; coor_x++) {
-				float norm = sqrt( pow(Patch_Ix.at<short>(coor_y,coor_x),2) + pow(Patch_Iy.at<short>(coor_y,coor_x),2));
+				double dx = Patch_Ix.at<short>(coor_y,coor_x);
+				double dy = Patch_Iy.at<short>(coor_y,coor_x);
+				//cout << "dx,dy = (" << dx << "," << dy << ")" << endl;
+				//waitKey(0);
+				double norm = sqrt( pow(dx,2.0) + pow(dy,2.0));
+				//cout << "norm = " << norm << endl;
+				//cout << "GaussWindow.at<double>(coor_y,coor_x) = " << GaussWindow.at<double>(coor_y,coor_x) << endl;
 				Gradients.at<double>(coor_y,coor_x) = norm*GaussWindow.at<double>(coor_y,coor_x);
-				Orientations.at<double>(coor_y,coor_x) = atan2(Patch_Iy.at<short>(coor_y,coor_x),Patch_Ix.at<short>(coor_y,coor_x));
+				Orientations.at<double>(coor_y,coor_x) = atan2(dy,dx);
+				//cout << "Orientations.at<double>(coor_y,coor_x) = " << Orientations.at<double>(coor_y,coor_x) << endl;
 			}
 		}		
 		// Maybe you should rotate the patch, so it coincides with the orientation in the strongest direction
 		
 		// Divde the 16x16 patch into subpatches of 4x4 
-		Matrix descrip(1,128);
-		Mat subPatchGradients, subPatchOrientations;
+		Mat Patch_of_HOGs = Mat::zeros(16, 8, CV_64FC1);
+		
+		//cout << "Gradients = " << Gradients << endl;
+		//cout << "Orientations = " << Orientations << endl;
+		
+		// Build a HOG for every 4x4 subpatch and insert that in the 16x8 matrix called Patch_of_HOGs
+		int index = 0;
+		for (int k1 = 0; k1 < 4; k1++) {
+			for (int k2 = 0; k2 < 4; k2++) {
+				Mat subPatch_gradients = Gradients.colRange(k2*4,(k2+1)*4).rowRange(k1*4,(k1+1)*4); 
+				Mat subPatch_orientations = Orientations.colRange(k2*4,(k2+1)*4).rowRange(k1*4,(k1+1)*4); 
+				
+				//cout << "subPatch_gradients = " << subPatch_gradients << endl;
+				//cout << "subPatch_orientations = " << subPatch_orientations << endl;
+				
+				//MatType(subPatch_gradients);
+				//MatType(subPatch_orientations);
+				
+				for (int r = 0; r < 4; r++) {
+					for (int c = 0; c < 4; c++) {
+						double angle = subPatch_orientations.at<double>(r,c);
+						
+						if (0 <= angle && angle < M_PI/4) { // Between 0 rad and Pi/4 rad 
+							Patch_of_HOGs.at<double>(index,0) = Patch_of_HOGs.at<double>(index,0) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (M_PI/4 <= angle && angle < M_PI/2) { // Between Pi/4 rad and Pi/2 rad 
+							Patch_of_HOGs.at<double>(index,1) = Patch_of_HOGs.at<double>(index,1) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (M_PI/2 <= angle && angle < (3*M_PI)/4) { // Between Pi/2 rad and 3*Pi/4 rad 
+							Patch_of_HOGs.at<double>(index,2) = Patch_of_HOGs.at<double>(index,2) + subPatch_gradients.at<double>(r,c);
+						}
+						else if ((3*M_PI)/4 <= angle && angle < M_PI) { // Between 3*Pi/4 rad and Pi rad 
+							Patch_of_HOGs.at<double>(index,3) = Patch_of_HOGs.at<double>(index,3) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (angle < -(3*M_PI)/4 && -M_PI <= angle) { // Between -3*Pi/4 rad and -Pi rad 
+							Patch_of_HOGs.at<double>(index,4) = Patch_of_HOGs.at<double>(index,4) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (angle < -(M_PI)/2 && -(3*M_PI)/4 <= angle) { // Between -Pi/2 rad and -3*Pi/4 rad 
+							Patch_of_HOGs.at<double>(index,5) = Patch_of_HOGs.at<double>(index,5) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (angle < -(M_PI)/4 && -(M_PI)/2 <= angle) { // Between -Pi/4 rad and -Pi/2 rad 
+							Patch_of_HOGs.at<double>(index,6) = Patch_of_HOGs.at<double>(index,6) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (angle < 0 && -(M_PI)/4 <= angle) { // Between 0 rad and -Pi/4 rad 
+							Patch_of_HOGs.at<double>(index,7) = Patch_of_HOGs.at<double>(index,7) + subPatch_gradients.at<double>(r,c);
+						}
+					}
+				}
+				
+				//cout << "Patch_of_HOGs = " << Patch_of_HOGs << endl;
+				//waitKey(0);
+				
+				index++;
+			}
+		}
+		
+		// Build HOG for the entire 16x16 Patch
+		Mat total_HOG = Mat::zeros(1, 8, CV_64FC1);
+		for (int q = 0; q < Patch_of_HOGs.rows; q++) {
+			total_HOG.at<double>(0,0) = total_HOG.at<double>(0,0) + Patch_of_HOGs.at<double>(q,0);
+			total_HOG.at<double>(0,1) = total_HOG.at<double>(0,1) + Patch_of_HOGs.at<double>(q,1);
+			total_HOG.at<double>(0,2) = total_HOG.at<double>(0,2) + Patch_of_HOGs.at<double>(q,2);
+			total_HOG.at<double>(0,3) = total_HOG.at<double>(0,3) + Patch_of_HOGs.at<double>(q,3);
+			total_HOG.at<double>(0,4) = total_HOG.at<double>(0,4) + Patch_of_HOGs.at<double>(q,4);
+			total_HOG.at<double>(0,5) = total_HOG.at<double>(0,5) + Patch_of_HOGs.at<double>(q,5);
+			total_HOG.at<double>(0,6) = total_HOG.at<double>(0,6) + Patch_of_HOGs.at<double>(q,6);
+			total_HOG.at<double>(0,7) = total_HOG.at<double>(0,7) + Patch_of_HOGs.at<double>(q,7);
+			
+		}
+		
+		// Find the biggest bin in the total HOG for the entire 16x16 patch
+		double max_bin = 0; 
+		int max_bin_index = 0;
+		for (int q = 0; q < total_HOG.cols; q++) {
+			if (total_HOG.at<double>(0,q) > max_bin) {
+				max_bin = total_HOG.at<double>(0,q);
+				max_bin_index = q;
+			}
+		}
+		
+		/*
+		cout << "total_HOG = " << total_HOG << endl;
+		cout << "max_bin = " << max_bin << endl;
+		cout << "max_bin_index = " << max_bin_index << endl;
+		
+		cout << "Patch_of_HOGs = " << Patch_of_HOGs << endl;
+		
+		cout << "Mistake with max_bin_index" << endl;
+		*/
+		if (max_bin_index == 0) {
+			max_bin_index = 1;
+		}
+		Mat temp1 = Patch_of_HOGs.colRange(0,max_bin_index);
+		Mat temp2 = Patch_of_HOGs.colRange(max_bin_index,8);
+		Mat temp3;
+		hconcat(temp2, temp1, temp3);
+		/*
+		cout << "did not reach this point" << endl;
+		waitKey(0);
+		*/
+		//cout << "temp3 = " << endl;
+		//cout << temp3 << endl;
+		
+		// Reshape the matrix so it goes from a 16x8 Matrix to a 1x128 matrix
+		
+		Mat descrip = temp3.reshape(0, 1);
+		
+		//cout << "descrip = " << descrip << endl;
+		
+		/*
+		cout << "descrip = " << descrip << endl;
+		waitKey(0);
+		*/
+		
+		for (int k = 0; k < descrip.cols; k++) {
+			Descriptors.at<double>(i,k) = descrip.at<double>(0,k);
+		}	
+		/*
+		cout << "Descriptors" << endl;
+		cout << Descriptors << endl;
+		waitKey(0);
+		*/
+		/*
+		 * Mat subPatchGradients, subPatchOrientations;
 		int nindex = 0;
 		for (int k1 = 0; k1 <= 12; k1 = k1+4) {
 			for (int k2 = 0; k2 <= 12; k2 = k2 + 4) {
@@ -1030,6 +1239,10 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 				nindex++;
 			}
 		}
+		*/
+		
+		
+		
 		
 		// Normalizing the vector 
 		double SumOfSquares = 0;
@@ -1038,11 +1251,14 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 		}
 		
 		
+		
+		
+		
 		for (int ii = 0; ii < Descriptors.cols; ii++) {
 			Descriptors.at<double>(i,ii) = Descriptors.at<double>(i,ii)/sqrt(SumOfSquares);
 		}
 		
-		
+		//cout << "mistake here" << endl;
 		
 
 	// Scale the norms of the gradients by multiplying a the graidents with a gaussian

@@ -176,9 +176,10 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cout << "Finding keypoints_I_i0 took = " << time_span.count() << " seconds" << endl;
 	*/
 	
-	
+	Mat draw_I_i0;
+	I_i0.copyTo(draw_I_i0);
 	const char* text0 = "Detected corners in frame I_i0";
-	drawCorners(I_i0, keypoints_I_i0, text0);
+	drawCorners(draw_I_i0, keypoints_I_i0, text0);
 	waitKey(0);
 	
 	
@@ -187,7 +188,9 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	//high_resolution_clock::time_point t3 = high_resolution_clock::now();
 	
-	//Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 210, emptyMatrix); // Number of keypoints that is looked for
+	//Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 210, emptyMatrix); // Number of keypoints that is looked 
+	
+	
 	dim1 = I_i1_gray.rows;
 	dim2 = I_i1_gray.cols;
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
@@ -200,16 +203,19 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		keypoints_I_i1.at<double>(1,i) = temp1.at<float>(i,0) + 10;
 	}
 	
+	
 	/*
 	high_resolution_clock::time_point t4 = high_resolution_clock::now();
 	duration<double> time_span1 = duration_cast<duration<double>>(t4-t3);
 	cout << "Finding keypoints_I_i1 took = " << time_span1.count() << " seconds" << endl;
 	*/
-	/*
+	
+	Mat draw_I_i1;
+	I_i1.copyTo(draw_I_i1);
 	const char* text1 = "Detected corners in frame I_i1";
-	drawCorners(I_i1, keypoints_I_i1, text1);
+	drawCorners(draw_I_i1, keypoints_I_i1, text1);
 	waitKey(0);
-	*/
+	
 	
 
 	
@@ -272,10 +278,16 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// For fudamental matrix
 	vector<Point2f> points1(N);
 	vector<Point2f> points2(N);
+	Mat a, b; 
+	I_i0.copyTo(a);
+	I_i1.copyTo(b);
+	
+	
 	for (int i = 0; i < N; i++) {
 		// Config1
 		//  #### SIFT #### 
 		// Be aware of differences in x and y
+		/*
 		points1[i] = Point2f(keypoints_I_i0.at<double>(0, matches(0,i)),keypoints_I_i0.at<double>(1, matches(0,i)));
 		points2[i] = Point2f(keypoints_I_i1.at<double>(0, matches(1,i)),keypoints_I_i1.at<double>(1, matches(1,i)));
 		
@@ -292,8 +304,27 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
 		circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
 		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
+		*/
+		points1[i] = Point2f(keypoints_I_i0.at<double>(0, matches(1,i)),keypoints_I_i0.at<double>(1, matches(1,i)));
+		points2[i] = Point2f(keypoints_I_i1.at<double>(0, matches(0,i)),keypoints_I_i1.at<double>(1, matches(0,i)));
 		
+		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(0, matches(0,i)); // y-coordinate in image 
+		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(1, matches(0,i)); // x-coordinate in image
+		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(0, matches(1,i)); // y-coordinate in image
+		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(1, matches(1,i)); // x-coordinate in image
+
 		
+		double y = keypoints_I_i1.at<double>(0, matches(0,i));
+		double x = keypoints_I_i1.at<double>(1, matches(0,i));
+		double y2 = keypoints_I_i0.at<double>(0, matches(1,i));
+		double x2 = keypoints_I_i0.at<double>(1, matches(1,i));
+		//line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
+		circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+		//imshow("Draw circle I_i1", I_i1);
+		//waitKey(0);
+		circle (I_i0, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
+		//imshow("Draw circle I_i0", I_i0);
+		//waitKey(0);
 		
 	}
 	imshow("Match",I_i1);
@@ -315,7 +346,17 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 			points1Mat.at<double>(1,temp_index) = temp_points1Mat.at<double>(1,i); // x-coordinate in image
 			points2Mat.at<double>(0,temp_index) = temp_points2Mat.at<double>(0,i); // y-coordinate in image
 			points2Mat.at<double>(1,temp_index) = temp_points2Mat.at<double>(1,i); // x-coordinate in image
+			
+			circle (a, Point(points1Mat.at<double>(1,temp_index),points1Mat.at<double>(0,temp_index)), 5, Scalar(0,0,255), 2,8,0);
+			imshow("a", a);
+			waitKey(0);
+			circle (b, Point(points2Mat.at<double>(1,temp_index),points2Mat.at<double>(0,temp_index)), 5,  Scalar(0,0,255), 2,8,0);
+			imshow("b", b);
+			waitKey(0);
+	
+			
 			temp_index++;
+			
 		}
 	}
 	 
@@ -686,6 +727,7 @@ int main ( int argc,char **argv ) {
 	drawCorners(I_i0, keypoints_I_i0, text0);
 	waitKey(0);
 	*/
+	/*
 	Mat I_i0_gray;
 	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
 	
@@ -698,6 +740,7 @@ int main ( int argc,char **argv ) {
 	
 	cv::Mat descriptor1;
 	descriptor->compute(I_i0_gray,keypoints1, descriptor1);
+	*/
 	
 	
 	/*
@@ -754,7 +797,7 @@ int main ( int argc,char **argv ) {
 	Mat transformation_matrix;
 	Mat Ii_1;
 	I_i1.copyTo(Ii_1);
-	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix " << endl;
 	cout << transformation_matrix << endl;
 	
