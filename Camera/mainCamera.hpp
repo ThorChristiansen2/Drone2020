@@ -118,7 +118,7 @@ namespace Harris {
 }	// Harris Corner
 
 
-namespace ThorSIFT {
+namespace SIFT {
 	Mat FindDescriptors(Mat src_gray, Mat keypoints);
 	Matrix matchDescriptors(Mat descriptor1, Mat descriptor2);
 	

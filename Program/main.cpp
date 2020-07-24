@@ -218,7 +218,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	//Finding SIFT::descriptors without parallelization 
 	//high_resolution_clock::time_point t5 = high_resolution_clock::now();
 	cout << "Before descriptors_I_i0" << endl;
-	Mat descriptors_I_i0 = ThorSIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
+	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	cout << "after descriptors_I_i0" << endl;
 	/*
 	cout << "descriptors_I_i0" << endl;
@@ -235,7 +235,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	//high_resolution_clock::time_point t7 = high_resolution_clock::now();
 	
-	Mat descriptors_I_i1 = ThorSIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
+	Mat descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
 	
 	/*
 	high_resolution_clock::time_point t8 = high_resolution_clock::now();
@@ -248,7 +248,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	//high_resolution_clock::time_point t9 = high_resolution_clock::now();
 	
 	// Match descriptors --> Optimize this part of the code because it takes the longest time to run
-	Matrix matches = ThorSIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+	Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
 	
 	/*
 	high_resolution_clock::time_point t10 = high_resolution_clock::now();
@@ -387,14 +387,14 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	// Not necessary since you already have the keypoints
 	//Mat keypoints_Ii_1 = Harris::corner(Ii_1, Ii_1_gray, 210, emptyMatrix);
-	Mat descriptors_Ii_1 = ThorSIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
+	Mat descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
 	
 	cout << "dimensions of descriptors_Ii_1 = (" << descriptors_Ii_1.rows << "," << descriptors_Ii_1.cols << ")" << endl;
 	
 	Mat keypoints_Ii = Harris::corner(Ii, Ii_gray, 210, emptyMatrix);
 	
 	
-	Mat descriptors_Ii = ThorSIFT::FindDescriptors(Ii_gray, keypoints_Ii);
+	Mat descriptors_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
 	
 	const char* text1 = "ProcessFrame Ii_1";
 	drawCorners(Ii_1, Si_1.Pi, text1);
@@ -405,7 +405,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	waitKey(0);
 	
 	// Match descriptors - Should be optimized
-	Matrix matches = ThorSIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
+	Matrix matches = SIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
 	
 	int N = matches.dim2();
 	

@@ -200,8 +200,8 @@ Mat subImage(int number_subimages, int boundary, int height, int width, int dim1
  * Output:
  * Matrix of size 2 x min(n1,n2) depending on how many keypoints there are
  */
- 
-Matrix ThorSIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
+ /*
+Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 
 	int n1 = descriptor1.rows;	// Matrix containing descriptors for keypoints in image 0
 	
@@ -266,8 +266,8 @@ Matrix ThorSIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 	
 	return valid_matches;
 }
+*/
 
-/*
 // Match SIFT Descriptors - Old function
 Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 
@@ -355,7 +355,6 @@ Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 		
 	return valid_matches;
 }
-*/
 
 /*
 // Match SIFT Descriptors - Old function
@@ -922,7 +921,7 @@ void *FindDescriptors(void *threadarg) {
 
 
 // Find SIFT Desriptors  without parallelization
-Mat ThorSIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
+Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	
 	// Simplification of SIFT
 	// Maybe the image should be smoothed first with a Gaussian Kernel
