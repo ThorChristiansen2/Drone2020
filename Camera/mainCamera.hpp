@@ -146,7 +146,7 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 
 // Find new candidate Keypoints
 state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc);
-state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc, Mat extracted_keypoints, Mat dwdx);
+state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc);
 
 // Triangulate new candidate Keypoints
 std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle);

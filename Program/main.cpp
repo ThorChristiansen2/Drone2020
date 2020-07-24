@@ -516,7 +516,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	}
 	matches = valid_matches.colRange(0,temp_index);
 	cout << "Number of mutual valid mathces = " << matches.cols << endl;
-	waitKey(0);
+	//waitKey(0);
 	
 	int N = matches.cols;
 	/*
@@ -679,6 +679,18 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	// Update keypoints in state 
 	Si_1.k = keypoints_i.cols;
 	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si_1.Pi); // Apparently you have to switch rows
+	
+	Mat temp_Ii;
+	Ii.copyTo(temp_Ii);
+	for (int i = 0; i < Si_1.k; i++) {
+		double y = Si_1.Pi.at<double>(0, i);
+		double x = Si_1.Pi.at<double>(1, i);
+		circle (temp_Ii, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+	}
+	imshow("Coordinates right", temp_Ii);
+	waitKey(0);
+	
+	
 	corresponding_landmarks.copyTo(Si_1.Xi);
 	
 	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
@@ -926,7 +938,7 @@ int main ( int argc,char **argv ) {
 	int stop = 0;
 	int iter = 0;
 	
-	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
+	while (continueVOoperation == true && pipelineBroke == false && stop < 2) {
 		cout << "Begin Continuous VO operation " << endl;
 		
 		/*
@@ -968,28 +980,18 @@ int main ( int argc,char **argv ) {
 		
 		// Find new candidate keypoints 
 		if (iter == 0) {
+			cout << "Find new candidate keypoints for the first time" << endl;
+			imshow("How does frame look", Ii);
+			waitKey(0);
 			Si = newCandidateKeypoints(Ii, Si, transformation_matrix);
 			iter++;
 		}
 		else {
 			//Ii = imread("cam2.png", IMREAD_UNCHANGED);
 			
-			int r_T = KLT_r_T;
-			int n = 2*r_T + 1;
-			Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
-			int temp_index = 0; 
-			for (int i = -r_T; i <= r_T; i++) {
-				for (int j = -r_T; j <= r_T; j++) {
-					xy1.at<double>(temp_index,0) = i;
-					xy1.at<double>(temp_index,1) = j;
-					xy1.at<double>(temp_index,2) = 1;
-					temp_index++;
-				} 
-			}
-			// Find the Kroeneckerproduct 
-			Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
+			cout << "Inside other continuous operation " << endl;
 			
-			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix, extracted_keypoints, dwdx);
+			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix);
 			cout << "ContinuousCandidateKeypoints" << endl;
 			cout << "Number of keypoints = " << Si.Ci.cols << endl;
 			
