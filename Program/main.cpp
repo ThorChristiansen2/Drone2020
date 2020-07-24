@@ -140,7 +140,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	//imshow("I_i0_resized", I_i0_resized);
 	//waitKey(0);
 	
-	goodFeaturesToTrack(I_i0_resized, temp0, 200, 0.01, 10, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i0_resized, temp0, 300, 0.01, 10, noArray(), 3, true, 0.04);
 	Mat keypoints_I_i0 = Mat::zeros(2, temp0.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i0.cols; i++) {
 		keypoints_I_i0.at<double>(0,i) = temp0.at<float>(i,1) + 10;
@@ -198,7 +198,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 	//imshow("I_i1_resized", I_i1_resized);
 	//waitKey(0);
-	goodFeaturesToTrack(I_i1_resized, temp1, 200, 0.01, 10, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i1_resized, temp1, 300, 0.01, 10, noArray(), 3, true, 0.04);
 	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i1.cols; i++) {
 		keypoints_I_i1.at<double>(0,i) = temp1.at<float>(i,1) + 10;
@@ -477,6 +477,49 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );	
 	
+	
+	Mat descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
+	
+	int dim1, dim2;
+	dim1 = Ii_gray.rows;
+	dim2 = Ii_gray.cols;
+	Mat Ii_resized = Ii_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
+	Mat temp1;
+	goodFeaturesToTrack(Ii_resized, temp1, 300, 0.01, 10, noArray(), 3, true, 0.04);
+	Mat keypoints_Ii = Mat::zeros(2, temp1.rows, CV_64FC1);
+	for (int i = 0; i < keypoints_Ii.cols; i++) {
+		keypoints_Ii.at<double>(0,i) = temp1.at<float>(i,1) + 10;
+		keypoints_Ii.at<double>(1,i) = temp1.at<float>(i,0) + 10;
+	}
+	
+	Mat descriptors_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
+	
+	Mat matches = SIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
+	Mat matches2 = SIFT::matchDescriptors(descriptors_Ii, descriptors_Ii_1);
+	
+	Mat valid_matches = Mat::zeros(2, matches.cols, CV_64FC1);
+	int temp_index = 0;
+	for (int i = 0; i < matches.cols; i++) {
+		int index_frame0 = matches.at<double>(0,i);
+		int index_frame1 = matches.at<double>(1,i);
+		
+		for (int q = 0; q < matches2.cols; q++) {
+			if (matches2.at<double>(1,q) == index_frame0) {
+				if (matches2.at<double>(0,q) == index_frame1) {
+					// Mutual match
+					valid_matches.at<double>(0,temp_index) = index_frame0;
+					valid_matches.at<double>(1,temp_index) = index_frame1;
+					temp_index++;
+				}
+			}
+		}
+	}
+	matches = valid_matches.colRange(0,temp_index);
+	cout << "Number of mutual valid mathces = " << matches.cols << endl;
+	waitKey(0);
+	
+	int N = matches.cols;
+	/*
 	Mat emptyMatrix;
 	
 	// Not necessary since you already have the keypoints
@@ -508,32 +551,39 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Mat keypoints_i = Mat::zeros(2, N, CV_64FC1);
 	Mat corresponding_landmarks = Mat::zeros(3, N, CV_64FC1); 
 	cout << "After update" << endl;
-	/*
+	*/
+	Mat keypoints_i = Mat::zeros(2, N, CV_64FC1);
+	Mat corresponding_landmarks = Mat::zeros(3, N, CV_64FC1);
+	
 	for (int i = 0; i < N; i++) {
 		// Config1
 		//  #### SIFT #### 
 	
 		// Turn the kyepoints so it becomes (u,v)
-		keypoints_i.at<double>(0,i) = keypoints_Ii.at<double>(1, matches(1,i)); // x-coordinate in image
-		keypoints_i.at<double>(1,i) = keypoints_Ii.at<double>(0, matches(1,i)); // y-coordinate in image
+		keypoints_i.at<double>(0,i) = keypoints_Ii.at<double>(1, matches.at<double>(1,i)); // x-coordinate in image
+		keypoints_i.at<double>(1,i) = keypoints_Ii.at<double>(0, matches.at<double>(1,i)); // y-coordinate in image
 		
 		//Si_1.Xi.col(matches(i,0)).copyTo(corresponding_landmarks.col(i));
-		corresponding_landmarks.at<double>(0,i) = Si_1.Xi.at<double>(0, matches(0,i));
-		corresponding_landmarks.at<double>(1,i) = Si_1.Xi.at<double>(1, matches(0,i));
-		corresponding_landmarks.at<double>(2,i) = Si_1.Xi.at<double>(2, matches(0,i));
+		corresponding_landmarks.at<double>(0,i) = Si_1.Xi.at<double>(0, matches.at<double>(0,i));
+		corresponding_landmarks.at<double>(1,i) = Si_1.Xi.at<double>(1, matches.at<double>(0,i));
+		corresponding_landmarks.at<double>(2,i) = Si_1.Xi.at<double>(2, matches.at<double>(0,i));
 		
-		
-		double y = keypoints_Ii.at<double>(0, matches(1,i));
-		double x = keypoints_Ii.at<double>(1, matches(1,i));
-		double y2 = Si_1.Pi.at<double>(0, matches(0,i));
-		double x2 = Si_1.Pi.at<double>(1, matches(0,i));
-		line(Ii,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
+		/*
+		double y = keypoints_Ii.at<double>(0, matches.at<double>(1,i));
+		double x = keypoints_Ii.at<double>(1, matches.at<double>(1,i));
+		double y2 = Si_1.Pi.at<double>(0, matches.at<double>(0,i));
+		double x2 = Si_1.Pi.at<double>(1, matches.at<double>(0,i));
+		line(Ii,Point(x2,y2),Point(x,y),Scalar(0,255,0),3);
 		circle (Ii, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
 		circle (Ii_1, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
+		*/
 	}
-	*/
-	imshow("matches in processFrame", Ii);
+	/*
+	imshow("matches in processFrame Ii_1", Ii_1);
 	waitKey(0);
+	imshow("matches in processFrame Ii", Ii);
+	waitKey(0);
+	*/
 	
 	/*
 	int nr_keep = 0;
@@ -591,7 +641,7 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	hconcat(landmark_container, corresponding_landmarks);
 	*/
 	
-	
+
 	
 	/*
 	cout << "Print of keypoints_i" << endl;
@@ -630,7 +680,6 @@ tuple<state, Mat> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Si_1.k = keypoints_i.cols;
 	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si_1.Pi); // Apparently you have to switch rows
 	corresponding_landmarks.copyTo(Si_1.Xi);
-	
 	
 	//high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	//duration<double> time_span = duration_cast<duration<double>>(t2-t1);
@@ -858,7 +907,7 @@ int main ( int argc,char **argv ) {
 	
 	
 	// ############### VO Continuous ###############
-	bool continueVOoperation = false;
+	bool continueVOoperation = true;
 	bool pipelineBroke = false;
 	bool output_T_ready = true;
 	
@@ -907,6 +956,7 @@ int main ( int argc,char **argv ) {
 		
 		// Estimate pose 
 		tie(Si, transformation_matrix) = processFrame(Ii, Ii_1, Si_1, K);
+		cout << "processFrame done" << endl;
 		cout << "Print of Transformation Matrix" << endl;
 		cout << transformation_matrix << endl;
 		
