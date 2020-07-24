@@ -49,6 +49,7 @@ Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o
  /usr/local/include/opencv4/opencv2/dnn/utils/inference_engine.hpp
  /usr/local/include/opencv4/opencv2/dnn/version.hpp
  /usr/local/include/opencv4/opencv2/features2d.hpp
+ /usr/local/include/opencv4/opencv2/features2d/features2d.hpp
  /usr/local/include/opencv4/opencv2/flann.hpp
  /usr/local/include/opencv4/opencv2/flann/all_indices.h
  /usr/local/include/opencv4/opencv2/flann/allocator.h

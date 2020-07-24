@@ -48,6 +48,7 @@ Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/ope
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/dnn/utils/inference_engine.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/dnn/version.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/features2d.hpp
+Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/features2d/features2d.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/flann.hpp
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/flann/all_indices.h
 Camera/CMakeFiles/CameraLib.dir/mainCamera.cpp.o: /usr/local/include/opencv4/opencv2/flann/allocator.h

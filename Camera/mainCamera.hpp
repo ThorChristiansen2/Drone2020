@@ -10,6 +10,7 @@
 #include <opencv2/core/types.hpp>
 #include <opencv2/calib3d.hpp>
 #include <opencv2/opencv.hpp>
+#include <opencv2/features2d/features2d.hpp>
 
 // Other libaries
 #include "Matrix.h"
@@ -74,10 +75,12 @@ struct harris_data {
 		//int thread_id;
 		Mat matrice;
 		Mat thread_dst;
+		double threshold;
 		int num_keypoints;
 		int thread_non_max_suppres;
 		int left_corner_y;
 		int left_corner_x;
+		int valid_interest_points;
 };
 
 struct thread_data {
@@ -114,11 +117,13 @@ namespace Harris {
 
 }	// Harris Corner
 
-namespace SIFT {
+
+namespace ThorSIFT {
 	Mat FindDescriptors(Mat src_gray, Mat keypoints);
 	Matrix matchDescriptors(Mat descriptor1, Mat descriptor2);
 	
 }	// SIFT
+
 
 void *FindDescriptors(void *threadarg);
 

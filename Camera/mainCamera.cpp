@@ -86,7 +86,8 @@ void *functionHarris(void *threadarg) {
    int nr_rows = my_harris->thread_dst.rows;
    int nr_cols = my_harris->thread_dst.cols;
    int nr_iter = my_harris->num_keypoints;
-   int i, r, c;
+   int i, r, c, valid_keypoints;
+   valid_keypoints = 0;
    int NMBOX = my_harris->thread_non_max_suppres;
    
    for (i = 0; i < nr_iter; i++) {
@@ -108,10 +109,14 @@ void *functionHarris(void *threadarg) {
 			   my_harris->thread_dst.at<float>(y+r,x+c) = 0;
 		   }
 	   }
-	   my_harris->matrice.at<double>(0,i) = y + my_harris->left_corner_y;
-	   my_harris->matrice.at<double>(1,i) = x + my_harris->left_corner_x;
+	   if (max > my_harris->threshold) {
+		   my_harris->matrice.at<double>(0,valid_keypoints) = y + my_harris->left_corner_y;
+		   my_harris->matrice.at<double>(1,valid_keypoints) = x + my_harris->left_corner_x;
+		   valid_keypoints++;
+	   }
    }
-   
+   valid_keypoints--;
+   my_harris->valid_interest_points = valid_keypoints;
    
    
    pthread_exit(NULL);
@@ -147,17 +152,14 @@ void *functionMatch(void *threadarg) {
 		   min_d2 = SSD;
 	   }
    }
-   cout << "min_d1 = " << min_d1 << endl;
-   cout << "min_d2 = " << min_d2 << endl;
-   cout << "match_d1 = " << match_d1 << endl;
+
    
    // Make 0.8 a variable that can be tuned 
-   if (min_d1/min_d2 < 0.8) {
+   if (min_d1/min_d2 < 0.9) {
 	   my_data->is_inlier = 1;
 	   my_data->lowest_distance = min_d1;
 	   my_data->match_in_n1 = match_d1;
    }
-   cout << "is inlier = " << my_data->is_inlier << endl;
    
    pthread_exit(NULL);
 }
@@ -198,28 +200,17 @@ Mat subImage(int number_subimages, int boundary, int height, int width, int dim1
  * Output:
  * Matrix of size 2 x min(n1,n2) depending on how many keypoints there are
  */
-Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
-
-	cout << "Inside matchDescriptors " << endl;
+ 
+Matrix ThorSIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 
 	int n1 = descriptor1.rows;	// Matrix containing descriptors for keypoints in image 0
+	
+	cout << "n1 is = " << n1 << endl;
+	
 	int n2 = descriptor2.rows;	// Matrix containing descriptors for keypoints in image 1
 	
-	Matrix matches(2,n1);
-	cout << "dimensions of matches = (" << matches.dim1() << "," << matches.dim2() << ")" << endl;
-	waitKey(0);
-	
-	/*
-	 * 'int descriptor_n2_id;
-		Matrix n1;
-		int is_inlier;
-		double lowest_distance;
-		int match_in_n1;
-		*/
-		
-	cout << "descriptor1" << endl;
-	cout << descriptor1 << endl;
-	
+	Mat matches = Mat::zeros(2, n1, CV_64FC1);
+
 	int NUM_THREADS = n2;
 	pthread_t threads[NUM_THREADS];
 	struct thread_match td[NUM_THREADS];
@@ -236,50 +227,135 @@ Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 		rc = pthread_create(&threads[i], NULL, functionMatch, (void *)&td[i]);
 	}
 	void* ret = NULL;
-	int nr_matches = 0;
 	for (int k = 0; k < NUM_THREADS; k++) {
 		pthread_join(threads[k], &ret);
-		waitKey(0);
-		cout << "td[k].is_inlier = " << td[k].is_inlier << endl;
 		if (td[k].is_inlier == 1) {
 			
 			double distance = td[k].lowest_distance;
-			cout << "distance = " << distance << endl;
 			double index = td[k].match_in_n1;
-			cout << "index = " << index << endl;
-			cout << "Current matches(0,index) = " << matches(0,index) << endl;
-			if (matches(0,index) == 0) {
-				matches(0,index) = distance;
-				matches(1,index) = index;
-				nr_matches++;
+
+			if (matches.at<double>(0, index) == 0) {
+				matches.at<double>(0, index) = distance;
+				matches.at<double>(1, index) = index;
 				
 			}
-			else if (distance < matches(0,index)) {
-				matches(0,index) = distance;
-				matches(1,index) = index;
+			else if (distance < matches.at<double>(0,index)) {
+				matches.at<double>(0, index) = distance;
+				matches.at<double>(1, index) = index;
 			}
 		}
 	}
 	
-	for (int r = 0; r < matches.dim1(); r++) {
-		for (int c = 0; c < matches.dim2(); c++) {
-			cout << matches(r,c) << ", " << endl;
+	int nr_matches = 0;
+	for (int h = 0; h < matches.cols; h++) {
+		if (matches.at<double>(0,h) != 0) {
+			nr_matches++;
 		}
-		cout << "" << endl;
 	}
 	
 	Matrix valid_matches(2, nr_matches);
 	int index = 0;
 	for (int q = 0; q < n1; q++) {
-		if (matches(0,q) != 0) {
+		if (matches.at<double>(0, q) != 0) {
 			valid_matches(0,index) = q;
-			valid_matches(1,index) = matches(1,q);
+			valid_matches(1,index) = matches.at<double>(1, q);
+			index++;
 		}
 	}
 	
 	
 	return valid_matches;
 }
+
+/*
+// Match SIFT Descriptors - Old function
+Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
+
+	int n1 = descriptor1.rows;	// Matrix containing descriptors for keypoints in image 0
+	int n2 = descriptor2.rows;	// Matrix containing descriptors for keypoints in image 1
+	
+	// Threshold on the euclidean distance between keypoints 
+	double threshold = 200;
+	
+	// Match keypoints in frame 2 to keypoints in frame 1 
+	Matrix matches(n2,5);
+	Matrix multiple_matches(n1,2);
+	
+	int count = 0;
+	for (int i = 0; i < n2; i++) {
+		double SSD;
+		double min = std::numeric_limits<double>::infinity();
+		double match;
+		// Just to initialize the values
+		matches(i,0) = 0;
+		matches(i,1) = min;
+		matches(i,2) = 0;
+		matches(i,3) = min;
+		matches(i,4) = 0;
+		for (int j = 0; j < n1; j++) {
+			SSD = 0;
+			for (int k = 0; k < 128; k++) {
+				SSD = SSD + pow((descriptor2.at<double>(i,k)-descriptor1.at<double>(j,k)),2.0);
+			}
+			// If closest neighbour is detected 
+			if (SSD < matches(i,1)) {
+				matches(i,2) = matches(i,0);
+				matches(i,3) = matches(i,1);
+				matches(i,1) = SSD;
+				matches(i,0) = j;
+				if (multiple_matches(j,1) == 0) {
+					multiple_matches(j,0) = i;
+					multiple_matches(j,1) = SSD;
+					matches(i,4) = 0;
+				}
+				else if (SSD < multiple_matches(j,1)) {
+					int temp_index = multiple_matches(j,0);
+					multiple_matches(j,0) = i;
+					multiple_matches(j,1) = SSD;
+					if (matches(temp_index,0) == j) {
+						matches(temp_index,4) = 2;
+					}
+					matches(i,4) = 0;
+				}
+				else {
+					//matches(i,4) = 2; --> Should maybe be enabled
+				}
+			}
+			// The second closest neighbour 
+			else if (SSD < matches(i,3)) {
+				matches(i,2) = j;
+				matches(i,3) = SSD;
+			}
+		}
+	}
+	for (int i = 0; i < n2; i++) {
+		double distance_ratio = matches(i,1)/matches(i,3);
+		if (distance_ratio < 0.8 && matches(i,1) < threshold) {
+			//matches(i,4) = 1;
+			if (matches(i,4) != 2) {
+				matches(i,4) = 1;
+				count++;
+			}
+			
+		}
+		//cout << "Keypoint " << i << " : " << matches(i,0)  << ", " << matches(i,1) << ", " << matches(i,2) << ", " << matches(i,3) << " Match = " << matches(i,4) <<  endl;
+	}
+	
+	// Create matrix with the keypoints that are valid and which are returned.
+	Matrix valid_matches(count,2);
+	cout << "Count of valid matches  = " << count << endl;
+	int index = 0;
+	for (int i = 0; i < n2; i++) {
+		if (matches(i,4) == 1) {
+			valid_matches(index,0) = i;
+			valid_matches(index,1) = matches(i,0);
+			index++;
+		}
+	}
+		
+	return valid_matches;
+}
+*/
 
 /*
 // Match SIFT Descriptors - Old function
@@ -510,12 +586,12 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression)
 	// Define variables related to Harris corner
 	int blockSize = 9; 
 	int apertureSize = 3;
-	double k = 0.04;		// Magic parameter 
+	double k = 0.08;		// Magic parameter 
 	//int thres = 200;	
 	// Parameters before: blocksize = 2, aperturesize = 3, thres = 200, k = 0.04
 	
 	// Variables related to Non Maximum suppression 
-	int NMSBox = 7;
+	int NMSBox = 20;
 	int boundaries = 10; // Boundaries in the image 
 	
 	Mat dst = Mat::zeros( src.size(), CV_32FC1 );
@@ -587,7 +663,7 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression)
 		td[i].num_keypoints  = q;
 		
 		td[i].matrice = keypoints.colRange(i*q,(i+1)*q);
-
+		td[i].threshold = 220;
 		td[i].left_corner_y = indicies.at<double>(0,i);
 		td[i].left_corner_x = indicies.at<double>(1,i);
 
@@ -599,11 +675,16 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression)
 		rc = pthread_create(&threads[i], NULL, functionHarris, (void *)&td[i]);
 	}
 	void* ret = NULL;
-	
+	vector<Mat> keypoint_container;
 	for (int k = 0; k < NUM_THREADS; k++) {
 		pthread_join(threads[k], &ret);
+		int h = td[k].valid_interest_points;
+		if (h > 0) {
+			keypoint_container.push_back(td[k].matrice.colRange(0,h));
+		}
 	}
-	
+	Mat valid_points;
+	hconcat(keypoint_container, valid_points);
 	// Test REct region for at se, om du får det rigtige. 
 	
 	
@@ -634,7 +715,8 @@ Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression)
 	*/
 		
 	
-	return keypoints;
+	//return keypoints;
+	return valid_points;
 	
 	//cout << "End of Harris " << endl;	
 	//Mat emptyArray;	
@@ -840,7 +922,7 @@ void *FindDescriptors(void *threadarg) {
 
 
 // Find SIFT Desriptors  without parallelization
-Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
+Mat ThorSIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	
 	// Simplification of SIFT
 	// Maybe the image should be smoothed first with a Gaussian Kernel
