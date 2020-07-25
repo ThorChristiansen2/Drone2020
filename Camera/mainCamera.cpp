@@ -1072,121 +1072,29 @@ void *FindDescriptors(void *threadarg) {
 */
 
 
-// Find SIFT Desriptors  without parallelization
-Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
-	
-	Mat src_gray_blurred;
-	GaussianBlur(src_gray, src_gray_blurred, Size(3,3), 5,5);
+void *functionDescriptor(void *threadarg) {
+   struct thread_descriptor *my_data;
+   my_data = (struct thread_descriptor *) threadarg;
+   
+   //cout << "mistake 0 here " << endl;
+   int y = my_data->thread_interest_point.at<double>(0,0);
+   int x = my_data->thread_interest_point.at<double>(1,0);
+		
+	Mat grad_x = my_data->thread_grad_x;
+	Mat grad_y = my_data->thread_grad_y;
+	Mat GaussWindow = my_data->thread_Gauss_Window;
+		
+	// Extract a patch of size 16,16 from the image with x-gradients and y-gradients
+	Mat Patch_Ix, Patch_Iy;
 
-	// Simplification of SIFT
-	// Maybe the image should be smoothed first with a Gaussian Kernel
-	int n = keypoints.cols;
-	
-	// Initialize matrix containing keypoints descriptors
-	//Matrix Descriptors(n,128);
-	Mat Descriptors = Mat::zeros(n, 128, CV_64FC1);
-	
-	// Find Image gradients
-	Mat grad_x, grad_y;
-	Mat abs_grad_x, abs_grad_y;
-	int ksize = 1;
-	int scale = 1; 
-	int delta = 0; 
-	int ddepth = CV_16S;
-	
-	// Find the gradients in the Sobel operator by using the OPENCV function
-	Sobel(src_gray_blurred, grad_y, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
-	Sobel(src_gray_blurred, grad_x, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
-	
-	// Converting back to CV_8U
-	convertScaleAbs(grad_x, abs_grad_x);
-	convertScaleAbs(grad_y, abs_grad_y);
-	
-	int filter_size = 16;
-	float sigma = 1.5*16;
-	Mat GaussWindow;
-	GaussWindow = gaussWindow(filter_size, sigma);
-	
-	// For each keypoint
-	for (int i = 0; i < n; i++) {
-		int y = keypoints.at<double>(0, i);
-		int x = keypoints.at<double>(1, i); 
-		//cout << "Point is = (" << y << "," << x << ")" << endl;
-		//waitKey(0);
+	Patch_Ix = selectRegionOfInterest(grad_x, y-7, x-7, y+8, x+8);
+	Patch_Iy = selectRegionOfInterest(grad_y, y-7, x-7, y+8, x+8);
 		
-		//MatType(src_gray);
-		//MatType(grad_x);
-		//MatType(grad_y);
-		
-		//cout << "Intensity at point (" << y << "," << x << ")" << (double) src_gray.at<uchar>(y,x) << endl;
-		/*
-		cout << "src_gray" << endl;
-		for (int r = y-10; r <y+10; r++) {
-			for (int c = x-10; c < x+10; c++) {
-				cout << (double) src_gray.at<uchar>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		} 
-		*/
-		grad_y = (-1)*grad_y;
-		/*
-		cout << "grad_y" << endl;
-		for (int r = y-10; r <y+10; r++) {
-			for (int c = x-10; c < x+10; c++) {
-				cout << (double) grad_y.at<short>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		} 
-		*/
-		grad_x = (-1)*grad_x;
-		/*
-		cout << "grad_x" << endl;
-		for (int r = y-10; r <y+10; r++) {
-			for (int c = x-10; c < x+10; c++) {
-				cout << (double) grad_x.at<short>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		} 
-		waitKey(0);
-		*/
-		
-		// Extract a patch of size 16,16 from the image with x-gradients and y-gradients
-		Mat Patch_Ix, Patch_Iy;
-
-		Patch_Ix = selectRegionOfInterest(grad_x, y-7, x-7, y+8, x+8);
-		Patch_Iy = selectRegionOfInterest(grad_y, y-7, x-7, y+8, x+8);
-		
-		//MatType(Patch_Ix);
-		//MatType(Patch_Iy);
-		
-		//cout << "Dimension of Patch_Ix = (" << Patch_Ix.rows << "," << Patch_Ix.cols << ")" << endl;
-		//cout << "Dimension of Patch_Ix = (" << Patch_Iy.rows << "," << Patch_Iy.cols << ")" << endl;
-		
-		/*
-		cout << "Patch_Ix" << endl;
-		for (int r = 0; r < Patch_Ix.rows; r++) {
-			for (int c = 0; c < Patch_Ix.cols; c++) {
-				cout << (double) Patch_Ix.at<short>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		}
-		*/
-		/*
-		cout << "Patch_Iy" << endl;
-		for (int r = 0; r < Patch_Iy.rows; r++) {
-			for (int c = 0; c < Patch_Iy.cols; c++) {
-				cout << (double) Patch_Iy.at<short>(r,c) << ", ";
-			}
-			cout << "" << endl;
-		}
-		
-		waitKey(0);
-		*/
-		
-		// This is the scaled gradients 
-		Mat Gradients = Mat::zeros(Size(16,16),CV_64FC1);
-		// This is the orientations (angles of the gradients in radians)
-		Mat Orientations = Mat::zeros(Size(16,16),CV_64FC1);
+	//cout << "Mistake 1 here" << endl;
+	// This is the scaled gradients 
+	Mat Gradients = Mat::zeros(Size(16,16),CV_64FC1);
+	// This is the orientations (angles of the gradients in radians)
+	Mat Orientations = Mat::zeros(Size(16,16),CV_64FC1);
 
 		//cout << "Test angle = " << atan2(-0.2,-5) << endl;
 
@@ -1213,6 +1121,7 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 		//cout << "Orientations = " << Orientations << endl;
 		
 		// Build a HOG for every 4x4 subpatch and insert that in the 16x8 matrix called Patch_of_HOGs
+		//cout << "Mistake 2 here" << endl;
 		int index = 0;
 		for (int k1 = 0; k1 < 4; k1++) {
 			for (int k2 = 0; k2 < 4; k2++) {
@@ -1263,6 +1172,7 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 			}
 		}
 		
+		//cout << "Mistake 3 here" << endl;
 		// Build HOG for the entire 16x16 Patch
 		Mat total_HOG = Mat::zeros(1, 8, CV_64FC1);
 		for (int q = 0; q < Patch_of_HOGs.rows; q++) {
@@ -1276,7 +1186,7 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 			total_HOG.at<double>(0,7) = total_HOG.at<double>(0,7) + Patch_of_HOGs.at<double>(q,7);
 			
 		}
-		
+		//cout << "Mistake 4 here" << endl;
 		// Find the biggest bin in the total HOG for the entire 16x16 patch
 		double max_bin = 0; 
 		int max_bin_index = 0;
@@ -1311,102 +1221,103 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 		//cout << temp3 << endl;
 		
 		// Reshape the matrix so it goes from a 16x8 Matrix to a 1x128 matrix
-		
+		//cout << "Mistake 5 here" << endl;
 		Mat descrip = temp3.reshape(0, 1);
 		
-		//cout << "descrip = " << descrip << endl;
 		
 		/*
 		cout << "descrip = " << descrip << endl;
 		waitKey(0);
 		*/
-		
 		for (int k = 0; k < descrip.cols; k++) {
-			Descriptors.at<double>(i,k) = descrip.at<double>(0,k);
+			my_data->thread_descriptor_vector.at<double>(0,k) = descrip.at<double>(0,k);
 		}	
-		/*
-		cout << "Descriptors" << endl;
-		cout << Descriptors << endl;
-		waitKey(0);
-		*/
-		/*
-		 * Mat subPatchGradients, subPatchOrientations;
-		int nindex = 0;
-		for (int k1 = 0; k1 <= 12; k1 = k1+4) {
-			for (int k2 = 0; k2 <= 12; k2 = k2 + 4) {
-				// Extract sub patches
-				subPatchGradients = selectRegionOfInterest(Gradients, k1, k2, k1+4, k2+4);
-				subPatchOrientations = selectRegionOfInterest(Orientations, k1, k2, k1+4, k2+4);
-				//cout << "Orientations extracted " << endl;
-				Matrix Histogram(1,8);
-				for (int l1 = 0; l1 < 4; l1++) {
-					for (int l2 = 0; l2 < 4; l2++) {
-						//cout << "Size subPatchOrientations = (" << subPatchOrientations.rows << ", " << subPatchOrientations.cols << ") " << endl;
-						double angle = subPatchOrientations.at<double>(l1,l2);
-						//cout << "Mistake here" << endl;
-						if (angle >= -M_PI && angle < -(3*M_PI)/4) {
-							Histogram(0,0) = Histogram(0,0) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= -(3*M_PI)/4 && angle < -M_PI/2) {
-							Histogram(0,1) = Histogram(0,1) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= -M_PI/2 && angle < -M_PI/4) {
-							Histogram(0,2) = Histogram(0,2) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= -M_PI/4 && angle < 0) {
-							Histogram(0,3) = Histogram(0,3) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= 0 && angle < M_PI/4) {
-							Histogram(0,4) = Histogram(0,4) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= M_PI/4 && angle < M_PI/2) {
-							Histogram(0,5) = Histogram(0,5) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= M_PI/2 && angle < 3*M_PI/4) {
-							Histogram(0,6) = Histogram(0,6) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= 3*M_PI/4 && angle < M_PI) {
-							Histogram(0,7) = Histogram(0,7) + subPatchGradients.at<double>(l1,l2);
-						}
-					}
-				}
-				// Rotate it so it becomes rotation invariant
-				Histogram = circularShift(Histogram);
-				for (int ii = 0; ii < Histogram.dim2(); ii++) {
-					//Descriptors[i].slice(nindex*8,nindex*8+ii) = Histogram(0,ii);
-					//Descriptors(i,nindex*8+ii) = Histogram(0,ii);
-					double value = Histogram(0,ii);
-					Descriptors.at<double>(i,nindex*8+ii) = value;
-				}
-				nindex++;
-			}
-		}
-		*/
-		
-		
 		
 		
 		// Normalizing the vector 
 		double SumOfSquares = 0;
-		for (int ii = 0; ii < Descriptors.cols; ii++) {
-			SumOfSquares = SumOfSquares + Descriptors.at<double>(i,ii)*Descriptors.at<double>(i,ii);
+		for (int ii = 0; ii < descrip.cols; ii++) {
+			SumOfSquares = SumOfSquares + my_data->thread_descriptor_vector.at<double>(0,ii)*my_data->thread_descriptor_vector.at<double>(0,ii);
 		}
 		
 		
 		
 		
-		
-		for (int ii = 0; ii < Descriptors.cols; ii++) {
-			Descriptors.at<double>(i,ii) = Descriptors.at<double>(i,ii)/sqrt(SumOfSquares);
+		//cout << "Mistake 6 here" << endl;
+		for (int ii = 0; ii < descrip.cols; ii++) {
+			my_data->thread_descriptor_vector.at<double>(0,ii) = my_data->thread_descriptor_vector.at<double>(0,ii)/sqrt(SumOfSquares);
 		}
 		
-		//cout << "mistake here" << endl;
+   
+   pthread_exit(NULL);
+}
+
+
+
+// This function works - 25.07-2020
+// Find SIFT Desriptors  without parallelization
+Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
+	
+	Mat src_gray_blurred;
+	GaussianBlur(src_gray, src_gray_blurred, Size(3,3), 5,5);
+
+	// Simplification of SIFT
+	// Maybe the image should be smoothed first with a Gaussian Kernel
+	int n = keypoints.cols;
+	
+	// Initialize matrix containing keypoints descriptors
+	//Matrix Descriptors(n,128);
+	Mat Descriptors = Mat::zeros(n, 128, CV_64FC1);
+	
+	// Find Image gradients
+	Mat grad_x, grad_y;
+	Mat abs_grad_x, abs_grad_y;
+	int ksize = 1;
+	int scale = 1; 
+	int delta = 0; 
+	int ddepth = CV_16S;
+	
+	// Find the gradients in the Sobel operator by using the OPENCV function
+	Sobel(src_gray_blurred, grad_y, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
+	Sobel(src_gray_blurred, grad_x, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
+	
+	// Converting back to CV_8U
+	convertScaleAbs(grad_x, abs_grad_x);
+	convertScaleAbs(grad_y, abs_grad_y);
+	
+	int filter_size = 16;
+	float sigma = 1.5*16;
+	Mat GaussWindow;
+	GaussWindow = gaussWindow(filter_size, sigma);
+	
+	
+	grad_y = (-1)*grad_y;
+	grad_x = (-1)*grad_x;
+	
+	
+	int NUM_THREADS = n;
+	pthread_t threads[NUM_THREADS];
+	struct thread_descriptor td[NUM_THREADS];
+	int i, rc;
+	for (i = 0; i < NUM_THREADS; i++) {
+		td[i].thread_interest_point = keypoints.colRange(i,i+1);
+
+		td[i].thread_grad_x = grad_x;
+		//cout << "td[i].thread_grad_x = " << td[i].thread_grad_x << endl;
+		td[i].thread_grad_y = grad_y;
+		//cout << "td[i].thread_grad_y = " << td[i].thread_grad_y << endl;
+		td[i].thread_descriptor_vector = Descriptors.row(i);
 		
-
-	// Scale the norms of the gradients by multiplying a the graidents with a gaussian
-	// centered in the keypoint and with Sigma_w = 1.5*16. 
-
+		td[i].thread_Gauss_Window = GaussWindow;
+		
+		rc = pthread_create(&threads[i], NULL, functionDescriptor, (void *)&td[i]);
 	}
+	void* ret = NULL;
+	vector<Mat> keypoint_container;
+	for (int k = 0; k < NUM_THREADS; k++) {
+		pthread_join(threads[k], &ret);
+	}
+	
 	
 	return Descriptors;
 }
@@ -2922,7 +2833,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	Mat matches2 = SIFT::matchDescriptors(descriptors_candidates_Ii, descriptors_candidates_Ii_1);
 	
 	Mat valid_matches = Mat::zeros(2, matches.cols, CV_64FC1);
-	int temp_index = 0;
+	temp_index = 0;
 	for (int i = 0; i < matches.cols; i++) {
 		int index_frame0 = matches.at<double>(0,i);
 		int index_frame1 = matches.at<double>(1,i);
@@ -2961,6 +2872,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	
 	// Parallelizaiton of code 	
 	//cout << "Parallelization of continuousCandidateKeypoints" << endl;
+	/*
 	int NUM_THREADS = Si.num_candidates;
 	pthread_t threads[NUM_THREADS];
 	struct thread_data td[NUM_THREADS];
@@ -2980,6 +2892,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 			//cout << "Mistake 1" << endl;
 		}
 	}
+	*/
 	
 	/*
 	 * 
@@ -3027,14 +2940,14 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	*/
 
 	// Delete un-tracked candidate keypoints by overwriting the points
-	failed_candidates = failed_candidates + extracted_keypoints;
+	//failed_candidates = failed_candidates + extracted_keypoints;
 	
 	/*
 	cout << "failed_candidates" << endl;
 	cout << failed_candidates << endl;
 	*/
 	
-	
+	/*
 	// Find new candidate keypoints 
 	int n = countNonZero(failed_candidates);
 	if (n > 0) { // If n is greater than zero - meaning that some keypoints failed
@@ -3081,17 +2994,17 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 				
 				// Update camera pose at the first observation of keypoint
 				t_C_W_vector.copyTo(Si.Ti.col(i));
-				/*
+				
 				for (int j = 0; j < t_C_W_vector.rows; j++) {
 					Si.Ti.at<double>(j,i) = t_C_W_vector.at<double>(j,0);
 				}
-				*/
+				
 				
 				temp++;
 			}
 		}
 	}
-	
+	*/
 	/*
 	cout << "number of keypoints that should be found = " << n << endl;
 	cout << "nonzero elements in failed_candidates = " << countNonZero(failed_candidates) << endl;

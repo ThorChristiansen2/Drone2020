@@ -92,6 +92,15 @@ struct thread_data {
 		int keep_point;
 };
 
+struct thread_descriptor {
+		//int thread_id;
+		Mat thread_interest_point;
+		Mat thread_grad_x;
+		Mat thread_grad_y;
+		Mat thread_descriptor_vector;
+		Mat thread_Gauss_Window;
+};
+
 struct thread_match {
 		//int thread_id;
 		int descriptor_n2_id;

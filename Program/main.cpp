@@ -129,8 +129,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	Mat temp0, temp1, emptyMatrix;
 	
-	
-	high_resolution_clock::time_point t1 = high_resolution_clock::now();
+	high_resolution_clock::time_point t11 = high_resolution_clock::now();
+	//high_resolution_clock::time_point t1 = high_resolution_clock::now();
 	
 	//Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 210, emptyMatrix); // Number of maximum keypoints
 	int dim1 = I_i0_gray.rows;
@@ -140,7 +140,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	//imshow("I_i0_resized", I_i0_resized);
 	//waitKey(0);
 	
-	goodFeaturesToTrack(I_i0_resized, temp0, 300, 0.01, 10, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i0_resized, temp0, 200, 0.01, 10, noArray(), 3, true, 0.04);
 	Mat keypoints_I_i0 = Mat::zeros(2, temp0.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i0.cols; i++) {
 		keypoints_I_i0.at<double>(0,i) = temp0.at<float>(i,1) + 10;
@@ -172,11 +172,11 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	}
 	*/
 	
-	
+	/*
 	high_resolution_clock::time_point t2 = high_resolution_clock::now();
 	duration<double> time_span = duration_cast<duration<double>>(t2-t1);
 	cout << "Finding keypoints_I_i0 took = " << time_span.count() << " seconds" << endl;
-	
+	*/
 	/*
 	Mat draw_I_i0;
 	I_i0.copyTo(draw_I_i0);
@@ -188,7 +188,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 
 	
 	
-	high_resolution_clock::time_point t3 = high_resolution_clock::now();
+	//high_resolution_clock::time_point t3 = high_resolution_clock::now();
 	
 	//Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 210, emptyMatrix); // Number of keypoints that is looked 
 	
@@ -198,7 +198,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 	//imshow("I_i1_resized", I_i1_resized);
 	//waitKey(0);
-	goodFeaturesToTrack(I_i1_resized, temp1, 300, 0.01, 10, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i1_resized, temp1, 200, 0.01, 10, noArray(), 3, true, 0.04);
 	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i1.cols; i++) {
 		keypoints_I_i1.at<double>(0,i) = temp1.at<float>(i,1) + 10;
@@ -206,11 +206,11 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	}
 	
 	
-	
+	/*
 	high_resolution_clock::time_point t4 = high_resolution_clock::now();
 	duration<double> time_span1 = duration_cast<duration<double>>(t4-t3);
 	cout << "Finding keypoints_I_i1 took = " << time_span1.count() << " seconds" << endl;
-	
+	*/
 	/*
 	Mat draw_I_i1;
 	I_i1.copyTo(draw_I_i1);
@@ -225,7 +225,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	// ######################### SIFT ######################### 
 	//Finding SIFT::descriptors without parallelization 
-	high_resolution_clock::time_point t5 = high_resolution_clock::now();
+	//high_resolution_clock::time_point t5 = high_resolution_clock::now();
 
 	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 
@@ -235,33 +235,37 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	waitKey(0);
 	*/
 
-	
+	/*
 	high_resolution_clock::time_point t6 = high_resolution_clock::now();
 	duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
 	cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
+	*/
 	
 	
-	
-	high_resolution_clock::time_point t7 = high_resolution_clock::now();
+	//high_resolution_clock::time_point t7 = high_resolution_clock::now();
 	
 	Mat descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
 	
-	
+	/*
 	high_resolution_clock::time_point t8 = high_resolution_clock::now();
 	duration<double> time_span3 = duration_cast<duration<double>>(t8-t7);
 	cout << "Finding descriptors_I_i0 took = " << time_span3.count() << " seconds" << endl;
+	*/
 	
 	
 	
-	
-	high_resolution_clock::time_point t9 = high_resolution_clock::now();
+
 	
 	// Match descriptors --> Optimize this part of the code because it takes the longest time to run
 	// Matrix matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+	
+	// Time consuming 
 	Mat matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
-
+	
+	// Time consuming 
 	Mat matches2 = SIFT::matchDescriptors(descriptors_I_i1, descriptors_I_i0);
-
+	
+	// Not time consuming 
 	Mat valid_matches = Mat::zeros(2, matches.cols, CV_64FC1);
 	int temp_index = 0;
 	for (int i = 0; i < matches.cols; i++) {
@@ -279,12 +283,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 			}
 		}
 	}
-	matches = valid_matches.colRange(0,temp_index);
-	
-	
-	high_resolution_clock::time_point t10 = high_resolution_clock::now();
-	duration<double> time_span4 = duration_cast<duration<double>>(t10-t9);
-	cout << "Finding matches took = " << time_span4.count() << " seconds" << endl;
+	matches = valid_matches.colRange(0,temp_index);	
 	
 	
 	// Find Point correspondences
@@ -295,7 +294,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	int N = matches.cols;
 	cout << "Number of matches = " << N << endl;
 	
-	high_resolution_clock::time_point t11 = high_resolution_clock::now();
+	//high_resolution_clock::time_point t11 = high_resolution_clock::now();
 	
 	// For plotting
 	// For efficiency, you should maybe just use vectors instead of creating two new matrices
@@ -916,7 +915,7 @@ int main ( int argc,char **argv ) {
 	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix " << endl;
 	cout << transformation_matrix << endl;
-	
+	waitKey(0);
 	
 	// ############### VO Continuous ###############
 	bool continueVOoperation = true;
