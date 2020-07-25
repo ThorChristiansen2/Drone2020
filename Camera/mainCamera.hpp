@@ -158,7 +158,8 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc);
 state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc);
 
 // Triangulate new candidate Keypoints
-std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle);
+//std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle);
+state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle);
 
 
 // For KLT

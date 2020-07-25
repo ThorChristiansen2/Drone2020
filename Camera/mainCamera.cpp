@@ -2706,36 +2706,20 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
  * state Si
  */
 state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
+	cout << "Finding new Candidate Keypoints for the first time" << endl;
 	
 	// Convert the image to gray scale 
 	Mat Ii_gray;
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY);
 	
-	/*
-	// Make sure you only find new keypoints and not keypoints you have already tracked
-	for (int i = 0; i < Si.k; i++) {
-		double y = Si.Pi.at<double>(0,i); // y-coordinate of image
-		double x = Si.Pi.at<double>(1,i); // x-coordinate of image
 		
-		// Area of 5x5 is set to zero in the image
-		for (int r = -2; r < 3; r++) {
-			for (int c = -2; c < 3; c++) {
-				Ii.at<uchar>(y+r,x+c) = 0;
-				Ii_gray.at<uchar>(y+r,x+c) = 0;
-			}
-		}
-	}
-	*/
-	
-	
-	
-	
 	// Find new keypoints 
 	int keypoint_max = num_candidate_keypoints + Si.k; // Select at least num_candidate_keypoints new candidate keypoints
 	int dim1, dim2;
 	dim1 = Ii_gray.rows;
 	dim2 = Ii_gray.cols;
 	
+	// Make an image that is used to check whether that keypoint had already been found before. 
 	Mat checkImage = Mat::zeros(dim1, dim2, CV_64FC1);
 	for (int i = 0; i < Si.k; i++) {
 		checkImage.at<double>(Si.Pi.at<double>(0,i),Si.Pi.at<double>(1,i)) = 1;
@@ -2745,8 +2729,10 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	Mat temp1;
 	goodFeaturesToTrack(Ii_resized, temp1, keypoint_max, 0.01, 10, noArray(), 3, true, 0.04);
 	Mat keypoints_Ii = Mat::zeros(2, temp1.rows, CV_64FC1);
+	
 	int a, b, temp_index;
 	temp_index = 0;
+	
 	for (int i = 0; i < keypoints_Ii.cols; i++) {
 		int a = temp1.at<float>(i,1) + 10;
 		int b = temp1.at<float>(i,0) + 10;
@@ -2757,15 +2743,32 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 			temp_index++;
 		}
 	}
-	keypoints_Ii = keypoints_Ii.colRange(0,temp_index);
-	//imshow("new candidate keypoints", Ii_gray);
-	//waitKey(0);
+	keypoints_Ii = keypoints_Ii.colRange(0,30);
 	
 	// Update state 
 	Si.num_candidates = keypoints_Ii.cols;
 	
+	cout << "Number of New candidate Keypoints" << endl;
+	
 	// Update keypoints
 	keypoints_Ii.copyTo(Si.Ci); 
+	
+	
+	// Draw keypoints Si.Pi
+	Mat Ii_draw;
+	Ii.copyTo(Ii_draw);
+	for (int i = 0; i < Si.Pi.cols; i++) {
+		circle (Ii_draw, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
+	}
+	imshow("newCandidateKeypoints Ii Si.Pi", Ii_draw);
+	waitKey(0);
+	// Draw Candidate keypoints Si.Ci
+	for (int i = 0; i < Si.Ci.cols; i++) {
+		circle (Ii_draw, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
+	}
+	imshow("newCandidateKeypoints Ii Si.Ci", Ii_draw);
+	waitKey(0);
+	
 	
 	// Update first observation of keypoints
 	keypoints_Ii.copyTo(Si.Fi);
@@ -2778,67 +2781,80 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	return Si;
 }
 
+/* Name: continuousCandidateKeypoints
+ * Objective: This function tracks candidate keypoints stored in the matrix Si.Ci from previous frame I^(i-1) to current frame I^i. 
+ * If a candidate keypoint is successfully tracked from frame I^(i-1) to current frame I^i the coordinates of the specific keypoint
+ * is updated in Si.Ci. 
+ * If a candidate keypoint is not tracked successfully it is simply discarded.
+ * If the number of candidate keypoints fall below a certain threshold specified as num_candidate_keypoints in mainCamera.hpp new
+ * potential candidate keypoints are found in frame I^i. These points are then concatenated horizontally to the other candidate keypoints
+ * 
+ * Inputs:
+ * Mat Ii_1 - Previous frame I^(i-1)
+ * Mat Ii - Current frame I^i
+ * State Si - The state which is a struct containing keypoints, corresponding landmarks, newest detection of candidate keypoints, 
+ * first detection of candidate keypoints and newest detection of candidate keypoints, 
+ * Mat T_wc - A matrix of size 3x4 which contains the rotation and translation
+ * 
+ * Output:
+ * State Si - An update of state Si
+ */
 state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
+	cout << "continuousCandidateKeypoints " << endl;
 	
-	cout << "Si.Ci" << endl;
-	cout << Si.Ci << endl;
-	
-	//Mat kpold = Mat::zeros(3, Si.num_candidates, CV_64FC1);
-	Mat failed_candidates = Mat::zeros(1, Si.num_candidates, CV_64FC1);
-	
-	int nr_keep = 0;
+	// Variables used for for loops
+	int i, q;
 	
 	Mat Ii_1_gray, Ii_gray;
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY);
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY);
 	
-	//cout << extracted_keypoints << endl;
 	
 	// Find descriptors for candidate keypoints from previous frame
 	Mat descriptors_candidates_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si.Ci);
-	
-	
 	
 	int dim1, dim2;
 	dim1 = Ii_gray.rows;
 	dim2 = Ii_gray.cols;
 	
-	// Ignorre keypoints that are already points
+	// Create a Matrix of same size as image and use it to ignorre keypoints that are already points
 	Mat checkImage = Mat::zeros(dim1, dim2, CV_64FC1);
-	for (int i = 0; i < Si.k; i++) {
+	for (i = 0; i < Si.k; i++) {
 		checkImage.at<double>(Si.Pi.at<double>(0,i),Si.Pi.at<double>(1,i)) = 1;
 	}
 	
-	
+	// Find keypoints in new image
 	Mat Ii_resized = Ii_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 	Mat temp1;
 	goodFeaturesToTrack(Ii_resized, temp1, 300, 0.01, 10, noArray(), 3, true, 0.04);
 	Mat keypoints_Ii = Mat::zeros(2, temp1.rows, CV_64FC1);
 	int a, b, temp_index;
 	temp_index = 0;
-	for (int i = 0; i < keypoints_Ii.cols; i++) {
+	for (i = 0; i < keypoints_Ii.cols; i++) {
 		a = temp1.at<float>(i,1) + 10;
 		b = temp1.at<float>(i,0) + 10;
 		if ( checkImage.at<double>(a,b) != 1 ) {
-			keypoints_Ii.at<double>(0,temp_index) = temp1.at<float>(i,1) + 10;
-			keypoints_Ii.at<double>(1,temp_index) = temp1.at<float>(i,0) + 10;
+			keypoints_Ii.at<double>(0,temp_index) = a;
+			keypoints_Ii.at<double>(1,temp_index) = b;
 			temp_index++;
 		}
 	}
 	keypoints_Ii = keypoints_Ii.colRange(0,temp_index);
 	
+	// Find descriptors for the new keypoints
 	Mat descriptors_candidates_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
 	
+	// Find matches
 	Mat matches = SIFT::matchDescriptors(descriptors_candidates_Ii_1, descriptors_candidates_Ii);
 	Mat matches2 = SIFT::matchDescriptors(descriptors_candidates_Ii, descriptors_candidates_Ii_1);
 	
 	Mat valid_matches = Mat::zeros(2, matches.cols, CV_64FC1);
 	temp_index = 0;
-	for (int i = 0; i < matches.cols; i++) {
+	for (i = 0; i < matches.cols; i++) {
 		int index_frame0 = matches.at<double>(0,i);
 		int index_frame1 = matches.at<double>(1,i);
 		
-		for (int q = 0; q < matches2.cols; q++) {
+		for (q = 0; q < matches2.cols; q++) {
 			if (matches2.at<double>(1,q) == index_frame0) {
 				if (matches2.at<double>(0,q) == index_frame1) {
 					// Mutual match
@@ -2866,162 +2882,63 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	hconcat(Ti_container, Si.Ti);
 	Si.num_candidates = Si.Ci.cols;
 	
-	// tack new keypoints if it is below threshold
 	
-	
-	
-	// Parallelizaiton of code 	
-	//cout << "Parallelization of continuousCandidateKeypoints" << endl;
-	/*
-	int NUM_THREADS = Si.num_candidates;
-	pthread_t threads[NUM_THREADS];
-	struct thread_data td[NUM_THREADS];
-	int i, rc;
-	for (i = 0; i < NUM_THREADS; i++) {
-		td[i].Ii_1_gray = Ii_1_gray;
-		td[i].Ii_gray = Ii_gray;
-		td[i].dwdx = dwdx;
-		td[i].thread_mat = Si.Ci.col(i);
-		rc = pthread_create(&threads[i], NULL, functionKLT, (void *)&td[i]);
+	// Draw keypoints Si.Pi
+	Mat Ii_draw;
+	Ii.copyTo(Ii_draw);
+	for (int i = 0; i < Si.Pi.cols; i++) {
+		circle (Ii_draw, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
 	}
-	void* ret = NULL;
-	for (int k = 0; k < NUM_THREADS; k++) {
-		pthread_join(threads[k], &ret);
-		if (td[k].keep_point != 1) {
-			failed_candidates.at<double>(0,k) = 1;
-			//cout << "Mistake 1" << endl;
-		}
-	}
-	*/
-	
-	/*
-	 * 
-	cout << "continuousCandidateKeypoints" << endl;
-	// Track candidate keypoints 
-	Mat x_T = Mat::zeros(1, 2, CV_64FC1);
-	Mat delta_keypoint;
-	for (int i = 0; i < Si.num_candidates; i++) {
-		// Makes sure not to track already extracted keypoints
-		if (extracted_keypoints.at<double>(0,i) == 0) {
-			//cout << "Mistake 2" << endl;
-			x_T.at<double>(0,0) = Si.Ci.at<double>(1,i); // x-coordinate in image
-			x_T.at<double>(0,1) = Si.Ci.at<double>(0,i); // y-coordinate in image
-			cout << "Keypoint x_T = (" << x_T.at<double>(0,0) << "," << x_T.at<double>(0,1) << ") ";
-			
-			delta_keypoint = KLT::trackKLTrobustly(Ii_1_gray, Ii_gray, x_T, dwdx, KLT_r_T, KLT_num_iters, KLT_lambda);
-			
-			if (delta_keypoint.at<double>(2,0) == 1) {
-				nr_keep++;
-				//Si.Ci.at<double>(1,i) = delta_keypoint.at<double>(0,0) + Si.Ci.at<double>(1,i); // Check if this is right 
-				//Si.Ci.at<double>(0,i) = delta_keypoint.at<double>(1,0) + Si.Ci.at<double>(0,i);
-				
-			}
-			Si.Ci.at<double>(1,i) = delta_keypoint.at<double>(0,0) + Si.Ci.at<double>(1,i); // Check if this is right 
-			Si.Ci.at<double>(0,i) = delta_keypoint.at<double>(1,0) + Si.Ci.at<double>(0,i);
-			cout << "Match = " << delta_keypoint.at<double>(2,0) << " at point = (" << Si.Ci.at<double>(0,i) << "," << Si.Ci.at<double>(1,i) << ")" << endl;
-			
-			if (delta_keypoint.at<double>(2,0) == 0) {
-				failed_candidates.at<double>(0,i) = 1;
-			}
-		}
-
-	}
-	*/
-	Mat row0, row1;
-	Si.Ci.row(0).copyTo(row0);
-	Si.Ci.row(1).copyTo(row1);
-	vconcat(row1, row0, Si.Ci); // y-coordinate in row 0 and x-coordinate in row 1
-	
-	/*
-	cout << "Si.Ci" << endl;
-	cout << Si.Ci << endl;
-	cout << "failed_candidates" << endl;
-	cout << failed_candidates << endl;
-	*/
-
-	// Delete un-tracked candidate keypoints by overwriting the points
-	//failed_candidates = failed_candidates + extracted_keypoints;
-	
-	/*
-	cout << "failed_candidates" << endl;
-	cout << failed_candidates << endl;
-	*/
-	
-	/*
-	// Find new candidate keypoints 
-	int n = countNonZero(failed_candidates);
-	if (n > 0) { // If n is greater than zero - meaning that some keypoints failed
-		
-		// Non maximum suppression of candidate keypoints 
-		Mat tempMat = Mat::zeros(2, countNonZero(failed_candidates), CV_64FC1); 
-		//cout << "Dimensions of tempMat = (" << tempMat.rows << "," << tempMat.cols << ")" << endl; 
-		for (int i = 0; i < countNonZero(failed_candidates); i++) {
-			if (failed_candidates.at<double>(0,i) == 1) {
-				//tempMat.at<double>(0,i) = (Si.Ci.at<double>(0,i));
-				//tempMat.at<double>(1,i) = (Si.Ci.at<double>(1,i));
-				tempMat.at<double>(0,i) = (Si.Ci.at<double>(0,i)); // y-coordinate
-				tempMat.at<double>(1,i) = (Si.Ci.at<double>(1,i)); // x-coordinate
-			}
-		}
-		//cout << "tempMat" << endl;
-		//cout << tempMat << endl;
-		
-		// Concatenate failed candidate keypoints as well as current keypoints in Si.Pi
-		Mat suprression;
-		if (tempMat.cols == 0) {
-			Si.Pi.copyTo(suprression);
-		}
-		else {
-			hconcat(Si.Pi, tempMat, suprression);
-		}	
-		
-		// Create a vector of current pose 
-		Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
-		
-		// Find candidate-keypoints
-		Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, suprression);
-		vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
-		int temp = 0;
-		for (int i = 0; i < Si.num_candidates; i++) {
-			if (failed_candidates.at<double>(0,i) > 0) {
-				// Update current keypoint position
-				Si.Ci.at<double>(1,i) = candidate_keypoints.at<double>(1,temp); // x-coordinate
-				Si.Ci.at<double>(0,i) = candidate_keypoints.at<double>(0,temp); // y-coordinate
-				
-				// Update first coordinates of first observation of keypoint
-				Si.Fi.at<double>(1,i) = candidate_keypoints.at<double>(1,temp); // x-coordinate
-				Si.Fi.at<double>(0,i) = candidate_keypoints.at<double>(0,temp); // y-coordinate
-				
-				// Update camera pose at the first observation of keypoint
-				t_C_W_vector.copyTo(Si.Ti.col(i));
-				
-				for (int j = 0; j < t_C_W_vector.rows; j++) {
-					Si.Ti.at<double>(j,i) = t_C_W_vector.at<double>(j,0);
-				}
-				
-				
-				temp++;
-			}
-		}
-	}
-	*/
-	/*
-	cout << "number of keypoints that should be found = " << n << endl;
-	cout << "nonzero elements in failed_candidates = " << countNonZero(failed_candidates) << endl;
-
-	Mat candidate_keypoints = Harris::corner(Ii, Ii_gray, n, suprression);
-	cout << "Dimensions of candidate_keypoints = (" << candidate_keypoints.rows << "," << candidate_keypoints.cols << ")" << endl;
-	vconcat(candidate_keypoints.row(1), candidate_keypoints.row(2), candidate_keypoints);
-	cout << candidate_keypoints << endl;
-	
-	for (int k = 0; k < Si.Ci.cols; k++) {
-		double y = Si.Ci.at<double>(0, k);
-		double x = Si.Ci.at<double>(1, k);
-		circle (Ii, Point(x,y), 5, Scalar(200), 2,8,0);
-	}
-	imshow("New candidates Ii", Ii);
+	imshow("continuousCandidateKeypoints Ii Si.Pi", Ii_draw);
 	waitKey(0);
-	*/
+	// Draw Candidate keypoints Si.Ci
+	for (int i = 0; i < Si.Ci.cols; i++) {
+		circle (Ii_draw, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
+	}
+	imshow("continuousCandidateKeypoints Ii Si.Ci", Ii_draw);
+	waitKey(0);
+	
+	if (Si.num_candidates < num_candidate_keypoints) {
+		
+		// Number of new candidate keypoints that should be found 
+		int n = num_candidate_keypoints - Si.num_candidates; 
+		
+		// Start by ignorring current candidate keypoints
+		for (i = 0; i < Si.num_candidates; i++) {
+			checkImage.at<double>(Si.Ci.at<double>(0,i),Si.Ci.at<double>(1,i)) = 1;
+		}
+		
+		int k = Si.k + Si.num_candidates + n;
+		Mat temp2;
+		goodFeaturesToTrack(Ii_resized, temp2, k, 0.01, 10, noArray(), 3, true, 0.04);
+		Mat Potential_new_CI = Mat::zeros(2, temp2.rows, CV_64FC1);
+		temp_index = 0;
+		for (int i = 0; i < Potential_new_CI.cols; i++) {
+			a = temp2.at<float>(i,1) + 10;
+			b = temp2.at<float>(i,0) + 10;
+			
+			if ( checkImage.at<double>(a,b) != 1 ) {
+				Potential_new_CI.at<double>(0,temp_index) = a;
+				Potential_new_CI.at<double>(1,temp_index) = b;
+				temp_index++;
+			}
+		}
+		
+		// Concatenate the newly founded keypoints
+		hconcat(Potential_new_CI.colRange(0,temp_index), Si.Ci);
+		hconcat(Potential_new_CI.colRange(0,temp_index), Si.Fi);
+		
+		Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
+		Mat poses = repeat(t_C_W_vector, 1, temp_index);
+		
+		// Concatenate the current poses
+		hconcat(poses, Si.Ti);
+		
+		
+	}
+	
+	// Update number of candidate keypoints
+	Si.num_candidates = Si.Ci.cols;
 	
 	cout << "Number of candidate keypoints = " << Si.Ci.cols << endl;
 	cout << "End continuousCandidateKeypoints" << endl;
@@ -3042,15 +2959,6 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat imagepoint0, Mat imagepoint1) {
 	Mat P;
 	Mat Q;
-	
-	/*
-	Mat imagepoint0 = Mat::ones(3, 1, CV_64FC1);
-	imagepoint0.at<double>(0,0) = keypoint0.at<double>(0,0);
-	imagepoint0.at<double>(1,0) = keypoint0.at<double>(1,0);
-	Mat imagepoint1 = Mat::ones(3, 1, CV_64FC1);
-	imagepoint1.at<double>(0,0) = keypoint1.at<double>(0,0);
-	imagepoint1.at<double>(1,0) = keypoint1.at<double>(1,0);
-	*/
 	
 	Mat M0 = K*tau;
 	Mat M1 = K*T_WC;
@@ -3079,7 +2987,8 @@ Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat imagepoint0, Mat imagepoint1) {
 
 
 // Triangulate new landmarks 
-tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle) {
+//tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle) {
+state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle) {
 	
 	// Check if points are ready to be traingulated 
 	Mat extracted_keypoints = Mat::zeros(1, Si.num_candidates, CV_64FC1);
@@ -3088,6 +2997,7 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 	Mat newKeypoints = Mat::zeros(2, Si.num_candidates, CV_64FC1);
 	Mat traingulated_landmark;
 	Mat newLandmarks = Mat::zeros(Si.Xi.rows, Si.num_candidates, CV_64FC1);
+	int i;
 	int temp = 0;
 	
 	Mat keypoint_last_occur = Mat::ones(3, 1, CV_64FC1);
@@ -3099,7 +3009,7 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 	// Paralleliser det her måske
 	// Beregn vinklen mellem vektorerne current viewpoint og den første observation af keypointet
 	double fraction, alpha;
-	for (int i = 0; i < Si.num_candidates; i++) {
+	for (i = 0; i < Si.num_candidates; i++) {
 		// First occurrence of keypoint
 		keypoint_last_occur.at<double>(0,0) = Si.Fi.at<double>(0,i); // y-coordinate
 		keypoint_last_occur.at<double>(1,0) = Si.Fi.at<double>(1,i); // x-coordinate
@@ -3142,41 +3052,42 @@ tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double thr
 			
 			traingulated_landmark.copyTo(newLandmarks.col(temp));
 			
-			/*
-			newLandmarks.at<double>(0,temp) = traingulated_landmark.at<double>(0,0);
-			newLandmarks.at<double>(1,temp) = traingulated_landmark.at<double>(1,0);
-			newLandmarks.at<double>(2,temp) = traingulated_landmark.at<double>(2,0);
-			newLandmarks.at<double>(3,temp) = traingulated_landmark.at<double>(3,0);
-			*/
-			
 			temp++;
 		}
 	}
 	
-	Mat temp_newKeypoints = Mat::zeros(2, temp, CV_64FC1);
-	Mat temp_newLandmarks = Mat::zeros(4, temp, CV_64FC1);
-	
-	for (int j = 0; j < temp; j++) {
-		temp_newKeypoints.at<double>(0,j) = newKeypoints.at<double>(0,j);
-		temp_newKeypoints.at<double>(1,j) = newKeypoints.at<double>(1,j);
-		
-		temp_newLandmarks.at<double>(0,j) = newLandmarks.at<double>(0,j);
-		temp_newLandmarks.at<double>(1,j) = newLandmarks.at<double>(1,j);
-		temp_newLandmarks.at<double>(2,j) = newLandmarks.at<double>(2,j);
-		temp_newLandmarks.at<double>(3,j) = newLandmarks.at<double>(3,j);
-		
-	}
-	
-	// 
+	// Append new keypoints and new landmarks 
 	if (temp > 0) {
+		newKeypoints = newKeypoints.colRange(0,temp);
+		newLandmarks = newLandmarks.colRange(0,temp);
+		
 		// Append new keypoints
-		hconcat(Si.Pi, temp_newKeypoints, Si.Pi);
+		hconcat(Si.Pi, newKeypoints, Si.Pi);
 		
 		// Append new 3D landmarks 
-		hconcat(Si.Xi, temp_newLandmarks, Si.Xi);
+		hconcat(Si.Xi, newLandmarks, Si.Xi);
 	}
 	
-	return make_tuple(Si, extracted_keypoints);
+	
+	// Remove the candidate keypoints that have been triangulated.
+	vector<Mat> Ci_container;
+	vector<Mat> Fi_container;
+	vector<Mat> Ti_container;
+	
+	for (i = 0; i < extracted_keypoints.cols; i++) {
+		if (extracted_keypoints.at<double>(0,i) == 0) {
+			Ci_container.push_back( Si.Ci.col(i) );
+			Fi_container.push_back( Si.Fi.col(i) );
+			Ti_container.push_back( Si.Ti.col(i) );
+		}
+	}
+	hconcat(Ci_container, Si.Ci);
+	hconcat(Fi_container, Si.Fi);
+	hconcat(Ti_container, Si.Ti);
+	Si.num_candidates = Si.Ci.cols;
+	
+	//return make_tuple(Si, extracted_keypoints);
+	return Si;
 }
 
 
