@@ -190,6 +190,12 @@ void MatType( Mat inputMat );
 // Test of funcitons 
 Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat keypoint0, Mat keypoint1);
 
+// Initialization
+std::tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1);
+
+// Process Frame 
+std::tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K);
+
 
 // Test of threadid
 //void *PrintHello(void *threadid);

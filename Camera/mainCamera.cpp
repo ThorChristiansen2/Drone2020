@@ -34,93 +34,19 @@ using namespace std::complex_literals;
 using namespace std::chrono;
 //using namespace Numeric_lib;
 
-void *functionKLT(void *threadarg) {
-   struct thread_data *my_data;
-   my_data = (struct thread_data *) threadarg;
-   Mat x_T = Mat::zeros(1, 2, CV_64FC1);
-   
-   Mat delta_keypoint;
-   for (int i = 0; i < my_data->thread_mat.cols; i++) {
-	   x_T.at<double>(0,0) = my_data->thread_mat.at<double>(1,i);
-	   x_T.at<double>(0,1) = my_data->thread_mat.at<double>(0,i);
-	   delta_keypoint = KLT::trackKLTrobustly(my_data->Ii_1_gray, my_data->Ii_gray, x_T, my_data->dwdx, KLT_r_T, KLT_num_iters, KLT_lambda);
-	   double a = delta_keypoint.at<double>(0,0) + my_data->thread_mat.at<double>(1,i);
-	   double b = delta_keypoint.at<double>(1,0) + my_data->thread_mat.at<double>(0,i);
-	   //my_data->thread_mat.at<double>(1,i) = b;
-	   //my_data->thread_mat.at<double>(0,i) = a;
-	   if (a > 0 && b > 0) {
-		   my_data->thread_mat.at<double>(1,i) = b;
-		   my_data->thread_mat.at<double>(0,i) = a;
-	   }
-	   else if (a > 0) {
-		   my_data->thread_mat.at<double>(1,i) = my_data->thread_mat.at<double>(0,i);
-		   my_data->thread_mat.at<double>(0,i) = a; // y-coordinate in image
-	   }
-	   else if (b > 0) {
-		   my_data->thread_mat.at<double>(0,i) = my_data->thread_mat.at<double>(1,i);
-		   my_data->thread_mat.at<double>(1,i) = b; // To avoid negative coordinates // x-coordinate in image
-	   }
-	   
-	   /*
-	   if (b > 0) {
-		   my_data->thread_mat.at<double>(1,i) = b; // To avoid negative coordinates // x-coordinate in image
-		   my_data->thread_mat.at<double>(0,i) = my_data->thread_mat.at<double>(1,i);
-	   }
-	   if (a > 0) {
-		   my_data->thread_mat.at<double>(0,i) = a; // y-coordinate in image
-		   my_data->thread_mat.at<double>(1,i) = my_data->thread_mat.at<double>(0,i);
-	   } 
-	   */
-	   my_data->keep_point = delta_keypoint.at<double>(2,0);
-   }
-   pthread_exit(NULL);
+
+// ####################### drawCorners #######################
+void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
+	for (int k = 0; k < keypoints.cols; k++) {
+		double y = keypoints.at<double>(0, k);
+		double x = keypoints.at<double>(1, k);
+		circle (img, Point(x,y), 5, Scalar(200), 2,8,0);
+	}
+	imshow(frame_name, img);
+	waitKey(0);
 }
 
-/* Function used to parallelize code in Harris::Corner detector
- * 
- */
-void *functionHarris(void *threadarg) {
-   struct harris_data *my_harris;
-   my_harris = (struct harris_data *) threadarg;
-   
-   int nr_rows = my_harris->thread_dst.rows;
-   int nr_cols = my_harris->thread_dst.cols;
-   int nr_iter = my_harris->num_keypoints;
-   int i, r, c, valid_keypoints;
-   valid_keypoints = 0;
-   int NMBOX = my_harris->thread_non_max_suppres;
-   
-   for (i = 0; i < nr_iter; i++) {
-	   int max = 0;
-	   int x = 0; 
-	   int y = 0;
-	   for (r = 0; r < nr_rows; r++) {
-		   for (c = 0; c < nr_rows; c++) {
-			   if ((double) my_harris->thread_dst.at<float>(r,c) > max) {
-					max = (double) my_harris->thread_dst.at<float>(r,c) ;
-					y = r;
-					x = c;
-						
-				}
-		   }
-	   }
-	   for (r = -NMBOX; r <  NMBOX; r++) {
-		   for (c = -NMBOX; c < NMBOX; c++) {
-			   my_harris->thread_dst.at<float>(y+r,x+c) = 0;
-		   }
-	   }
-	   if (max > my_harris->threshold) {
-		   my_harris->matrice.at<double>(0,valid_keypoints) = y + my_harris->left_corner_y;
-		   my_harris->matrice.at<double>(1,valid_keypoints) = x + my_harris->left_corner_x;
-		   valid_keypoints++;
-	   }
-   }
-   valid_keypoints--;
-   my_harris->valid_interest_points = valid_keypoints;
-   
-   
-   pthread_exit(NULL);
-}
+
 
 void *functionMatch(void *threadarg) {
    struct thread_match *my_data;
@@ -198,30 +124,6 @@ void *functionMatch(void *threadarg) {
 }
 
 
-
-
-
-/* Function that is supposed to return a matrix of size 4xM with coordinates corresponding to
- * the upper right and lower left corners of the matrix
- * inputs:
- * int number_subimages;
- * int boundary --> Boundary that is not included in the original image
- * int height --> Height of one subpart of the image
- * int width --> Widht of one subpart of the image
- * int dim1 --> Height of the input image
- * int dim2 --> Widht of the input image
- * 
- * Outputs:
- * A matrix of 4xM with 
- */
- /*
-Mat subImage(int number_subimages, int boundary, int height, int width, int dim1, int dim2) [
-	Mat indicies = Mat::zeros(4, number_subimages, CV_64FC1);
-
-	
-	return indicies;
-}
-*/
 
 
 // Match SIFT Descriptors
@@ -572,193 +474,6 @@ void nonMaximumSuppression(Mat img, int y1, int x1, int y2, int x2) {
 
 
 
-// Heap operations
-Matrix insertNodeHeap(Matrix Corners, int value, int y, int x, int n) {
-	Corners(n,0) = value;
-	Corners(n,1) = y;
-	Corners(n,2) = x;
-	// Bubble up 
-	int index = floor(n/2);
-	while(Corners(index,0) < Corners(n,0) && index >= 1) {
-		Corners.swap_rows(index,n);
-		n = index;
-		index = floor(n/2);
-	}
-	return Corners;
-}
-
-Matrix extractMaxHeap(Matrix Corners, int n) {
-	Corners.swap_rows(1,n); // Exchange max and last row
-	n--;
-	// Bubble down
-	int index = 1;
-	while ((2*index+1) <= n && (Corners(index,0) < Corners(2*index,0) || Corners(index,0) < Corners(2*index+1,0))) {
-		if (Corners(2*index,0) > Corners(2*index+1,0)) {
-			Corners.swap_rows(index,2*index);
-			index = 2*index;
-		}
-		else {
-			Corners.swap_rows(index,2*index+1);
-			index = 2*index+1;
-		}
-	}
-	return Corners;
-}
-
-// ############################# Harris ############################# 
-/* Objective: To find keypoints in the image using Harris Corner detector
- * Inputs: 
- * Matrix: Image src 
- * Matrix: Image src_gray
- * int maxinum_keypoint - The number of keypoints that Harris Corner detector should find
- * Matrix keypoints of size 3 x maxinum_keypoint, where the keypoints are organized
- * as [keypoint_value, y, x].
- */
-Mat Harris::corner(Mat src, Mat src_gray, int maxinum_keypoint, Mat suppression) {
-	
-	
-	// Maybe use minMaxLoc(img, &minVal, &maxVal); for at finde max og minimum, som gemmes i værdierne minVal og maxVal. 	
-	
-	// Define variables related to Harris corner
-	int blockSize = 9; 
-	int apertureSize = 3;
-	double k = 0.08;		// Magic parameter 
-	//int thres = 200;	
-	// Parameters before: blocksize = 2, aperturesize = 3, thres = 200, k = 0.04
-	
-	// Variables related to Non Maximum suppression 
-	int NMSBox = 20;
-	int boundaries = 10; // Boundaries in the image 
-	
-	Mat dst = Mat::zeros( src.size(), CV_32FC1 );
-	cornerHarris (src_gray, dst, blockSize, apertureSize, k);
-	
-	Mat dst_norm, dst_norm_scaled;
-	normalize( dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat() );
-	convertScaleAbs( dst_norm, dst_norm_scaled );
-	
-	// Find corners and return 
-	int nr_corners = 0;
-		
-		
-	int keypoints_limit = maxinum_keypoint; // Change to 200
-		/*
-		Matrix Corners(keypoints_limit,3); // Column1: Corner responses, Column2: Pixel i, Column3: Pixel j
-		
-		int CornerResponse = 0;
-		int maxCornerResponse = 0;
-		Corners(0,0) = 0;
-		Corners(1,0) = 0;
-		*/
-	double row_nr, col_nr;
-	if (suppression.cols != 0) {
-		// This operation can maybe be parallelaized
-		for (int c = 0; c < suppression.cols; c++) {
-			if (row_nr < dst_norm.rows && col_nr < dst_norm.cols) {
-				row_nr = suppression.at<double>(0,c);
-				col_nr = suppression.at<double>(1,c);
-				for (int i = -3; i < 4; i++) {
-					for (int j = -3; j < 4; j++) {
-						dst_norm.at<float>(row_nr + i, col_nr + j) = 0;
-					}
-				}
-			}
-		}
-	}
-
-	
-	
-	/*
-	 * 
-	 * NB: JUSTER FOR COORDINATES, SÅ DER SKLA LÆGGES Y OG X TIL FOR BILLEDET
-	 * 
-	 */
-	
-	//Define number of keypoints
-	// possible mistake with dividing the keypoints into cols.
-	Mat keypoints = Mat::zeros(2, keypoints_limit, CV_64FC1);
-	
-	// Create indices matrix
-	int NUM_THREADS = Harris_threads;
-	Mat indicies = Mat::zeros(2, Harris_threads, CV_64FC1);
-	int index = 0;
-	for (int r = 0; r < 5; r++) {
-		for (int c = 0; c < 6; c++) {
-			indicies.at<double>(0,index) = r*188 + boundaries-1;			// y1
-			indicies.at<double>(1,index) = c*210 + boundaries-1;			// x1
-			index++;
-		}
-	}
-	
-	
-	pthread_t threads[NUM_THREADS];
-	struct harris_data td[NUM_THREADS];
-	int i, rc, q;
-	q = keypoints_limit / NUM_THREADS; // Potential mistake, when it does not become a possible division
-	for (i = 0; i < NUM_THREADS; i++) {
-		td[i].num_keypoints  = q;
-		
-		td[i].matrice = keypoints.colRange(i*q,(i+1)*q);
-		td[i].threshold = 220;
-		td[i].left_corner_y = indicies.at<double>(0,i);
-		td[i].left_corner_x = indicies.at<double>(1,i);
-
-		td[i].thread_dst = dst_norm.colRange(indicies.at<double>(1,i),indicies.at<double>(1,i)+210).rowRange(indicies.at<double>(0,i),indicies.at<double>(0,i)+188);
-
-		td[i].thread_non_max_suppres = NMSBox;
-		
-		
-		rc = pthread_create(&threads[i], NULL, functionHarris, (void *)&td[i]);
-	}
-	void* ret = NULL;
-	vector<Mat> keypoint_container;
-	for (int k = 0; k < NUM_THREADS; k++) {
-		pthread_join(threads[k], &ret);
-		int h = td[k].valid_interest_points;
-		if (h > 0) {
-			keypoint_container.push_back(td[k].matrice.colRange(0,h));
-		}
-	}
-	Mat valid_points;
-	hconcat(keypoint_container, valid_points);
-	// Test REct region for at se, om du får det rigtige. 
-	
-	
-	/*
-	for (int count = 0; count < keypoints_limit; count++) {
-		double max = 0; 
-		int x = 0; 
-		int y = 0; 
-		for (int i = 0+boundaries; i < dst_norm.rows-boundaries; i++) {
-			for (int j = 0+boundaries; j < dst_norm.cols-boundaries; j++) {
-				if ((double) dst_norm.at<float>(i,j) > max) {
-					max = (double) dst_norm.at<float>(i,j) ;
-					y = i;
-					x = j;
-						
-				}
-
-				}
-			}
-
-		keypoints.at<double>(0, count) = max;
-		keypoints.at<double>(1, count) = y;
-		keypoints.at<double>(2, count) = x;
-	
-		nonMaximumSuppression(dst_norm, y-NMSBox, x-NMSBox, y+NMSBox+1, x+NMSBox+1);
-
-	}
-	*/
-		
-	
-	//return keypoints;
-	return valid_points;
-	
-	//cout << "End of Harris " << endl;	
-	//Mat emptyArray;	
-	//return emptyArray;
-}
-
 // ############################# SIFT ############################# 
 // Function to initialize GaussWindow. 
 Mat gaussWindow(int filter_size, float sigma) {
@@ -1059,9 +774,9 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 		td[i].thread_interest_point = keypoints.colRange(i,i+1);
 
 		td[i].thread_grad_x = grad_x;
-		//cout << "td[i].thread_grad_x = " << td[i].thread_grad_x << endl;
+		
 		td[i].thread_grad_y = grad_y;
-		//cout << "td[i].thread_grad_y = " << td[i].thread_grad_y << endl;
+	
 		td[i].thread_descriptor_vector = Descriptors.row(i);
 		
 		td[i].thread_Gauss_Window = GaussWindow;
@@ -1211,84 +926,7 @@ void *functionAdvancedDescriptor(void *threadarg) {
 		for (int ii = 0; ii < vector.cols; ii++) {
 				SumOfSquares = SumOfSquares + vector.at<double>(0,ii)*vector.at<double>(0,ii);
 		}
-		//cout << "SumOfSquares = " << SumOfSquares << endl;
-		/*
-		if ( total_HOG.at<double>(0,0) > total_HOG.at<double>(0,1) && total_HOG.at<double>(0,0) > total_HOG.at<double>(0,7) {
-			// If it is a local max
-			Mat descrip = Patch_of_HOGs.reshape(0, 1);
-			double SumOfSquares = 0;
-			for (int ii = 0; ii < descrip.cols; ii++) {
-				SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
-			}
-			// Insert in descriptors matrix
-			for (int ii = 0; ii < descrip.cols; ii++) {
-				descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
-			}
-			descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
-			
-			nr_desciptors++;
-			
-		}
 		
-		// If 1st bin is a local max 
-		if ( total_HOG.at<double>(0,1) > total_HOG.at<double>(0,0) && total_HOG.at<double>(0,1) > total_HOG.at<double>(0,2) ) {
-			
-			Mat temp1 = Patch_of_HOGs.colRange(0,1);
-			Mat temp2 = Patch_of_HOGs.colRange(1,8);
-			Mat temp3;
-			hconcat(temp2, temp1, temp3);
-			Mat descrip = temp3.reshape(0, 1);
-			double SumOfSquares = 0;
-			for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
-				SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
-			}
-			for (int ii = 0; ii < descrip.cols; ii++) {
-				descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
-			}
-			descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
-			
-			nr_desciptors++;
-			
-		}
-		
-		// If 2nd bin is a local max 
-		if ( total_HOG.at<double>(0,2) > total_HOG.at<double>(0,1) && total_HOG.at<double>(0,2) > total_HOG.at<double>(0,3) ) {
-			Mat temp1 = Patch_of_HOGs.colRange(0,2);
-			Mat temp2 = Patch_of_HOGs.colRange(2,8);
-			Mat temp3;
-			hconcat(temp2, temp1, temp3);
-			Mat descrip = temp3.reshape(0, 1);
-			double SumOfSquares = 0;
-			for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
-				SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
-			}
-			for (int ii = 0; ii < descrip.cols; ii++) {
-				descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
-			}
-			descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
-			
-			nr_desciptors++;
-		}
-		
-		// If 3rd bin is a local max 
-		if ( total_HOG.at<double>(0,3) > total_HOG.at<double>(0,2) && total_HOG.at<double>(0,3) > total_HOG.at<double>(0,4) ) {
-			Mat temp1 = Patch_of_HOGs.colRange(0,2);
-			Mat temp2 = Patch_of_HOGs.colRange(2,8);
-			Mat temp3;
-			hconcat(temp2, temp1, temp3);
-			Mat descrip = temp3.reshape(0, 1);
-			double SumOfSquares = 0;
-			for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
-				SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
-			}
-			for (int ii = 0; ii < descrip.cols; ii++) {
-				descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
-			}
-			descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
-			
-			nr_desciptors++;
-		}
-		*/
 		
 		for (int k = 0; k < total_HOG.cols; k++) {
 			//cout << "Finding next max " << endl;
@@ -1740,318 +1378,6 @@ Mat findRotationAndTranslation(Mat essential_matrix, Mat K, Mat points1Mat, Mat 
 	}
 	return transformation_matrix;
 }
-
-
-
-// ############################# KLT ############################# 
-Mat warpImage(Mat I_R, Mat W) {
-	Mat I_warped = Mat::zeros(I_R.rows, I_R.cols, CV_64FC1);
-	
-	for (int x = 0; x < I_R.cols; x++) {
-		for (int y = 0; y < I_R.rows; y++) {
-			Mat vector = Mat::ones(3, 1, CV_64FC1);
-			vector.at<double>(0,0) = x;
-			vector.at<double>(1,0) = y; 
-			Mat warped = W * vector;
-			warped = warped.t();
-
-			if (warped.at<double>(0,0) < I_R.cols && warped.at<double>(0,1) < I_R.rows) {
-				if (warped.at<double>(0,0) > 1 && warped.at<double>(0,1) > 1) {
-					
-					uchar m = I_R.at<double>(floor(warped.at<double>(0,1)),floor(warped.at<double>(0,0)));
-					
-					I_warped.at<double>(y,x) = I_R.at<double>(floor(warped.at<double>(0,1)),floor(warped.at<double>(0,0)));
-				}
-			}
-		}
-	} 
-	return I_warped;
-}
-
-
-
-// Get the warping matrix
-Mat getSimWarp(double dx, double dy, double alpha_deg, double lambda) {
-	
-	Mat W = Mat::zeros(2, 3, CV_64FC1);
-	double alpha_rad = (alpha_deg * M_PI) / 180;
-	W.at<double>(0,0) = lambda * cos( alpha_rad );
-	W.at<double>(1,0) = lambda * sin( alpha_rad );
-	W.at<double>(0,1) = lambda * -sin( alpha_rad );
-	W.at<double>(1,1) = lambda * cos( alpha_rad );
-	W.at<double>(0,2 ) = lambda * dx;
-	W.at<double>(1,2) = lambda * dy;
-	
-	return W;
-}
-
-// Get the patch
-Mat getWarpedPatch(Mat I_new, Mat W, Mat x_T, int r_T) {
-	
-	// Initialize patch
-	Mat patch = Mat::zeros(2*r_T + 1, 2*r_T + 1, CV_64FC1);
-	
-	// Get dimensions of image 
-	int max_coords_rows = I_new.rows;
-	int max_coords_cols = I_new.cols;
-	
-	//cout << "Dimensions of image = (" << max_coords_rows << "," << max_coords_cols << ")" << endl;
-	
-	// Find the transpose
-	Mat WT = W.t();
-	
-	
-	Mat pre_warp = Mat::zeros(1, 3, CV_64FC1);
-	for (int x = -r_T; x <= r_T; x++) {
-		for (int y = -r_T; y <= r_T; y++) {
-			pre_warp.at<double>(0,0) = x;
-			pre_warp.at<double>(0,1) = y;
-			pre_warp.at<double>(0,2) = 1;
-
-			
-			Mat warped = x_T + pre_warp * WT;
-			
-			
-			if (warped.at<double>(0,0) < max_coords_cols && warped.at<double>(0,1) < max_coords_rows) {
-				if (warped.at<double>(0,0) > 0 && warped.at<double>(0,1) > 0) { // It should be greater than 0 (C++ 0-indexing)
-					
-					//cout << "Inside if-statements" << endl;
-
-					Mat floors = Mat::zeros(warped.rows, warped.cols, CV_64FC1);
-					
-					
-					for (int r = 0; r < floors.rows; r++) {
-						for (int c = 0; c < floors.cols; c++) {
-							floors.at<double>(r, c) = floor(warped.at<double>(r, c));
-						}
-					}
-					
-					Mat weights = warped - floors;
-					
-					
-					double a = weights.at<double>(0,0);
-					double b = weights.at<double>(0,1);
-					
-					
-					double intensity = (1-b) * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)-1) + a * I_new.at<uchar>(floors.at<double>(0,1)-1,floors.at<double>(0,0)));
-					
-
-					
-					intensity = intensity + b * ((1-a) * I_new.at<uchar>(floors.at<double>(0,1),floors.at<double>(0,0)-1) + a * I_new.at<uchar>(floors.at<double>(0,1),floors.at<double>(0,0)));
-					
-					
-					patch.at<double>(y + r_T, x + r_T) = intensity;
-					
-				}	
-			}
-		}
-	}
-	return patch;
-}
-
-Mat Kroneckerproduct(Mat A, Mat B) {
-	
-	int rowa = A.rows;
-	int cola = A.cols;
-	int rowb = B.rows;
-	int colb = B.cols;
-	
-	Mat C = Mat::zeros(rowa * rowb, cola * colb, CV_64FC1);
-	for (int i = 0; i < rowa; i++) {
-		
-		for (int k = 0; k < rowb; k++) {
-			
-			for (int j = 0; j < cola; j++) {
-				
-				for (int l = 0; l < colb; l++) {
-					
-					C.at<double>(i*rowb + k, j*colb + l) = A.at<double>(i, j) * B.at<double>(k, l);
-				}
-			}
-		}
-	}
-	return C;
-}
-
-// Track KLT
-//Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, int r_T, int num_iters) {
-Mat trackKLT(Mat I_R, Mat I_new, Mat x_T, Mat dwdx, int r_T, int num_iters) {
-	//Mat p_hist = Mat::zeros(6, num_iters+1, CV_64FC1);
-	Mat W = getSimWarp(0, 0, 0, 1);
-	
-	
-	int temp_index = 0;
-	
-	/*
-	for (int c = 0; c < W.cols; c++) {
-		for (int r = 0; r < W.rows; r++) {
-			p_hist.at<double>(temp_index, 0) = W.at<double>(r,c);
-			temp_index++;
-		}
-	}
-	*/
-	
-	// Get the warped patch
-	Mat I_RT = getWarpedPatch(I_R, W, x_T, r_T);
-		
-	
-	I_RT = I_RT.t();
-	Mat i_R = I_RT.reshape(0,I_RT.rows * I_RT.cols);
-	
-	int n = 2*r_T + 1;
-	/*
-	int n = 2*r_T + 1;
-	Mat xy1 = Mat::zeros(n * n, 3, CV_64FC1);
-	temp_index = 0; 
-	for (int i = -r_T; i <= r_T; i++) {
-		for (int j = -r_T; j <= r_T; j++) {
-			xy1.at<double>(temp_index,0) = i;
-			xy1.at<double>(temp_index,1) = j;
-			xy1.at<double>(temp_index,2) = 1;
-			temp_index++;
-		} 
-	}
-	
-	// Find the Kroeneckerproduct 
-	Mat dwdx = Kroneckerproduct(xy1, Mat::eye(2, 2, CV_64FC1));
-	*/
-	
-	// 2D filters for convolution
-	Mat kernelx, kernely; 
-	Point anchorx, anchory;
-	double delta;
-	int ddepth; 
-	int kernel_size;
-	
-	anchorx = Point(-1,0);
-	anchory = Point(0,-1);
-	delta = 0; 
-	ddepth = -1;
-	
-	kernelx = Mat::zeros(1, 3, CV_64FC1);
-	kernelx.at<double>(0,0) = -1;
-	kernelx.at<double>(0,2) = 1;
-	kernely = Mat::zeros(3, 1, CV_64FC1);
-	kernely.at<double>(0,0) = -1;
-	kernely.at<double>(2,0) = 1;
-	
-	// About to begin iteration 
-	Mat IWT_temp, IWT, IWTx, IWTy, temp_IWTx, temp_IWTy, temp_IWTx2, temp_IWTy2, didw, H, temp_delta_p, delta_p, delta_p_temp;
-	for (int iter = 0; iter < num_iters; iter++) {
-		Mat big_IWT = getWarpedPatch(I_new, W, x_T, r_T + 1); // We are here 		
-		
-		//Mat IWT_temp, IWT;
-		IWT_temp = selectRegionOfInterest(big_IWT, 1, 1, big_IWT.rows-1, big_IWT.cols-1);
-		IWT_temp.copyTo(IWT);
-	
-		IWT = IWT.t();
-		Mat i = IWT.reshape(0, IWT.rows * IWT.cols);
-		
-		// Getting di/dp 
-		//cout << "Getting di/dp" << endl;
-		//Mat IWTx, IWTy, temp_IWTx, temp_IWTy, temp_IWTx2, temp_IWTy2;
-		temp_IWTx2 = selectRegionOfInterest(big_IWT, 1, 0, big_IWT.cols+1, big_IWT.rows-2); // Maybe check for values
-		temp_IWTy2 = selectRegionOfInterest(big_IWT, 0, 1, big_IWT.cols-2, big_IWT.rows+1);
-		
-		//cout << "Not here yet " << endl;
-		temp_IWTx2.copyTo(temp_IWTx);
-		temp_IWTy2.copyTo(temp_IWTy);
-		
-		// Convolve x
-		filter2D(temp_IWTx, IWTx, ddepth, kernelx, anchorx, delta, BORDER_DEFAULT);
-		IWTx = selectRegionOfInterest(IWTx, 0, 1, IWTx.cols-1, IWTx.rows+1);
-		
-		// Convolve y 
-		filter2D(temp_IWTy, IWTy, ddepth, kernely, anchory, delta, BORDER_DEFAULT);
-		IWTy = selectRegionOfInterest(IWTy, 1, 0, IWTy.cols+1, IWTy.rows-1);
-		
-		// Concatenate vectors
-		Mat IWTx_new, IWTy_new;
-		IWTx.copyTo(IWTx_new);
-		IWTy.copyTo(IWTy_new);
-		IWTx_new = IWTx_new.t();
-		IWTy_new = IWTy_new.t();
-	
-		
-		temp_IWTx = IWTx_new.reshape(0, IWTx.rows * IWTx.cols);
-		temp_IWTy = IWTy_new.reshape(0, IWTy.rows * IWTy.cols);
-		
-		
-		
-		//Mat didw;
-		hconcat(temp_IWTx, temp_IWTy, didw);
-				
-		Mat didp = Mat::zeros(n * n, 6, CV_64FC1);
-		double vdidw1, vdidw2, vdwdx1, vdwdx2;
-		for (int pixel_i = 0; pixel_i < didp.rows; pixel_i++) {
-			vdidw1 = didw.at<double>(pixel_i,0);
-			vdidw2 = didw.at<double>(pixel_i,1);
-			for (int j = 0; j < 6; j++) {
-				vdwdx1 = dwdx.at<double>(pixel_i * 2, j);
-				vdwdx2 = dwdx.at<double>(pixel_i * 2 + 1, j);
-				didp.at<double>(pixel_i, j) = vdidw1 * vdwdx1 + vdidw2 * vdwdx2;
-			}
-		} 
-		
-		// Hessian matrix 
-		H = didp.t() * didp;
-		
-		// Hessian matrix check
-		
-		temp_delta_p = didp.t() * (i_R - i);
-		
-		// Calculate delta_p 
-		delta_p = H.inv() * (didp.t() * (i_R - i)); // Maybe problem with 
-		
-		// Reshape delta_p 
-		delta_p_temp = delta_p.reshape(0, 3);
-		
-		delta_p_temp = delta_p_temp.t();
-		
-		W = W + delta_p_temp; // 2 = W.rows
-		 
-		W = W.t();
-		
-		// Transpose W to get the right shape for the next iteration - C++ is different from Matlab
-		W = W.t();
-
-		
-	}
-	return W;
-}
-
-//Mat KLT::trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, int r_T, int num_iters, double lambda) {
-Mat KLT::trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, Mat dwdx, int r_T, int num_iters, double lambda) {
-	
-	Mat W = trackKLT(I_R, I_new, keypoint, dwdx, r_T, num_iters);
-	
-	// delta_keypoint contains the y- and x-coordinate of the keypoint as the first and second coordiate
-	// and the third coordiate is a boolean-value, which is either 1 or 0 depending on whether the value is smaller 
-	// than lambda  
-	Mat delta_keypoint = Mat::zeros(3, 1, CV_64FC1);
-	delta_keypoint.at<double>(0,0) = W.at<double>(0,2);
-	delta_keypoint.at<double>(1,0) = W.at<double>(1,2);
-	
-	// The reverse keypoint that is used to find the backwards warp
-	Mat reverse_keypoint = Mat::zeros(1, 2, CV_64FC1);
-	reverse_keypoint.at<double>(0,0) = keypoint.at<double>(0,0) + delta_keypoint.at<double>(0,0);
-	reverse_keypoint.at<double>(0,1) = keypoint.at<double>(0,1) + delta_keypoint.at<double>(1,0);
-	
-	// Brug for threading her. 
-	Mat Winv = trackKLT(I_new, I_R, reverse_keypoint, dwdx, r_T, num_iters);
-	
-	Mat dkpinv = Mat::zeros(2, 1, CV_64FC1);
-	dkpinv.at<double>(0,0) = Winv.at<double>(0,2);
-	dkpinv.at<double>(1,0) = Winv.at<double>(1,2);
-	
-	if (sqrt(pow(delta_keypoint.at<double>(0,0) + dkpinv.at<double>(0,0),2.0) + pow(delta_keypoint.at<double>(1,0) + dkpinv.at<double>(1,0),2.0)) < lambda) {
-		delta_keypoint.at<double>(2,0) = 1;
-	}
-	
-	return delta_keypoint;
-}
-
-
 
 
 // ############################# ransacLocalizaiton #############################
@@ -3223,7 +2549,476 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 	return Si;
 }
 
+// ############################# VO Initialization Pipeline #############################
+tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
+	cout << "Begin initialization" << endl;
+	
+	Mat transformation_matrix;
+	bool initialization_okay;
+	
+	// Transform color images to gray images
+	Mat I_i0_gray, I_i1_gray;
+	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
+	cvtColor(I_i1, I_i1_gray, COLOR_BGR2GRAY );
+	
+	Mat temp0, temp1, emptyMatrix;
+	
+	high_resolution_clock::time_point t11 = high_resolution_clock::now();
 
+	
+	//Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 210, emptyMatrix); // Number of maximum keypoints
+	int dim1 = I_i0_gray.rows;
+	int dim2 = I_i0_gray.cols;
+	Mat I_i0_resized = I_i0_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
+		
+	goodFeaturesToTrack(I_i0_resized, temp0, 100, 0.01, 10, noArray(), 3, true, 0.04);
+	Mat keypoints_I_i0 = Mat::zeros(2, temp0.rows, CV_64FC1);
+	for (int i = 0; i < keypoints_I_i0.cols; i++) {
+		keypoints_I_i0.at<double>(0,i) = temp0.at<float>(i,1) + 10;
+		keypoints_I_i0.at<double>(1,i) = temp0.at<float>(i,0) + 10;
+	}
+
+	/*
+	Mat draw_I_i0;
+	I_i0.copyTo(draw_I_i0);
+	const char* text0 = "Detected corners in frame I_i0";
+	drawCorners(draw_I_i0, keypoints_I_i0, text0);
+	waitKey(0);
+	*/
+	
+
+	
+	
+	//high_resolution_clock::time_point t3 = high_resolution_clock::now();
+	
+	//Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 210, emptyMatrix); // Number of keypoints that is looked 
+	
+	
+	dim1 = I_i1_gray.rows;
+	dim2 = I_i1_gray.cols;
+	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
+	goodFeaturesToTrack(I_i1_resized, temp1, 100, 0.01, 10, noArray(), 3, true, 0.04);
+	cout << "dimensions of temp1 = (" << temp1.rows << "," << temp1.cols << ")" << endl;
+	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
+	for (int i = 0; i < keypoints_I_i1.cols; i++) {
+		keypoints_I_i1.at<double>(0,i) = temp1.at<float>(i,1) + 10;
+		keypoints_I_i1.at<double>(1,i) = temp1.at<float>(i,0) + 10;
+	}
+	
+	
+	/*
+	Mat draw_I_i1;
+	I_i1.copyTo(draw_I_i1);
+	const char* text1 = "Detected corners in frame I_i1";
+	drawCorners(draw_I_i1, keypoints_I_i1, text1);
+	waitKey(0);
+	*/
+	
+	
+
+	
+	
+	// ######################### SIFT ######################### 
+	//Finding SIFT::descriptors without parallelization 
+	//high_resolution_clock::time_point t5 = high_resolution_clock::now();
+
+	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
+
+
+	cout << "before descriptors_I_i0_Advanced " << endl;
+	Mat descriptors_I_i0_Advanced = SIFT::FindDescriptorsAdvanced( I_i0_gray,  keypoints_I_i0);
+	
+	cout << "Dimensions of descriptors_I_i0_Advanced = (" << descriptors_I_i0_Advanced.rows << "," << descriptors_I_i0_Advanced.cols << ")" << endl;
+	cout << "before descriptors_I_i1_Advanced " << endl;
+	Mat descriptors_I_i1_Advanced = SIFT::FindDescriptorsAdvanced( I_i1_gray,  keypoints_I_i1);
+	
+	cout << "Dimensions of descriptors_I_i1_Advanced = (" << descriptors_I_i1_Advanced.rows << "," << descriptors_I_i1_Advanced.cols << ")" << endl;
+	cout << "before matches_1_advanced " << endl;
+	Mat matches_1_advanced = SIFT::matchDescriptorsAdvanced( descriptors_I_i0_Advanced,  descriptors_I_i1_Advanced);
+	cout << "before matches_2_advanced " << endl;
+	Mat matches_2_advanced = SIFT::matchDescriptorsAdvanced( descriptors_I_i1_Advanced,  descriptors_I_i0_Advanced);
+
+	int temp_index_advanced = 0; 
+	Mat valid_matches_advanced = Mat::zeros(2, matches_1_advanced.cols, CV_64FC1);
+	for (int i = 0; i < matches_1_advanced.cols; i++) {
+		if ( matches_2_advanced.at<double>(0, matches_1_advanced.at<double>(0,i)) = i ) {
+			valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
+			valid_matches_advanced.at<double>(0, temp_index_advanced) = matches_1_advanced.at<double>(0,i);
+			temp_index_advanced++;
+		} 
+	}
+	
+	
+	/*
+	cout << "descriptors_I_i0" << endl;
+	cout << descriptors_I_i0 << endl;
+	waitKey(0);
+	*/
+
+	/*
+	high_resolution_clock::time_point t6 = high_resolution_clock::now();
+	duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
+	cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
+	*/
+	
+	
+	//high_resolution_clock::time_point t7 = high_resolution_clock::now();
+	
+	Mat descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
+	
+	/*
+	high_resolution_clock::time_point t8 = high_resolution_clock::now();
+	duration<double> time_span3 = duration_cast<duration<double>>(t8-t7);
+	cout << "Finding descriptors_I_i0 took = " << time_span3.count() << " seconds" << endl;
+	*/
+	
+	
+	// Time consuming 
+	Mat matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
+	
+	// Time consuming 
+	Mat matches2 = SIFT::matchDescriptors(descriptors_I_i1, descriptors_I_i0);
+	
+	// Not time consuming 
+	Mat valid_matches = Mat::zeros(2, matches.cols, CV_64FC1);
+	int temp_index = 0;
+	for (int i = 0; i < matches.cols; i++) {
+		int index_frame0 = matches.at<double>(0,i);
+		int index_frame1 = matches.at<double>(1,i);
+		
+		for (int q = 0; q < matches2.cols; q++) {
+			if (matches2.at<double>(1,q) == index_frame0) {
+				if (matches2.at<double>(0,q) == index_frame1) {
+					// Mutual match
+					valid_matches.at<double>(0,temp_index) = index_frame0;
+					valid_matches.at<double>(1,temp_index) = index_frame1;
+					temp_index++;
+				}
+			}
+		}
+	}
+	matches = valid_matches.colRange(0,temp_index);	// original
+	//matches = valid_matches_advanced.colRange(0, temp_index_advanced);	
+	
+	
+	// Find Point correspondences
+	// Points from image 0 in row 1 and row 2 
+	// Points from image 1 in row 3 and row 	
+
+	//int N = matches.dim2();
+	int N = matches.cols;
+	cout << "Number of matches = " << N << endl;
+	
+	if (N == 0) {
+		initialization_okay = false;
+		
+		return make_tuple(Si_1, transformation_matrix, initialization_okay);
+	}
+	
+	//high_resolution_clock::time_point t11 = high_resolution_clock::now();
+	
+	// For plotting
+	// For efficiency, you should maybe just use vectors instead of creating two new matrices
+	Mat temp_points1Mat = Mat::zeros(2, N, CV_64FC1);
+	Mat temp_points2Mat = Mat::zeros(2, N, CV_64FC1);
+	// For fudamental matrix
+	vector<Point2f> points1(N);
+	vector<Point2f> points2(N);
+	
+	
+	Mat I_i0_draw, I_i1_draw; 
+	I_i0.copyTo(I_i0_draw);
+	I_i1.copyTo(I_i1_draw);
+	
+	
+	
+	for (int i = 0; i < N; i++) {
+		// Be aware of differences in x and y
+		
+		points1[i] = Point2f(keypoints_I_i0.at<double>(0, matches.at<double>(0,i)),keypoints_I_i0.at<double>(1, matches.at<double>(0,i)));
+		points2[i] = Point2f(keypoints_I_i1.at<double>(0, matches.at<double>(1,i)),keypoints_I_i1.at<double>(1, matches.at<double>(1,i)));
+		
+		temp_points1Mat.at<double>(0,i) = keypoints_I_i0.at<double>(0, matches.at<double>(0,i)); // y-coordinate in image 
+		temp_points1Mat.at<double>(1,i) = keypoints_I_i0.at<double>(1, matches.at<double>(0,i)); // x-coordinate in image
+		temp_points2Mat.at<double>(0,i) = keypoints_I_i1.at<double>(0, matches.at<double>(1,i)); // y-coordinate in image
+		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(1, matches.at<double>(1,i)); // x-coordinate in image
+
+		
+		double y = keypoints_I_i1.at<double>(0, matches.at<double>(1,i));
+		double x = keypoints_I_i1.at<double>(1, matches.at<double>(1,i));
+		double y2 = keypoints_I_i0.at<double>(0, matches.at<double>(0,i));
+		double x2 = keypoints_I_i0.at<double>(1, matches.at<double>(0,i));
+		line(I_i1_draw,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
+		circle (I_i1_draw, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+		circle (I_i0_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
+		
+		
+		
+	}
+	imshow("Match I_i0_draw",I_i0_draw);
+	waitKey(0);
+	imshow("Match I_i1_draw",I_i1_draw);
+	waitKey(0);
+	
+	
+	// Find fudamental matrix 
+	vector<uchar> pArray(N);
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.90, 5000, pArray); // 3 can be changed to 1
+	
+	int N_inlier = countNonZero(pArray);
+	
+	// If initialization fails
+	if (N_inlier == 0) {
+		initialization_okay = false;
+		
+		return make_tuple(Si_1, transformation_matrix, initialization_okay);
+		
+	}
+	// If initialization succeeds
+	else {
+		initialization_okay = true;
+		
+		Mat points1Mat = Mat::zeros(2, N_inlier, CV_64FC1);
+		Mat points2Mat = Mat::zeros(2, N_inlier, CV_64FC1);
+		temp_index = 0;
+		for (int i = 0; i < N; i++) {
+			if ((double) pArray[i] == 1) {
+				points1Mat.at<double>(0,temp_index) = temp_points1Mat.at<double>(0,i); // y-coordinate in image
+				points1Mat.at<double>(1,temp_index) = temp_points1Mat.at<double>(1,i); // x-coordinate in image
+				points2Mat.at<double>(0,temp_index) = temp_points2Mat.at<double>(0,i); // y-coordinate in image
+				points2Mat.at<double>(1,temp_index) = temp_points2Mat.at<double>(1,i); // x-coordinate in image
+				
+				/*
+				circle (a, Point(points1Mat.at<double>(1,temp_index),points1Mat.at<double>(0,temp_index)), 5, Scalar(0,0,255), 2,8,0);
+				imshow("a", I_i0_draw);
+				waitKey(0);
+				circle (b, Point(points2Mat.at<double>(1,temp_index),points2Mat.at<double>(0,temp_index)), 5,  Scalar(0,0,255), 2,8,0);
+				imshow("b", I_i1_draw);
+				waitKey(0);
+				*/
+		
+				
+				temp_index++;
+				
+			}
+		}
+		 
+		// Inlier keypoints after using RANSAC
+		Si_1.k = N_inlier;
+		
+		// The realiably tracked keypoints
+		Si_1.Pi = points2Mat;
+			
+		// Estimate Essential Matrix
+		Mat essential_matrix = estimateEssentialMatrix(fundamental_matrix, K);	
+		
+		// Find the rotation and translation assuming the first frame is taken with the drone on the ground - At the origin
+		transformation_matrix = findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
+		for (int i = 0; i < transformation_matrix.rows; i++) {
+			for (int j = 0; j < transformation_matrix.cols; j++) {
+				cout << transformation_matrix.at<double>(i,j) << ", ";
+			}
+			cout << "" << endl;
+		}
+		
+		// Update State with regards to 3D (triangulated points)
+		// Triangulate initial point cloud
+		Mat M1 = K * (Mat_<double>(3,4) << 1,0,0,0, 0,1,0,0, 0,0,1,0);
+		Mat M2 = K * transformation_matrix;
+		Mat landmarks = linearTriangulation(points1Mat, points2Mat, M1, M2);
+		
+		Mat temp;
+		vconcat(landmarks.row(0), landmarks.row(1), temp);
+		vconcat(temp, landmarks.row(2), Si_1.Xi);
+		
+
+		
+		cout << "Initializaiton" << endl;
+		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
+		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
+		
+		
+		high_resolution_clock::time_point t12 = high_resolution_clock::now();
+		duration<double> time_span5 = duration_cast<duration<double>>(t12-t11);
+		cout << "rest of initialization matches took = " << time_span5.count() << " seconds" << endl;
+		
+		// return state of drone as well as transformation_matrix;
+		return make_tuple(Si_1, transformation_matrix, initialization_okay);
+	}
+}
+
+
+// ############################# VO Continuous Operation #############################
+// Process Frame for continuous VO operation 
+/* Arguments: 
+ * Current Image I1
+ * Previous Image Ii-1 (I_{i-1})
+ * Previous State Si_1, which is a struct
+ */
+tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
+	
+	cout << "Images in processFrame" << endl;
+	imshow("processFrame Ii", Ii);
+	waitKey(0);
+	imshow("processFrame Ii_1", Ii_1);
+	waitKey(0);
+	
+	bool processFrame_okay;
+	Mat transformation_matrix, best_inlier_mask;
+
+	// Turn the images into grayscale 
+	Mat Ii_gray, Ii_1_gray;
+	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
+	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );	
+	
+	// Find descriptors for previous frame I^i-1
+	Mat descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
+	
+	// Find keypoints for current frame I^i
+	int dim1, dim2;
+	dim1 = Ii_gray.rows;
+	dim2 = Ii_gray.cols;
+	Mat Ii_resized = Ii_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
+	Mat temp1;
+	goodFeaturesToTrack(Ii_resized, temp1, 300, 0.01, 10, noArray(), 3, true, 0.04);
+	Mat keypoints_Ii = Mat::zeros(2, temp1.rows, CV_64FC1);
+	for (int i = 0; i < keypoints_Ii.cols; i++) {
+		keypoints_Ii.at<double>(0,i) = temp1.at<float>(i,1) + 10;
+		keypoints_Ii.at<double>(1,i) = temp1.at<float>(i,0) + 10;
+	}
+	
+	// Find descriptors for current frame I^i
+	Mat descriptors_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
+	
+	// Find matches for previous frame I^i-1 to current frame I^i
+	Mat matches = SIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
+	// Find matches for current frame I^i to previous frame I^i-1
+	Mat matches2 = SIFT::matchDescriptors(descriptors_Ii, descriptors_Ii_1);
+	
+	// Determine the valid matches 
+	Mat valid_matches = Mat::zeros(2, matches.cols, CV_64FC1);
+	int temp_index = 0;
+	for (int i = 0; i < matches.cols; i++) {
+		int index_frame0 = matches.at<double>(0,i);
+		int index_frame1 = matches.at<double>(1,i);
+		
+		for (int q = 0; q < matches2.cols; q++) {
+			if (matches2.at<double>(1,q) == index_frame0) {
+				if (matches2.at<double>(0,q) == index_frame1) {
+					// Mutual match
+					valid_matches.at<double>(0,temp_index) = index_frame0;
+					valid_matches.at<double>(1,temp_index) = index_frame1;
+					temp_index++;
+				}
+			}
+		}
+	}
+	matches = valid_matches.colRange(0,temp_index);
+	cout << "Number of mutual valid mathces = " << matches.cols << endl;
+
+	
+	int N = matches.cols;
+	
+	if (N == 0) {
+		processFrame_okay = false;
+		
+		return make_tuple(Si_1, transformation_matrix, processFrame_okay); 
+	}
+	
+	// Matrix for keeping tracked keypoints and tracked corresponding landmarks 
+	Mat keypoints_i = Mat::zeros(2, N, CV_64FC1);
+	Mat corresponding_landmarks = Mat::zeros(3, N, CV_64FC1);
+	
+	
+	Mat Ii_draw, Ii_1_draw; 
+	Ii.copyTo(Ii_draw);
+	Ii_1.copyTo(Ii_1_draw);
+	
+	
+	
+	for (int i = 0; i < N; i++) {
+
+		// Turn the kyepoints so it becomes (u,v)
+		keypoints_i.at<double>(0,i) = keypoints_Ii.at<double>(1, matches.at<double>(1,i)); // x-coordinate in image
+		keypoints_i.at<double>(1,i) = keypoints_Ii.at<double>(0, matches.at<double>(1,i)); // y-coordinate in image
+		
+		//Si_1.Xi.col(matches(i,0)).copyTo(corresponding_landmarks.col(i));
+		corresponding_landmarks.at<double>(0,i) = Si_1.Xi.at<double>(0, matches.at<double>(0,i));
+		corresponding_landmarks.at<double>(1,i) = Si_1.Xi.at<double>(1, matches.at<double>(0,i));
+		corresponding_landmarks.at<double>(2,i) = Si_1.Xi.at<double>(2, matches.at<double>(0,i));
+		
+		
+		double y = keypoints_Ii.at<double>(0, matches.at<double>(1,i));
+		double x = keypoints_Ii.at<double>(1, matches.at<double>(1,i));
+		double y2 = Si_1.Pi.at<double>(0, matches.at<double>(0,i));
+		double x2 = Si_1.Pi.at<double>(1, matches.at<double>(0,i));
+		line(Ii_draw,Point(x2,y2),Point(x,y),Scalar(0,255,0),3);
+		circle (Ii_draw, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+		circle (Ii_1_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
+		
+	}
+	
+	imshow("matches in processFrame Ii_1_draw", Ii_1_draw);
+	waitKey(0);
+	imshow("matches in processFrame Ii_draw", Ii_draw);
+	waitKey(0);
+	
+	
+	
+	cout << "Process Frame" << endl;
+	cout << "Number of keypoints = " << keypoints_i.cols << endl;
+	cout << "Number of landmarks = " << corresponding_landmarks.cols << endl;
+	
+	
+	// Estimate the new pose using RANSAC and P3P algorithm 
+	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(keypoints_i, corresponding_landmarks, K);
+	
+	cout << "best_inlier_mask " << endl;
+	cout << best_inlier_mask << endl;
+	
+	if (countNonZero(best_inlier_mask) == 0) {
+		processFrame_okay = false;
+		
+		return make_tuple(Si_1, transformation_matrix, processFrame_okay); 
+	}
+	
+	// Remove points that are determined as outliers from best_inlier_mask by using best_inlier_mask
+	//cout << "best_inlier_mask" << endl;
+	//cout << best_inlier_mask << endl;
+	vector<Mat> keypoint_inlier;
+	vector<Mat> landmark_inlier;
+	for (int i = 0; i < best_inlier_mask.cols; i++) {
+		if ((double) best_inlier_mask.at<uchar>(0,i) > 0) {
+			keypoint_inlier.push_back(keypoints_i.col(i));
+			landmark_inlier.push_back(corresponding_landmarks.col(i));
+		}
+	}
+	hconcat(keypoint_inlier, keypoints_i);
+	hconcat(landmark_inlier, corresponding_landmarks);
+	
+	
+	// Update keypoints in state 
+	Si_1.k = keypoints_i.cols;
+	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si_1.Pi); // Apparently you have to switch rows
+	
+	/*
+	Mat temp_Ii;
+	Ii.copyTo(temp_Ii);
+	for (int i = 0; i < Si_1.k; i++) {
+		double y = Si_1.Pi.at<double>(0, i);
+		double x = Si_1.Pi.at<double>(1, i);
+		circle (temp_Ii, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+	}
+	imshow("Coordinates right", temp_Ii);
+	waitKey(0);
+	*/
+	
+	corresponding_landmarks.copyTo(Si_1.Xi);
+	
+	//return make_tuple(Si, transformation_matrix); 
+	processFrame_okay = true;
+	return make_tuple(Si_1, transformation_matrix, processFrame_okay); 
+}
 
 
 
