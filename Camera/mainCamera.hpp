@@ -71,18 +71,6 @@ struct state {
 };
 
 
-struct harris_data {
-		//int thread_id;
-		Mat matrice;
-		Mat thread_dst;
-		double threshold;
-		int num_keypoints;
-		int thread_non_max_suppres;
-		int left_corner_y;
-		int left_corner_x;
-		int valid_interest_points;
-};
-
 struct thread_data {
 		//int thread_id;
 		Mat Ii_1_gray;
@@ -150,11 +138,6 @@ namespace SIFT {
 
 void *FindDescriptors(void *threadarg);
 
-
-namespace KLT {
-	//Mat trackKLTrobustly(Mat I_R, Mat I, Mat keypoint, int r_T, int num_iters, double lambda);
-	Mat trackKLTrobustly(Mat I_R, Mat I_new, Mat keypoint, Mat dwdx, int r_T, int num_iters, double lambda);
-}
 
 namespace Localize {
 	std::tuple<Mat, Mat> ransacLocalization(Mat keypoints_i, Mat corresponding_landmarks, Mat K);
