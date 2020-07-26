@@ -118,7 +118,7 @@ void *functionKLT(void *threadarg) {
 */
 
 // ####################### VO Initialization Pipeline #######################
-tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
+tuple<state, Mat> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cout << "Begin initialization" << endl;
 	
 	// Transform color images to gray images
@@ -657,9 +657,9 @@ int main ( int argc,char **argv ) {
 	Mat transformation_matrix;
 	Mat Ii_1;
 	I_i1.copyTo(Ii_1);
-	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	tie(Si_1, transformation_matrix, init_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
 	cout << "Transformation matrix " << endl;
-	cout << transformation_matrix << endl;
+	cout << transformation_matrix << endl; (float) transformation_matrix.at<double>(1,3);
 
 	
 	// ############### VO Continuous ###############
