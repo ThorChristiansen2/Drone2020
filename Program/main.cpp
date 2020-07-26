@@ -136,7 +136,7 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	int dim2 = I_i0_gray.cols;
 	Mat I_i0_resized = I_i0_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 		
-	goodFeaturesToTrack(I_i0_resized, temp0, 200, 0.01, 10, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i0_resized, temp0, 100, 0.01, 10, noArray(), 3, true, 0.04);
 	Mat keypoints_I_i0 = Mat::zeros(2, temp0.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i0.cols; i++) {
 		keypoints_I_i0.at<double>(0,i) = temp0.at<float>(i,1) + 10;
@@ -162,7 +162,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	dim1 = I_i1_gray.rows;
 	dim2 = I_i1_gray.cols;
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
-	goodFeaturesToTrack(I_i1_resized, temp1, 200, 0.01, 10, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i1_resized, temp1, 100, 0.01, 10, noArray(), 3, true, 0.04);
+	cout << "dimensions of temp1 = (" << temp1.rows << "," << temp1.cols << ")" << endl;
 	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i1.cols; i++) {
 		keypoints_I_i1.at<double>(0,i) = temp1.at<float>(i,1) + 10;
@@ -188,6 +189,31 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 
 	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 
+
+	cout << "before descriptors_I_i0_Advanced " << endl;
+	Mat descriptors_I_i0_Advanced = SIFT::FindDescriptorsAdvanced( I_i0_gray,  keypoints_I_i0);
+	
+	cout << "Dimensions of descriptors_I_i0_Advanced = (" << descriptors_I_i0_Advanced.rows << "," << descriptors_I_i0_Advanced.cols << ")" << endl;
+	cout << "before descriptors_I_i1_Advanced " << endl;
+	Mat descriptors_I_i1_Advanced = SIFT::FindDescriptorsAdvanced( I_i1_gray,  keypoints_I_i1);
+	
+	cout << "Dimensions of descriptors_I_i1_Advanced = (" << descriptors_I_i1_Advanced.rows << "," << descriptors_I_i1_Advanced.cols << ")" << endl;
+	cout << "before matches_1_advanced " << endl;
+	Mat matches_1_advanced = SIFT::matchDescriptorsAdvanced( descriptors_I_i0_Advanced,  descriptors_I_i1_Advanced);
+	cout << "before matches_2_advanced " << endl;
+	Mat matches_2_advanced = SIFT::matchDescriptorsAdvanced( descriptors_I_i1_Advanced,  descriptors_I_i0_Advanced);
+
+	int temp_index_advanced = 0; 
+	Mat valid_matches_advanced = Mat::zeros(2, matches_1_advanced.cols, CV_64FC1);
+	for (int i = 0; i < matches_1_advanced.cols; i++) {
+		if ( matches_2_advanced.at<double>(0, matches_1_advanced.at<double>(0,i)) = i ) {
+			valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
+			valid_matches_advanced.at<double>(0, temp_index_advanced) = matches_1_advanced.at<double>(0,i);
+			temp_index_advanced++;
+		} 
+	}
+	
+	
 	/*
 	cout << "descriptors_I_i0" << endl;
 	cout << descriptors_I_i0 << endl;
@@ -236,7 +262,8 @@ tuple<state, Mat> initializaiton(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 			}
 		}
 	}
-	matches = valid_matches.colRange(0,temp_index);	
+	//matches = valid_matches.colRange(0,temp_index);	// original
+	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	
 	
 	
 	// Find Point correspondences
@@ -555,7 +582,7 @@ int main ( int argc,char **argv ) {
 	//cout << "Image captured" <<endl;
 	waitKey(1000);
 	
-	
+	/*
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
@@ -569,11 +596,12 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
+	*/
 	
 	
 	
 	 
-	/*
+	
 	// Test billeder
 	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
@@ -583,8 +611,9 @@ int main ( int argc,char **argv ) {
 	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
 	imshow("Frame I_i1 displayed", I_i1);
-	*/
+	waitKey(0);
 	
+	/*
 	cout << "Test af ransacLocalizaiton" << endl;
 	Mat corresponding_landmarks = Mat::zeros(3, 271, CV_64FC1);
 	ifstream MyRead2File("CorrespondingLandmarks.txt");	
@@ -620,6 +649,7 @@ int main ( int argc,char **argv ) {
 	Mat transformation_matrix1, best_inlier_mask;
 	tie(transformation_matrix1, best_inlier_mask) = Localize::ransacLocalization(matched_query_keypoints, corresponding_landmarks, K2);
 	cout << "transformation_matrix1 = " << transformation_matrix1 << endl;
+	*/
 
 	// ############### VO initializaiton ###############
 	// VO-pipeline: Initialization. Bootstraps the initial position.	
@@ -627,7 +657,7 @@ int main ( int argc,char **argv ) {
 	Mat transformation_matrix;
 	Mat Ii_1;
 	I_i1.copyTo(Ii_1);
-	//tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
+	tie(Si_1, transformation_matrix) = initializaiton(I_i0, I_i1, K, Si_1);
 	cout << "Transformation matrix " << endl;
 	cout << transformation_matrix << endl;
 

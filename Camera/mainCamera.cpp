@@ -126,40 +126,73 @@ void *functionMatch(void *threadarg) {
    struct thread_match *my_data;
    my_data = (struct thread_match *) threadarg;
    
+   //cout << "start of thread " << endl;
+   
    double min_d1 = std::numeric_limits<double>::infinity();
-   double match_d1;
+   double match_d1 = std::numeric_limits<double>::infinity();
    double min_d2 = std::numeric_limits<double>::infinity();
+   double match_d2 = std::numeric_limits<double>::infinity();
+   int nr_descriptors = my_data->descriptors_n1.rows;
    
-   int nr_descriptors = my_data->n1.rows;
+   //cout << "Mistake here " << endl;
    
-   int dimension = my_data->n1.cols;
+   int dimension = my_data->descriptors_n1.cols - 1; // Since there are only 128 columns
    for (int i = 0; i < nr_descriptors; i++) {
 	   double SSD = 0;
 	   for (int k = 0; k < dimension; k++) {
-		   SSD = SSD + pow(my_data->n1.at<double>(i,k) - my_data->n2.at<double>(0,k) ,2.0);
+		   SSD = SSD + pow(my_data->descriptors_n1.at<double>(i,k) - my_data->descriptors_n2.at<double>(0,k) ,2.0);
 	   }
 	   if (SSD < min_d1) {
-		   // Update minimum distance to d2
-		   min_d2 = min_d1;
 		   
-		   // Update minimum distance to d1 
-		   min_d1 = SSD;
-		   // Update id for match
-		   match_d1 = i;
+		   double temp_min_d1 = min_d1;
+		   double temp_match_d1 = match_d1;
+		   
+		   
+		   if (my_data->descriptors_n1.at<double>(i,128) != temp_match_d1) {
+			   // Update second best
+			   match_d2 = match_d1;
+			   min_d2 = min_d1;
+			   
+			   // Update first best
+			   match_d1 = my_data->descriptors_n1.at<double>(i,128);
+			   min_d1 = SSD;
+			   
+		   }
+		   else if (my_data->descriptors_n1.at<double>(i,128) == temp_match_d1) {
+			   match_d1 = my_data->descriptors_n1.at<double>(i,128);
+			   min_d1 = SSD;
+			   
+		   }
 		
 	   }
 	   else if (SSD < min_d2) {
-		   min_d2 = SSD;
+		   if ( my_data->descriptors_n1.at<double>(i,128) != match_d1) {
+			   match_d2 = my_data->descriptors_n1.at<double>(i,128);
+			   min_d2 = SSD;
+		   }
 	   }
    }
 
-   
+  //cout << "Mistake here 2 " << endl;
    // Make 0.8 a variable that can be tuned 
-   if (min_d1/min_d2 < 0.9) {
+   if (min_d1/min_d2 < 0.8) {
 	   my_data->is_inlier = 1;
 	   my_data->lowest_distance = min_d1;
-	   my_data->match_in_n1 = match_d1;
+	   my_data->best_match = match_d1;
    }
+   else {
+	   my_data->is_inlier = 0;
+	   my_data->lowest_distance = std::numeric_limits<double>::infinity();
+	   my_data->best_match = 0;
+   }
+   
+   /*
+   cout << "my_data->is_inlier = " << my_data->is_inlier << endl;
+   cout << "my_data->lowest_distance = " << my_data->lowest_distance << endl;
+   cout << "my_data->best_match = " << my_data->best_match << endl;
+   cout << "my_data->descriptor_n2_id = " << my_data->descriptor_n2_id << endl;
+   cout << "my_data->descriptors_n2 = " << my_data->descriptors_n2 << endl;
+	*/
    
    pthread_exit(NULL);
 }
@@ -200,255 +233,107 @@ Mat subImage(int number_subimages, int boundary, int height, int width, int dim1
  * Output:
  * Matrix of size 2 x min(n1,n2) depending on how many keypoints there are
  */
-/*
-Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
+Mat SIFT::matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2) {
 
-	int n1 = descriptor1.rows;	// Matrix containing descriptors for keypoints in image 0
+	cout << "Inside matchDescriptorsAdvanced " << endl;
+	int k1 = descriptor1.rows;
+	int k2 = descriptor2.rows;
 	
-	cout << "n1 is = " << n1 << endl;
+	cout << "k1 and k2 = " << k1 << ", " << k2 << endl;
 	
-	int n2 = descriptor2.rows;	// Matrix containing descriptors for keypoints in image 1
+	int n1 = descriptor1.at<double>(k1-1, 129-1);	// Number of keypoints in image 0
+	int n2 = descriptor2.at<double>(k2-1, 129-1);	// Number of keypoints in image 1 
 	
-	Mat matches = Mat::zeros(2, n1, CV_64FC1);
-
-	int NUM_THREADS = n2;
+	cout << "n1, n2 = " << n1 << ", " << n2 << endl;
+	
+	waitKey(0);
+	
+	Mat matches = Mat::ones(2, n1, CV_64FC1);
+	matches = (-1.0)*matches;
+	
+	//cout << "matches = " << matches << endl;
+		
+	int NUM_THREADS = k2;
+	//int NUM_THREADS = 1;
 	pthread_t threads[NUM_THREADS];
 	struct thread_match td[NUM_THREADS];
 	int i, rc;
+
+	
 	for (i = 0; i < NUM_THREADS; i++) {
-		td[i].descriptor_n2_id = i;
-		td[i].n2 = descriptor2.row(i);
-		td[i].n1 = descriptor1;
+		td[i].descriptor_n2_id = descriptor2.at<double>(i,128);
+		td[i].descriptors_n1 = descriptor1;
+		td[i].descriptors_n2 = descriptor2.row(i);
 		td[i].is_inlier = 0;
-		td[i].lowest_distance = 0;
-		td[i].match_in_n1 = 0;
+		
+		
+		rc = pthread_create(&threads[i], NULL, functionMatch, (void *)&td[i]);
+		if (rc) {
+			cout << "unable to create thread " << rc << " and i = " << i << endl;
+		}
+	}
+	
+	/*
+	for (i = 0; i < NUM_THREADS; i++) {
+		cout << "thread is now being created " << endl;
+		td[i].descriptor_n2_id = descriptor2.at<double>(343,128);
+		td[i].descriptors_n1 = descriptor1;
+		td[i].descriptors_n2 = descriptor2.row(343);
+		td[i].is_inlier = 0;
 		
 		
 		rc = pthread_create(&threads[i], NULL, functionMatch, (void *)&td[i]);
 	}
+	*/
 	void* ret = NULL;
 	for (int k = 0; k < NUM_THREADS; k++) {
+
+		/*
+		if (k == 344) {
+			cout << "td[344].descriptor_n2_id = " << td[344].descriptor_n2_id << endl;
+			cout << "td[344].descriptors_n2 = " << td[344].descriptors_n2 << endl;
+			cout << "td[344].is_inlier = " << td[344].is_inlier << endl;
+			cout << "td[344].lowest_distance = " << td[344].lowest_distance << endl;
+			cout << "td[344].best_match = " << td[344].best_match << endl;
+		}
+		*/
+		//cout << "this thread " << k << " did not join" << endl;
+		//cout << "NUM_THREADS = " << NUM_THREADS << endl;
 		pthread_join(threads[k], &ret);
-		if (td[k].is_inlier == 1) {
+		//cout << "hej, hej" << endl;
+
+		if ( td[k].is_inlier == 1 ) {
+			//cout << "next point" << endl;
+			//cout << "k = " << k << endl;
+			double d1 = td[k].lowest_distance;
+			double match_n1 = td[k].best_match;
+			double n2_index = td[k].descriptor_n2_id;
+			//cout << "d1 = " << d1 << endl;
+			//cout << "match_n1 = " << match_n1 << endl;
+			//cout << "n2_index = " << n2_index << endl;
+			//cout << "matches.at<double>(0, match_n1) = " << matches.at<double>(0, match_n1) << endl;
+			//cout << "matches.at<double>(0, 141) = " << matches.at<double>(0, 141) << endl;
 			
-			double distance = td[k].lowest_distance;
-			double index = td[k].match_in_n1;
-
-			if (matches.at<double>(0, index) == 0) {
-				matches.at<double>(0, index) = distance;
-				matches.at<double>(1, index) = index;
-				
+			if ( matches.at<double>(0, match_n1) == -1 ) {
+				matches.at<double>(0, match_n1) = d1;
+				matches.at<double>(1, match_n1) = n2_index;
+				//cout << "Got to this point" << endl;
 			}
-			else if (distance < matches.at<double>(0,index)) {
-				matches.at<double>(0, index) = distance;
-				matches.at<double>(1, index) = index;
-			}
-		}
-	}
-	
-	int nr_matches = 0;
-	for (int h = 0; h < matches.cols; h++) {
-		if (matches.at<double>(0,h) != 0) {
-			nr_matches++;
-		}
-	}
-	
-	Matrix valid_matches(2, nr_matches);
-	int index = 0;
-	for (int q = 0; q < n1; q++) {
-		if (matches.at<double>(0, q) != 0) {
-			valid_matches(0,index) = q;
-			valid_matches(1,index) = matches.at<double>(1, q);
-			index++;
-		}
-	}
-	
-	
-	return valid_matches;
-}
-*/
-
-/*
-// Match SIFT Descriptors - Old function that works
-Matrix SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
-
-	int n1 = descriptor1.rows;	// Matrix containing descriptors for keypoints in image 0
-	int n2 = descriptor2.rows;	// Matrix containing descriptors for keypoints in image 1
-	
-	// Threshold on the euclidean distance between keypoints 
-	double threshold = 200;
-	
-	// Match keypoints in frame 2 to keypoints in frame 1 
-	Matrix matches(n2,5);
-	Matrix multiple_matches(n1,2);
-	
-	int count = 0;
-	for (int i = 0; i < n2; i++) {
-		double SSD;
-		double min = std::numeric_limits<double>::infinity();
-		double match;
-		// Just to initialize the values
-		matches(i,0) = 0;
-		matches(i,1) = min;
-		matches(i,2) = 0;
-		matches(i,3) = min;
-		matches(i,4) = 0;
-		for (int j = 0; j < n1; j++) {
-			SSD = 0;
-			for (int k = 0; k < 128; k++) {
-				SSD = SSD + pow((descriptor2.at<double>(i,k)-descriptor1.at<double>(j,k)),2.0);
-			}
-			// If closest neighbour is detected 
-			if (SSD < matches(i,1)) {
-				matches(i,2) = matches(i,0);
-				matches(i,3) = matches(i,1);
-				matches(i,1) = SSD;
-				matches(i,0) = j;
-				if (multiple_matches(j,1) == 0) {
-					multiple_matches(j,0) = i;
-					multiple_matches(j,1) = SSD;
-					matches(i,4) = 0;
-				}
-				else if (SSD < multiple_matches(j,1)) {
-					int temp_index = multiple_matches(j,0);
-					multiple_matches(j,0) = i;
-					multiple_matches(j,1) = SSD;
-					if (matches(temp_index,0) == j) {
-						matches(temp_index,4) = 2;
-					}
-					matches(i,4) = 0;
-				}
-				else {
-					//matches(i,4) = 2; --> Should maybe be enabled
-				}
-			}
-			// The second closest neighbour 
-			else if (SSD < matches(i,3)) {
-				matches(i,2) = j;
-				matches(i,3) = SSD;
-			}
-		}
-	}
-	for (int i = 0; i < n2; i++) {
-		double distance_ratio = matches(i,1)/matches(i,3);
-		if (distance_ratio < 0.8 && matches(i,1) < threshold) {
-			//matches(i,4) = 1;
-			if (matches(i,4) != 2) {
-				matches(i,4) = 1;
-				count++;
+			else if ( d1 < matches.at<double>(0, match_n1) ) {
+				matches.at<double>(0, match_n1) = d1;
+				matches.at<double>(1, match_n1) = n2_index;
 			}
 			
 		}
-		//cout << "Keypoint " << i << " : " << matches(i,0)  << ", " << matches(i,1) << ", " << matches(i,2) << ", " << matches(i,3) << " Match = " << matches(i,4) <<  endl;
+		cout << "Done with this - next thread k up " << k << endl;
 	}
+	cout << "Mistake here?" << endl;
+	Mat valid_matches = matches.row(1);
 	
-	// Create matrix with the keypoints that are valid and which are returned.
-	Matrix valid_matches(2,count);
-	cout << "Count of valid matches  = " << count << endl;
-	int index = 0;
-	for (int i = 0; i < n2; i++) {
-		if (matches(i,4) == 1) {
-			valid_matches(0,index) = i;
-			valid_matches(1,index) = matches(i,0);
-			index++;
-		}
-	}
-	
-	
-		
 	return valid_matches;
 }
-*/
 
-/*
-// Match SIFT Descriptors - Old function
-Matrix SIFT::matchDescriptors(Matrix descriptor1, Matrix descriptor2) {
 
-	int n1 = descriptor1.dim1();	// Matrix containing descriptors for keypoints in image 0
-	int n2 = descriptor2.dim1();	// Matrix containing descriptors for keypoints in image 1
-	
-	// Threshold on the euclidean distance between keypoints 
-	double threshold = 200;
-	
-	// Match keypoints in frame 2 to keypoints in frame 1 
-	Matrix matches(n2,5);
-	Matrix multiple_matches(n1,2);
-	
-	int count = 0;
-	for (int i = 0; i < n2; i++) {
-		double SSD;
-		double min = std::numeric_limits<double>::infinity();
-		double match;
-		// Just to initialize the values
-		matches(i,0) = 0;
-		matches(i,1) = min;
-		matches(i,2) = 0;
-		matches(i,3) = min;
-		matches(i,4) = 0;
-		for (int j = 0; j < n1; j++) {
-			SSD = 0;
-			for (int k = 0; k < 128; k++) {
-				SSD = SSD + pow((descriptor2(i,k)-descriptor1(j,k)),2);
-			}
-			// If closest neighbour is detected 
-			if (SSD < matches(i,1)) {
-				matches(i,2) = matches(i,0);
-				matches(i,3) = matches(i,1);
-				matches(i,1) = SSD;
-				matches(i,0) = j;
-				if (multiple_matches(j,1) == 0) {
-					multiple_matches(j,0) = i;
-					multiple_matches(j,1) = SSD;
-					matches(i,4) = 0;
-				}
-				else if (SSD < multiple_matches(j,1)) {
-					int temp_index = multiple_matches(j,0);
-					multiple_matches(j,0) = i;
-					multiple_matches(j,1) = SSD;
-					if (matches(temp_index,0) == j) {
-						matches(temp_index,4) = 2;
-					}
-					matches(i,4) = 0;
-				}
-				else {
-					//matches(i,4) = 2; --> Should maybe be enabled
-				}
-			}
-			// The second closest neighbour 
-			else if (SSD < matches(i,3)) {
-				matches(i,2) = j;
-				matches(i,3) = SSD;
-			}
-		}
-	}
-	for (int i = 0; i < n2; i++) {
-		double distance_ratio = matches(i,1)/matches(i,3);
-		if (distance_ratio < 0.8 && matches(i,1) < threshold) {
-			//matches(i,4) = 1;
-			if (matches(i,4) != 2) {
-				matches(i,4) = 1;
-				count++;
-			}
-			
-		}
-		//cout << "Keypoint " << i << " : " << matches(i,0)  << ", " << matches(i,1) << ", " << matches(i,2) << ", " << matches(i,3) << " Match = " << matches(i,4) <<  endl;
-	}
-	
-	// Create matrix with the keypoints that are valid and which are returned.
-	Matrix valid_matches(count,2);
-	cout << "Count of valid matches  = " << count << endl;
-	int index = 0;
-	for (int i = 0; i < n2; i++) {
-		if (matches(i,4) == 1) {
-			valid_matches(index,0) = i;
-			valid_matches(index,1) = matches(i,0);
-			index++;
-		}
-	}
-		
-	return valid_matches;
-}
-*/
 
 // New attempt to write code 
 /*
@@ -940,136 +825,7 @@ Matrix circularShift(Matrix histogram) {
 	*/
 	return histogram;
 }
-//FindDescriptors(Mat src_gray, Mat keypoints)
-/*
-// Find SIFT Desriptors using Parallelization
-void *FindDescriptors(void *threadarg) {
-	// SIT = SIFT_Descriptor_thread
-	struct SIT *my_data;
-	my_data = (struct SIT *) threadarg;
-	
-	// Simplification of SIFT
-	// Maybe the image should be smoothed first with a Gaussian Kernel
-	int n = my_data->keypoints.cols;
-	
-	// Initialize matrix containing keypoints descriptors
-	// Matrix Descriptors(n,128);
-	Mat Descriptors = Mat::zeros(n, 128, CV_64FC1);
-	
-	// Find Image gradients
-	Mat grad_x, grad_y;
-	Mat abs_grad_x, abs_grad_y;
-	int ksize = 1;
-	int scale = 1; 
-	int delta = 0; 
-	int ddepth = CV_16S;
-	
-	// Find the gradients in the Sobel operator by using the OPENCV function
-	Sobel(my_data->image_gray, grad_x, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
-	Sobel(my_data->image_gray, grad_y, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
-	
-	// Converting back to CV_8U
-	convertScaleAbs(grad_x, abs_grad_x);
-	convertScaleAbs(grad_y, abs_grad_y);
-	
-	int filter_size = 16;
-	float sigma = 1.5*16;
-	Mat GaussWindow;
-	GaussWindow = gaussWindow(filter_size, sigma);
-	
-	// For each keypoint
-	for (int i = 0; i < n; i++) {
-		int y = my_data->keypoints.at<double>(1, i);
-		int x = my_data->keypoints.at<double>(2, i); 
 
-		
-		// Extract a patch of size 16,16 from the image with x-gradients and y-gradients
-		Mat Patch_Ix, Patch_Iy;
-
-		Patch_Ix = selectRegionOfInterest(grad_x, y-7, x-7, y+8, x+8);
-		Patch_Iy = selectRegionOfInterest(grad_y, y-7, x-7, y+8, x+8);
-		// This is the scaled gradients 
-		Mat Gradients = Mat::zeros(Size(16,16),CV_64FC1);
-		// This is the orientations (angles of the gradients in radians)
-		Mat Orientations = Mat::zeros(Size(16,16),CV_64FC1);
-
-		for (int coor_y = 0; coor_y < 16; coor_y++) {
-			for (int coor_x = 0; coor_x < 16; coor_x++) {
-				float norm = sqrt( pow(Patch_Ix.at<short>(coor_y,coor_x),2) + pow(Patch_Iy.at<short>(coor_y,coor_x),2));
-				Gradients.at<double>(coor_y,coor_x) = norm*GaussWindow.at<double>(coor_y,coor_x);
-				Orientations.at<double>(coor_y,coor_x) = atan2(Patch_Iy.at<short>(coor_y,coor_x),Patch_Ix.at<short>(coor_y,coor_x));
-			}
-		}		
-		// Maybe you should rotate the patch, so it coincides with the orientation in the strongest direction
-		
-		// Divde the 16x16 patch into subpatches of 4x4 
-		Matrix descrip(1,128);
-		Mat subPatchGradients, subPatchOrientations;
-		int nindex = 0;
-		for (int k1 = 0; k1 <= 12; k1 = k1+4) {
-			for (int k2 = 0; k2 <= 12; k2 = k2 + 4) {
-				// Extract sub patches
-				subPatchGradients = selectRegionOfInterest(Gradients, k1, k2, k1+4, k2+4);
-				subPatchOrientations = selectRegionOfInterest(Orientations, k1, k2, k1+4, k2+4);
-				//cout << "Orientations extracted " << endl;
-				Matrix Histogram(1,8);
-				for (int l1 = 0; l1 < 4; l1++) {
-					for (int l2 = 0; l2 < 4; l2++) {
-						//cout << "Size subPatchOrientations = (" << subPatchOrientations.rows << ", " << subPatchOrientations.cols << ") " << endl;
-						double angle = subPatchOrientations.at<double>(l1,l2);
-						//cout << "Mistake here" << endl;
-						if (angle >= -M_PI && angle < -(3*M_PI)/4) {
-							Histogram(0,0) = Histogram(0,0) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= -(3*M_PI)/4 && angle < -M_PI/2) {
-							Histogram(0,1) = Histogram(0,1) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= -M_PI/2 && angle < -M_PI/4) {
-							Histogram(0,2) = Histogram(0,2) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= -M_PI/4 && angle < 0) {
-							Histogram(0,3) = Histogram(0,3) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= 0 && angle < M_PI/4) {
-							Histogram(0,4) = Histogram(0,4) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= M_PI/4 && angle < M_PI/2) {
-							Histogram(0,5) = Histogram(0,5) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= M_PI/2 && angle < 3*M_PI/4) {
-							Histogram(0,6) = Histogram(0,6) + subPatchGradients.at<double>(l1,l2);
-						}
-						else if (angle >= 3*M_PI/4 && angle < M_PI) {
-							Histogram(0,7) = Histogram(0,7) + subPatchGradients.at<double>(l1,l2);
-						}
-					}
-				}
-				// Rotate it so it becomes rotation invariant
-				Histogram = circularShift(Histogram);
-				for (int ii = 0; ii < Histogram.dim2(); ii++) {
-					//Descriptors[i].slice(nindex*8,nindex*8+ii) = Histogram(0,ii);
-					//Descriptors(i,nindex*8+ii) = Histogram(0,ii);
-					Descriptors.at<double>(i,nindex*8+ii) = Histogram(0,ii);
-				}
-				nindex++;
-			}
-		}
-		
-		// Normalizing the vector 
-		double SumOfSquares = 0;
-		for (int ii = 0; ii < Descriptors.cols; ii++) {
-			SumOfSquares = SumOfSquares + Descriptors.at<double>(i,ii)*Descriptors.at<double>(i,ii);
-		}
-
-	// Scale the norms of the gradients by multiplying a the graidents with a gaussian
-	// centered in the keypoint and with Sigma_w = 1.5*16. 
-
-	}
-	my_data->descriptors = Descriptors;
-	
-	pthread_exit(NULL);
-}
-*/
 
 
 void *functionDescriptor(void *threadarg) {
@@ -1322,7 +1078,382 @@ Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	return Descriptors;
 }
 
+// Advanced Find descriptors
  
+void *functionAdvancedDescriptor(void *threadarg) {
+   struct thread_descriptorAdvanced *my_data;
+   my_data = (struct thread_descriptorAdvanced *) threadarg;
+   
+   //cout << "mistake 0 here " << endl;
+   int y = my_data->thread_interest_point.at<double>(0,0);
+   int x = my_data->thread_interest_point.at<double>(1,0);
+		
+	Mat grad_x = my_data->thread_grad_x;
+	Mat grad_y = my_data->thread_grad_y;
+	Mat GaussWindow = my_data->thread_Gauss_Window;
+		
+	// Extract a patch of size 16,16 from the image with x-gradients and y-gradients
+	Mat Patch_Ix, Patch_Iy;
+
+	Patch_Ix = selectRegionOfInterest(grad_x, y-7, x-7, y+8, x+8);
+	Patch_Iy = selectRegionOfInterest(grad_y, y-7, x-7, y+8, x+8);
+		
+	//cout << "Mistake 1 here" << endl;
+	// This is the scaled gradients 
+	Mat Gradients = Mat::zeros(Size(16,16),CV_64FC1);
+	// This is the orientations (angles of the gradients in radians)
+	Mat Orientations = Mat::zeros(Size(16,16),CV_64FC1);
+
+		//cout << "Test angle = " << atan2(-0.2,-5) << endl;
+
+		for (int coor_y = 0; coor_y < 16; coor_y++) {
+			for (int coor_x = 0; coor_x < 16; coor_x++) {
+				double dx = Patch_Ix.at<short>(coor_y,coor_x);
+				double dy = Patch_Iy.at<short>(coor_y,coor_x);
+				//cout << "dx,dy = (" << dx << "," << dy << ")" << endl;
+				//waitKey(0);
+				double norm = sqrt( pow(dx,2.0) + pow(dy,2.0));
+				//cout << "norm = " << norm << endl;
+				//cout << "GaussWindow.at<double>(coor_y,coor_x) = " << GaussWindow.at<double>(coor_y,coor_x) << endl;
+				Gradients.at<double>(coor_y,coor_x) = norm*GaussWindow.at<double>(coor_y,coor_x);
+				Orientations.at<double>(coor_y,coor_x) = atan2(dy,dx);
+				//cout << "Orientations.at<double>(coor_y,coor_x) = " << Orientations.at<double>(coor_y,coor_x) << endl;
+			}
+		}		
+		// Maybe you should rotate the patch, so it coincides with the orientation in the strongest direction
+		
+		// Divde the 16x16 patch into subpatches of 4x4 
+		Mat Patch_of_HOGs = Mat::zeros(16, 8, CV_64FC1);
+		
+		//cout << "Gradients = " << Gradients << endl;
+		//cout << "Orientations = " << Orientations << endl;
+		
+		// Build a HOG for every 4x4 subpatch and insert that in the 16x8 matrix called Patch_of_HOGs
+		//cout << "Mistake 2 here" << endl;
+		int index = 0;
+		for (int k1 = 0; k1 < 4; k1++) {
+			for (int k2 = 0; k2 < 4; k2++) {
+				Mat subPatch_gradients = Gradients.colRange(k2*4,(k2+1)*4).rowRange(k1*4,(k1+1)*4); 
+				Mat subPatch_orientations = Orientations.colRange(k2*4,(k2+1)*4).rowRange(k1*4,(k1+1)*4); 
+				
+				//cout << "subPatch_gradients = " << subPatch_gradients << endl;
+				//cout << "subPatch_orientations = " << subPatch_orientations << endl;
+				
+				//MatType(subPatch_gradients);
+				//MatType(subPatch_orientations);
+				
+				for (int r = 0; r < 4; r++) {
+					for (int c = 0; c < 4; c++) {
+						double angle = subPatch_orientations.at<double>(r,c);
+						
+						if (0 <= angle && angle < M_PI/4) { // Between 0 rad and Pi/4 rad 
+							Patch_of_HOGs.at<double>(index,0) = Patch_of_HOGs.at<double>(index,0) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (M_PI/4 <= angle && angle < M_PI/2) { // Between Pi/4 rad and Pi/2 rad 
+							Patch_of_HOGs.at<double>(index,1) = Patch_of_HOGs.at<double>(index,1) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (M_PI/2 <= angle && angle < (3*M_PI)/4) { // Between Pi/2 rad and 3*Pi/4 rad 
+							Patch_of_HOGs.at<double>(index,2) = Patch_of_HOGs.at<double>(index,2) + subPatch_gradients.at<double>(r,c);
+						}
+						else if ((3*M_PI)/4 <= angle && angle < M_PI) { // Between 3*Pi/4 rad and Pi rad 
+							Patch_of_HOGs.at<double>(index,3) = Patch_of_HOGs.at<double>(index,3) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (angle < -(3*M_PI)/4 && -M_PI <= angle) { // Between -3*Pi/4 rad and -Pi rad 
+							Patch_of_HOGs.at<double>(index,4) = Patch_of_HOGs.at<double>(index,4) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (angle < -(M_PI)/2 && -(3*M_PI)/4 <= angle) { // Between -Pi/2 rad and -3*Pi/4 rad 
+							Patch_of_HOGs.at<double>(index,5) = Patch_of_HOGs.at<double>(index,5) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (angle < -(M_PI)/4 && -(M_PI)/2 <= angle) { // Between -Pi/4 rad and -Pi/2 rad 
+							Patch_of_HOGs.at<double>(index,6) = Patch_of_HOGs.at<double>(index,6) + subPatch_gradients.at<double>(r,c);
+						}
+						else if (angle < 0 && -(M_PI)/4 <= angle) { // Between 0 rad and -Pi/4 rad 
+							Patch_of_HOGs.at<double>(index,7) = Patch_of_HOGs.at<double>(index,7) + subPatch_gradients.at<double>(r,c);
+						}
+					}
+				}
+				
+				//cout << "Patch_of_HOGs = " << Patch_of_HOGs << endl;
+				//waitKey(0);
+				
+				index++;
+			}
+		}
+		
+		//cout << "Patch_of_HOGs = " << Patch_of_HOGs << endl;
+		
+		//cout << "Mistake 3 here" << endl;
+		// Build HOG for the entire 16x16 Patch
+		Mat total_HOG = Mat::zeros(1, 8, CV_64FC1);
+		for (int q = 0; q < Patch_of_HOGs.rows; q++) {
+			total_HOG.at<double>(0,0) = total_HOG.at<double>(0,0) + Patch_of_HOGs.at<double>(q,0);
+			total_HOG.at<double>(0,1) = total_HOG.at<double>(0,1) + Patch_of_HOGs.at<double>(q,1);
+			total_HOG.at<double>(0,2) = total_HOG.at<double>(0,2) + Patch_of_HOGs.at<double>(q,2);
+			total_HOG.at<double>(0,3) = total_HOG.at<double>(0,3) + Patch_of_HOGs.at<double>(q,3);
+			total_HOG.at<double>(0,4) = total_HOG.at<double>(0,4) + Patch_of_HOGs.at<double>(q,4);
+			total_HOG.at<double>(0,5) = total_HOG.at<double>(0,5) + Patch_of_HOGs.at<double>(q,5);
+			total_HOG.at<double>(0,6) = total_HOG.at<double>(0,6) + Patch_of_HOGs.at<double>(q,6);
+			total_HOG.at<double>(0,7) = total_HOG.at<double>(0,7) + Patch_of_HOGs.at<double>(q,7);
+			
+		}
+		
+		//cout << "total_HOG = " << total_HOG << endl;
+		
+		Mat multiple_descriptors = Mat::zeros(4, 129, CV_64FC1);
+		
+		//waitKey(0);
+		
+		// Check if 0th entry is a local maximum
+		int nr_desciptors = 0;
+		
+		Mat vector = Patch_of_HOGs.reshape(0, 1);;
+		double SumOfSquares = 0; 
+		for (int ii = 0; ii < vector.cols; ii++) {
+				SumOfSquares = SumOfSquares + vector.at<double>(0,ii)*vector.at<double>(0,ii);
+		}
+		//cout << "SumOfSquares = " << SumOfSquares << endl;
+		/*
+		if ( total_HOG.at<double>(0,0) > total_HOG.at<double>(0,1) && total_HOG.at<double>(0,0) > total_HOG.at<double>(0,7) {
+			// If it is a local max
+			Mat descrip = Patch_of_HOGs.reshape(0, 1);
+			double SumOfSquares = 0;
+			for (int ii = 0; ii < descrip.cols; ii++) {
+				SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
+			}
+			// Insert in descriptors matrix
+			for (int ii = 0; ii < descrip.cols; ii++) {
+				descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
+			}
+			descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
+			
+			nr_desciptors++;
+			
+		}
+		
+		// If 1st bin is a local max 
+		if ( total_HOG.at<double>(0,1) > total_HOG.at<double>(0,0) && total_HOG.at<double>(0,1) > total_HOG.at<double>(0,2) ) {
+			
+			Mat temp1 = Patch_of_HOGs.colRange(0,1);
+			Mat temp2 = Patch_of_HOGs.colRange(1,8);
+			Mat temp3;
+			hconcat(temp2, temp1, temp3);
+			Mat descrip = temp3.reshape(0, 1);
+			double SumOfSquares = 0;
+			for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
+				SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
+			}
+			for (int ii = 0; ii < descrip.cols; ii++) {
+				descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
+			}
+			descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
+			
+			nr_desciptors++;
+			
+		}
+		
+		// If 2nd bin is a local max 
+		if ( total_HOG.at<double>(0,2) > total_HOG.at<double>(0,1) && total_HOG.at<double>(0,2) > total_HOG.at<double>(0,3) ) {
+			Mat temp1 = Patch_of_HOGs.colRange(0,2);
+			Mat temp2 = Patch_of_HOGs.colRange(2,8);
+			Mat temp3;
+			hconcat(temp2, temp1, temp3);
+			Mat descrip = temp3.reshape(0, 1);
+			double SumOfSquares = 0;
+			for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
+				SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
+			}
+			for (int ii = 0; ii < descrip.cols; ii++) {
+				descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
+			}
+			descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
+			
+			nr_desciptors++;
+		}
+		
+		// If 3rd bin is a local max 
+		if ( total_HOG.at<double>(0,3) > total_HOG.at<double>(0,2) && total_HOG.at<double>(0,3) > total_HOG.at<double>(0,4) ) {
+			Mat temp1 = Patch_of_HOGs.colRange(0,2);
+			Mat temp2 = Patch_of_HOGs.colRange(2,8);
+			Mat temp3;
+			hconcat(temp2, temp1, temp3);
+			Mat descrip = temp3.reshape(0, 1);
+			double SumOfSquares = 0;
+			for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
+				SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
+			}
+			for (int ii = 0; ii < descrip.cols; ii++) {
+				descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
+			}
+			descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
+			
+			nr_desciptors++;
+		}
+		*/
+		
+		for (int k = 0; k < total_HOG.cols; k++) {
+			//cout << "Finding next max " << endl;
+			//waitKey(0);
+			// For bin 0
+			if (k == 0) {
+				if ( total_HOG.at<double>(0,0) > total_HOG.at<double>(0,1) && total_HOG.at<double>(0,0) > total_HOG.at<double>(0,7) ) {
+					Mat descrip = Patch_of_HOGs.reshape(0, 1);
+					//cout << "descrip = " << descrip << endl;
+					double SumOfSquares = 0;
+					/*
+					for (int ii = 0; ii < descrip.cols; ii++) {
+						SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
+					}
+					cout << "SumOfSquares = " << SumOfSquares << endl;
+					*/
+					// Insert in descriptors matrix
+					for (int ii = 0; ii < descrip.cols; ii++) {
+						multiple_descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
+					}
+					multiple_descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
+					
+					nr_desciptors++;
+				}
+				
+			}
+			// For bin 7
+			else if (k == 7 ) {
+				if ( total_HOG.at<double>(0,7) > total_HOG.at<double>(0,6) && total_HOG.at<double>(0,7) > total_HOG.at<double>(0,0) ) {
+					Mat temp1 = Patch_of_HOGs.colRange(0,7);
+					Mat temp2 = Patch_of_HOGs.colRange(7,8);
+					Mat temp3;
+					hconcat(temp2, temp1, temp3);
+					Mat descrip = temp3.reshape(0, 1);
+					//cout << "descrip = " << descrip << endl;
+					/*
+					double SumOfSquares = 0;
+					for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
+						SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
+					}
+					cout << "SumOfSquares = " << SumOfSquares << endl;
+					*/
+					for (int ii = 0; ii < descrip.cols; ii++) {
+						multiple_descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
+					}
+					multiple_descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
+					
+					nr_desciptors++;
+				}
+				
+			}
+			// For the other bins 
+			else {
+				//cout << "Find local max which is not bin 0 or bin 7 " << endl;
+				//waitKey(0);
+				if ( total_HOG.at<double>(0,k) > total_HOG.at<double>(0,k-1) && total_HOG.at<double>(0,k) > total_HOG.at<double>(0,k+1) ) {
+					//cout << "if statement passed " << endl;
+					//cout << "k = " << k << endl;
+					Mat temp1 = Patch_of_HOGs.colRange(0,k);
+					Mat temp2 = Patch_of_HOGs.colRange(k,8);
+					Mat temp3;
+					hconcat(temp2, temp1, temp3);
+					Mat descrip = temp3.reshape(0, 1);
+					//cout << "descrip = " << descrip << endl;
+					//cout << "Mistake here" << endl;
+					/*
+					double SumOfSquares = 0;
+					for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
+						SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
+					}
+					cout << "SumOfSquares = " << SumOfSquares << endl;
+					*/
+					for (int ii = 0; ii < descrip.cols; ii++) {
+						multiple_descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
+					}
+					multiple_descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
+					
+					nr_desciptors++;
+				}
+				
+			}
+		}
+			
+		
+		my_data->thread_multiple_descriptors = multiple_descriptors.rowRange(0, nr_desciptors);
+		
+		
+		//cout << "my_data->thread_multiple_descriptors = " << my_data->thread_multiple_descriptors << endl;
+   
+   pthread_exit(NULL);
+}
+
+
+
+// This function works - 25.07-2020
+// Find SIFT Desriptors  without parallelization
+Mat SIFT::FindDescriptorsAdvanced(Mat src_gray, Mat keypoints) {
+	
+	Mat src_gray_blurred;
+	GaussianBlur(src_gray, src_gray_blurred, Size(3,3), 5,5);
+
+	// Simplification of SIFT
+	// Maybe the image should be smoothed first with a Gaussian Kernel
+	int n = keypoints.cols;
+	
+	// Initialize matrix containing keypoints descriptors
+	//Matrix Descriptors(n,128);
+	//Mat Descriptors = Mat::zeros(n, 128, CV_64FC1);
+	
+	// Find Image gradients
+	Mat grad_x, grad_y;
+	Mat abs_grad_x, abs_grad_y;
+	int ksize = 1;
+	int scale = 1; 
+	int delta = 0; 
+	int ddepth = CV_16S;
+	
+	// Find the gradients in the Sobel operator by using the OPENCV function
+	Sobel(src_gray_blurred, grad_y, ddepth, 1, 0, 3, scale, delta, BORDER_DEFAULT);
+	Sobel(src_gray_blurred, grad_x, ddepth, 0, 1, 3, scale, delta, BORDER_DEFAULT);
+	
+	// Converting back to CV_8U
+	convertScaleAbs(grad_x, abs_grad_x);
+	convertScaleAbs(grad_y, abs_grad_y);
+	
+	int filter_size = 16;
+	float sigma = 1.5*16;
+	Mat GaussWindow;
+	GaussWindow = gaussWindow(filter_size, sigma);
+	
+	
+	grad_y = (-1)*grad_y;
+	grad_x = (-1)*grad_x;
+	
+	
+	int NUM_THREADS = n;
+	//int NUM_THREADS = 1;
+	pthread_t threads[NUM_THREADS];
+	struct thread_descriptorAdvanced td[NUM_THREADS];
+	int i, rc;
+	for (i = 0; i < NUM_THREADS; i++) {
+		td[i].thread_interest_point = keypoints.colRange(i,i+1);
+		td[i].thread_descriptor_id = i;
+
+		td[i].thread_grad_x = grad_x;
+		//cout << "td[i].thread_grad_x = " << td[i].thread_grad_x << endl;
+		td[i].thread_grad_y = grad_y;
+		//cout << "td[i].thread_grad_y = " << td[i].thread_grad_y << endl;
+		
+		td[i].thread_Gauss_Window = GaussWindow;
+		
+		rc = pthread_create(&threads[i], NULL, functionAdvancedDescriptor, (void *)&td[i]);
+	}
+	void* ret = NULL;
+	vector<Mat> descriptor_container;
+	for (int k = 0; k < NUM_THREADS; k++) {
+		pthread_join(threads[k], &ret);
+		descriptor_container.push_back(td[k].thread_multiple_descriptors);
+	}
+	Mat Descriptors;
+	vconcat(descriptor_container, Descriptors);
+	
+	
+	return Descriptors;
+}
  
 
 

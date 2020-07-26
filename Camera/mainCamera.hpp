@@ -101,14 +101,24 @@ struct thread_descriptor {
 		Mat thread_Gauss_Window;
 };
 
+struct thread_descriptorAdvanced {
+		int thread_descriptor_id;
+		Mat thread_interest_point;
+		Mat thread_grad_x;
+		Mat thread_grad_y;
+		Mat thread_Gauss_Window;
+		Mat thread_multiple_descriptors;
+};
+
 struct thread_match {
 		//int thread_id;
+		int descriptor_n1_id;
 		int descriptor_n2_id;
-		Mat n2;
-		Mat n1;
+		Mat descriptors_n1;
+		Mat descriptors_n2;
 		int is_inlier;
 		double lowest_distance;
-		double match_in_n1;
+		int best_match;
 };
 
 // SIT = SIFT Descriptor thread struct
@@ -131,6 +141,9 @@ namespace SIFT {
 	Mat FindDescriptors(Mat src_gray, Mat keypoints);
 	//Matrix matchDescriptors(Mat descriptor1, Mat descriptor2);
 	Mat matchDescriptors(Mat descriptor1, Mat descriptor2);
+	
+	Mat FindDescriptorsAdvanced(Mat src_gray, Mat keypoints);
+	Mat matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2);
 	
 }	// SIFT
 
