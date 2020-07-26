@@ -2391,17 +2391,17 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	
 	// Other parameters 
 	double num_iterations;
-	int pixel_tolerance = ransac_pixel_tolerance; 
+	int pixel_tolerance = 10; 
 	double k = 3.0;
-	int min_inlier_count = ransac_min_inlier_count; // This parameter should be tuned for the implementation
+	int min_inlier_count = 30; // This parameter should be tuned for the implementation
 	double record_inlier = 0;
 
 		
 	if (adaptive_ransac) {
-		num_iterations = 1000;
+		num_iterations = INFINITY;
 	}
 	else {
-		num_iterations = INFINITY;
+		num_iterations = 1000;
 	}
 	
 	// Initialize RANSAC
@@ -2454,6 +2454,8 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			random_nums[mm] = mm;
 		}
 		random_shuffle(random_nums, random_nums + corresponding_landmarks.cols);
+		
+		
 		for (int mm = 0; mm < k;  mm++) {
 			//cout << "Random number = " << random_nums[mm] << endl;
 			// Landmark sample 
