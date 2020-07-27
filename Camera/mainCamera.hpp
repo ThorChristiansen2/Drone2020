@@ -33,12 +33,7 @@ using Vector = Numeric_lib::Matrix<double,1>;
 
 // Variables to define
 // Harris corner
-#define Harris_threads 30
-
-// KLT
-#define KLT_r_T 11
-#define KLT_num_iters 20
-#define KLT_lambda 0.6
+#define Harris_keypoints 110
 
 // Num candidate keypoints
 #define num_candidate_keypoints 30

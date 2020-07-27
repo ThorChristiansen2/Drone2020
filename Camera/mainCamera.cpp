@@ -177,8 +177,9 @@ Mat SIFT::matchDescriptors2(Mat descriptor1, Mat descriptor2) {
 }
 
 
-
-
+/*
+ * This function matches keypoints by looking at multiple descriptors for keypoints.
+*/
 void *functionMatchAdvanced(void *threadarg) {
    struct thread_match *my_data;
    my_data = (struct thread_match *) threadarg;
@@ -243,13 +244,7 @@ void *functionMatchAdvanced(void *threadarg) {
 	   my_data->best_match = 0;
    }
    
-   /*
-   cout << "my_data->is_inlier = " << my_data->is_inlier << endl;
-   cout << "my_data->lowest_distance = " << my_data->lowest_distance << endl;
-   cout << "my_data->best_match = " << my_data->best_match << endl;
-   cout << "my_data->descriptor_n2_id = " << my_data->descriptor_n2_id << endl;
-   cout << "my_data->descriptors_n2 = " << my_data->descriptors_n2 << endl;
-	*/
+ 
    
    pthread_exit(NULL);
 }
@@ -260,11 +255,7 @@ void *functionMatchAdvanced(void *threadarg) {
 // Match SIFT Descriptors
 /* Objective: Function that matches keypoints in frame 2 to keypoints in frame 1 using the descriptors
  * for the keypoints in frame 2 and the descriptors for the keypoints in frame 1
- * Inputs:
- * descriptor1 - Matrix (Bjarnes matrix) of size n1x128
- * descriptor2 - Matrix (Bjarnes matrix) of size n2x128
- * Output:
- * Matrix of size 2 x min(n1,n2) depending on how many keypoints there are
+ * This function uses parallel threading and can take more than just one descriptor for each keypoint
  */
 Mat SIFT::matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2) {
 
@@ -272,14 +263,9 @@ Mat SIFT::matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2) {
 	int k1 = descriptor1.rows;
 	int k2 = descriptor2.rows;
 	
-	cout << "k1 and k2 = " << k1 << ", " << k2 << endl;
-	
 	int n1 = descriptor1.at<double>(k1-1, 129-1);	// Number of keypoints in image 0
 	int n2 = descriptor2.at<double>(k2-1, 129-1);	// Number of keypoints in image 1 
 	
-	cout << "n1, n2 = " << n1 << ", " << n2 << endl;
-	
-	waitKey(0);
 	
 	Mat matches = Mat::ones(2, n1, CV_64FC1);
 	matches = (-1.0)*matches;
@@ -295,8 +281,9 @@ Mat SIFT::matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2) {
 	
 	for (i = 0; i < NUM_THREADS; i++) {
 		td[i].descriptor_n2_id = descriptor2.at<double>(i,128);
-		td[i].descriptors_n1 = descriptor1;
-		td[i].descriptors_n2 = descriptor2.row(i);
+		descriptor1.copyTo(td[i].descriptors_n1);
+		Mat vector = descriptor2.row(i);
+		vector.copyTo(td[i].descriptors_n2); 
 		td[i].is_inlier = 0;
 		
 		
@@ -333,8 +320,9 @@ Mat SIFT::matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2) {
 		}
 		
 	}
-	
+
 	Mat valid_matches = matches.row(1);
+	
 	
 	return valid_matches;
 }
@@ -345,9 +333,9 @@ Mat SIFT::matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2) {
 
 // New attempt to write code 
 /* This funciton works as of 27.7-2020
+ * This Function uses parallelthreading - but only considers one descriptor for every keypoint
 
  */
-
 Mat SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 
 	int descriptor_length = descriptor2.cols;
@@ -832,7 +820,7 @@ void *functionDescriptor(void *threadarg) {
 
 
 // This function works - 25.07-2020
-// Find SIFT Desriptors  without parallelization
+// Find SIFT Desriptors  with parallelization
 Mat SIFT::FindDescriptors(Mat src_gray, Mat keypoints) {
 	
 	Mat src_gray_blurred;
@@ -1018,13 +1006,10 @@ void *functionAdvancedDescriptor(void *threadarg) {
 			
 		}
 		
-		//cout << "total_HOG = " << total_HOG << endl;
-		
-		Mat multiple_descriptors = Mat::zeros(4, 129, CV_64FC1);
-		
-		//waitKey(0);
-		
-		// Check if 0th entry is a local maximum
+		// Only possible with 2 descriptors for each keypoint
+		Mat multiple_descriptors = Mat::zeros(2, 129, CV_64FC1);
+
+	
 		int nr_desciptors = 0;
 		
 		Mat vector = Patch_of_HOGs.reshape(0, 1);;
@@ -1033,94 +1018,73 @@ void *functionAdvancedDescriptor(void *threadarg) {
 				SumOfSquares = SumOfSquares + vector.at<double>(0,ii)*vector.at<double>(0,ii);
 		}
 		
-		
-		for (int k = 0; k < total_HOG.cols; k++) {
-			//cout << "Finding next max " << endl;
-			//waitKey(0);
-			// For bin 0
-			if (k == 0) {
-				if ( total_HOG.at<double>(0,0) > total_HOG.at<double>(0,1) && total_HOG.at<double>(0,0) > total_HOG.at<double>(0,7) ) {
-					Mat descrip = Patch_of_HOGs.reshape(0, 1);
-					//cout << "descrip = " << descrip << endl;
-					double SumOfSquares = 0;
-					/*
-					for (int ii = 0; ii < descrip.cols; ii++) {
-						SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
-					}
-					cout << "SumOfSquares = " << SumOfSquares << endl;
-					*/
-					// Insert in descriptors matrix
-					for (int ii = 0; ii < descrip.cols; ii++) {
-						multiple_descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
-					}
-					multiple_descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
-					
-					nr_desciptors++;
-				}
-				
-			}
-			// For bin 7
-			else if (k == 7 ) {
-				if ( total_HOG.at<double>(0,7) > total_HOG.at<double>(0,6) && total_HOG.at<double>(0,7) > total_HOG.at<double>(0,0) ) {
-					Mat temp1 = Patch_of_HOGs.colRange(0,7);
-					Mat temp2 = Patch_of_HOGs.colRange(7,8);
-					Mat temp3;
-					hconcat(temp2, temp1, temp3);
-					Mat descrip = temp3.reshape(0, 1);
-					//cout << "descrip = " << descrip << endl;
-					/*
-					double SumOfSquares = 0;
-					for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
-						SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
-					}
-					cout << "SumOfSquares = " << SumOfSquares << endl;
-					*/
-					for (int ii = 0; ii < descrip.cols; ii++) {
-						multiple_descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
-					}
-					multiple_descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
-					
-					nr_desciptors++;
-				}
-				
-			}
-			// For the other bins 
-			else {
-				//cout << "Find local max which is not bin 0 or bin 7 " << endl;
-				//waitKey(0);
-				if ( total_HOG.at<double>(0,k) > total_HOG.at<double>(0,k-1) && total_HOG.at<double>(0,k) > total_HOG.at<double>(0,k+1) ) {
-					//cout << "if statement passed " << endl;
-					//cout << "k = " << k << endl;
-					Mat temp1 = Patch_of_HOGs.colRange(0,k);
-					Mat temp2 = Patch_of_HOGs.colRange(k,8);
-					Mat temp3;
-					hconcat(temp2, temp1, temp3);
-					Mat descrip = temp3.reshape(0, 1);
-					//cout << "descrip = " << descrip << endl;
-					//cout << "Mistake here" << endl;
-					/*
-					double SumOfSquares = 0;
-					for (int ii = 0; ii < descrip.cols; ii++) { // Maybe unessecary to calculate this one to
-						SumOfSquares = SumOfSquares + descrip.at<double>(0,ii)*descrip.at<double>(0,ii);
-					}
-					cout << "SumOfSquares = " << SumOfSquares << endl;
-					*/
-					for (int ii = 0; ii < descrip.cols; ii++) {
-						multiple_descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
-					}
-					multiple_descriptors.at<double>(nr_desciptors,128) = my_data->thread_descriptor_id;
-					
-					nr_desciptors++;
-				}
-				
+		// Find maximum number of totalHOG 
+		int max_index_1 = 0;
+		double max_value_1 = 0;
+		for (int i = 0; i < total_HOG.cols; i++) {
+			if ( total_HOG.at<double>(0,i) > max_value_1 ) {
+				max_value_1 = total_HOG.at<double>(0,i);
+				max_index_1 = i;
 			}
 		}
+		total_HOG.at<double>(0, max_index_1) = 0;
+		
+		if ( max_index_1 == 0 ) {
+			total_HOG.at<double>(0, 1) = 0;
+			total_HOG.at<double>(0, 7) = 0;
+		}
+		else if ( max_index_1 == 7 ) {
+			total_HOG.at<double>(0, 6) = 0;
+			total_HOG.at<double>(0, 1) = 0;
+		}
+		else {
+			total_HOG.at<double>(0, max_index_1+1) = 0;
+			total_HOG.at<double>(0, max_index_1-1) = 0;
+		}
+		
+		// Find second maxmum number of totalHOG
+		int max_index_2 = 0;
+		double max_value_2 = 0;
+		for (int i = 0; i < total_HOG.cols; i++) {
+			if ( total_HOG.at<double>(0,i) > max_value_2 ) {
+				max_value_2 = total_HOG.at<double>(0,i);
+				max_index_2 = i;
+			}
+		}
+		
+		// First maximum
+		Mat temp1, temp2, temp3, descrip; 
+		if ( max_index_1 == 0 ) {
+			max_index_1++;
+		}
+		temp1 = Patch_of_HOGs.colRange(0,max_index_1);
+		temp2 = Patch_of_HOGs.colRange(max_index_1,8);
+		temp3;
+		hconcat(temp2, temp1, temp3);
+		descrip = temp3.reshape(0, 1);
+					//cout << "descrip = " << descrip << endl;
+		for (int ii = 0; ii < descrip.cols; ii++) {
+			multiple_descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
+		}
+		multiple_descriptors.at<double>(0,128) = my_data->thread_descriptor_id;
+		
+		// Second maximum
+		if ( max_index_2 == 0 ) {
+			max_index_2++;
+		}
+		temp1 = Patch_of_HOGs.colRange(0,max_index_2);
+		temp2 = Patch_of_HOGs.colRange(max_index_2,8);
+		temp3;
+		hconcat(temp2, temp1, temp3);
+		descrip = temp3.reshape(0, 1);
+					//cout << "descrip = " << descrip << endl;
+		for (int ii = 0; ii < descrip.cols; ii++) {
+			multiple_descriptors.at<double>(nr_desciptors,ii) = descrip.at<double>(0,ii)/sqrt(SumOfSquares);
+		}
+		multiple_descriptors.at<double>(1,128) = my_data->thread_descriptor_id;
+	
 			
-		
-		my_data->thread_multiple_descriptors = multiple_descriptors.rowRange(0, nr_desciptors);
-		
-		
-		//cout << "my_data->thread_multiple_descriptors = " << my_data->thread_multiple_descriptors << endl;
+		my_data->thread_multiple_descriptors = multiple_descriptors;
    
    pthread_exit(NULL);
 }
@@ -1178,9 +1142,8 @@ Mat SIFT::FindDescriptorsAdvanced(Mat src_gray, Mat keypoints) {
 		td[i].thread_descriptor_id = i;
 
 		td[i].thread_grad_x = grad_x;
-		//cout << "td[i].thread_grad_x = " << td[i].thread_grad_x << endl;
+
 		td[i].thread_grad_y = grad_y;
-		//cout << "td[i].thread_grad_y = " << td[i].thread_grad_y << endl;
 		
 		td[i].thread_Gauss_Window = GaussWindow;
 		
@@ -2680,7 +2643,8 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cvtColor(I_i0, I_i0_gray, COLOR_BGR2GRAY );
 	cvtColor(I_i1, I_i1_gray, COLOR_BGR2GRAY );
 	
-	Mat temp0, temp1, emptyMatrix;
+	Mat temp0, temp1;
+	int nr_interest_points = Harris_keypoints;
 
 
 	
@@ -2689,7 +2653,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	int dim2 = I_i0_gray.cols;
 	Mat I_i0_resized = I_i0_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 		
-	goodFeaturesToTrack(I_i0_resized, temp0, 150, 0.01, 4, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i0_resized, temp0, nr_interest_points, 0.01, 4, noArray(), 3, true, 0.04);
 	Mat keypoints_I_i0 = Mat::zeros(2, temp0.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i0.cols; i++) {
 		keypoints_I_i0.at<double>(0,i) = temp0.at<float>(i,1) + 10;
@@ -2715,7 +2679,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	dim1 = I_i1_gray.rows;
 	dim2 = I_i1_gray.cols;
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
-	goodFeaturesToTrack(I_i1_resized, temp1, 150, 0.01, 4, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i1_resized, temp1, nr_interest_points, 0.01, 4, noArray(), 3, true, 0.04);
 	
 	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i1.cols; i++) {
@@ -2743,37 +2707,36 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 
 
-	/*
-	cout << "before descriptors_I_i0_Advanced " << endl;
-	Mat descriptors_I_i0_Advanced = SIFT::FindDescriptorsAdvanced( I_i0_gray,  keypoints_I_i0);
 	
-	cout << "Dimensions of descriptors_I_i0_Advanced = (" << descriptors_I_i0_Advanced.rows << "," << descriptors_I_i0_Advanced.cols << ")" << endl;
-	cout << "before descriptors_I_i1_Advanced " << endl;
+	// cout << "Advanced descriptors " << endl;
+	
+	Mat descriptors_I_i0_Advanced = SIFT::FindDescriptorsAdvanced( I_i0_gray,  keypoints_I_i0);
+
 	Mat descriptors_I_i1_Advanced = SIFT::FindDescriptorsAdvanced( I_i1_gray,  keypoints_I_i1);
 	
-	cout << "Dimensions of descriptors_I_i1_Advanced = (" << descriptors_I_i1_Advanced.rows << "," << descriptors_I_i1_Advanced.cols << ")" << endl;
-	cout << "before matches_1_advanced " << endl;
+	
 	Mat matches_1_advanced = SIFT::matchDescriptorsAdvanced( descriptors_I_i0_Advanced,  descriptors_I_i1_Advanced);
-	cout << "before matches_2_advanced " << endl;
+
 	Mat matches_2_advanced = SIFT::matchDescriptorsAdvanced( descriptors_I_i1_Advanced,  descriptors_I_i0_Advanced);
 
+	int temp_index;
 	int temp_index_advanced = 0; 
 	Mat valid_matches_advanced = Mat::zeros(2, matches_1_advanced.cols, CV_64FC1);
 	for (int i = 0; i < matches_1_advanced.cols; i++) {
-		if ( matches_2_advanced.at<double>(0, matches_1_advanced.at<double>(0,i)) = i ) {
-			valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
-			valid_matches_advanced.at<double>(0, temp_index_advanced) = matches_1_advanced.at<double>(0,i);
-			temp_index_advanced++;
-		} 
+		if ( matches_1_advanced.at<double>(0,i) != -1 ) {
+			if ( matches_2_advanced.at<double>(0, matches_1_advanced.at<double>(0,i)) = i ) {
+				valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
+				valid_matches_advanced.at<double>(1, temp_index_advanced) = matches_1_advanced.at<double>(0,i);
+				temp_index_advanced++;
+			} 
+		}
 	}
-	*/
 	
+	Mat matches = valid_matches_advanced.colRange(0, temp_index_advanced);
 	
-	/*
-	cout << "descriptors_I_i0" << endl;
-	cout << descriptors_I_i0 << endl;
-	waitKey(0);
-	*/
+	cout << "number of matches = " << matches.cols << endl;
+	
+
 
 	/*
 	high_resolution_clock::time_point t6 = high_resolution_clock::now();
@@ -2794,6 +2757,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 	/*
+	// cout << "Time consuming match descriptors " << endl;
 	// Time consuming 
 	Mat matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
 	
@@ -2822,7 +2786,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	*/
 	
 	
-	
+	/*
 	// Not time consuming 
 	Mat matches = SIFT::matchDescriptors2(descriptors_I_i0, descriptors_I_i1);
 	
@@ -2849,11 +2813,11 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		}
 	}
 	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	// original
+	*/
 	
 	
 	
-	
-	//matches = valid_matches_advanced.colRange(0, temp_index_advanced);	
+		
 	
 	
 	// Find Point correspondences
