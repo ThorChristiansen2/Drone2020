@@ -47,201 +47,71 @@ void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
 }
 
 
-
-void *functionMatch(void *threadarg) {
-   struct thread_match *my_data;
-   my_data = (struct thread_match *) threadarg;
+void *functionMatch2(void *threadarg) {
+   struct thread_match2 *my_data;
+   my_data = (struct thread_match2 *) threadarg;
    
-   //cout << "start of thread " << endl;
+   double d1 = std::numeric_limits<double>::infinity();
+   double best_match_d1 = std::numeric_limits<double>::infinity();
+   double d2 = std::numeric_limits<double>::infinity();
+   double best_match_d2 = std::numeric_limits<double>::infinity();
+   int i, j;
    
-   double min_d1 = std::numeric_limits<double>::infinity();
-   double match_d1 = std::numeric_limits<double>::infinity();
-   double min_d2 = std::numeric_limits<double>::infinity();
-   double match_d2 = std::numeric_limits<double>::infinity();
-   int nr_descriptors = my_data->descriptors_n1.rows;
+   int dimension1 = my_data->descriptors_n1.rows; 
+   int dimension2 = my_data->descriptors_n1.cols;
    
-   //cout << "Mistake here " << endl;
-   
-   int dimension = my_data->descriptors_n1.cols - 1; // Since there are only 128 columns
-   for (int i = 0; i < nr_descriptors; i++) {
+   for (i = 0; i < dimension1; i++) {
+	   
 	   double SSD = 0;
-	   for (int k = 0; k < dimension; k++) {
-		   SSD = SSD + pow(my_data->descriptors_n1.at<double>(i,k) - my_data->descriptors_n2.at<double>(0,k) ,2.0);
+	   
+	   for (j = 0; j < dimension2; j++) {
+		   SSD = SSD + pow( my_data->descriptors_n1.at<double>(i, j) - my_data->descriptor_n2.at<double>(0, j) ,2.0);
 	   }
-	   if (SSD < min_d1) {
+	   // If a descriptor with lower distance has been detected:
+	   if ( SSD < d1 ) {
+		   // Update distance for 2nd best descriptor
+		   d2 = d1; 
+		   best_match_d2 = best_match_d1;
 		   
-		   double temp_min_d1 = min_d1;
-		   double temp_match_d1 = match_d1;
-		   
-		   
-		   if (my_data->descriptors_n1.at<double>(i,128) != temp_match_d1) {
-			   // Update second best
-			   match_d2 = match_d1;
-			   min_d2 = min_d1;
-			   
-			   // Update first best
-			   match_d1 = my_data->descriptors_n1.at<double>(i,128);
-			   min_d1 = SSD;
-			   
-		   }
-		   else if (my_data->descriptors_n1.at<double>(i,128) == temp_match_d1) {
-			   match_d1 = my_data->descriptors_n1.at<double>(i,128);
-			   min_d1 = SSD;
-			   
-		   }
-		
+		   d1 = SSD;
+		   best_match_d1 = i;
 	   }
-	   else if (SSD < min_d2) {
-		   if ( my_data->descriptors_n1.at<double>(i,128) != match_d1) {
-			   match_d2 = my_data->descriptors_n1.at<double>(i,128);
-			   min_d2 = SSD;
-		   }
+	   // If a descriptor with second lowest distance has been detected 
+	   else if ( SSD < d2 ) {
+		   d2 = SSD;
+		   best_match_d2 = i;
 	   }
-   }
-
-  //cout << "Mistake here 2 " << endl;
-   // Make 0.8 a variable that can be tuned 
-   if (min_d1/min_d2 < 0.8) {
-	   my_data->is_inlier = 1;
-	   my_data->lowest_distance = min_d1;
-	   my_data->best_match = match_d1;
-   }
-   else {
-	   my_data->is_inlier = 0;
-	   my_data->lowest_distance = std::numeric_limits<double>::infinity();
-	   my_data->best_match = 0;
+	   
    }
    
-   /*
-   cout << "my_data->is_inlier = " << my_data->is_inlier << endl;
-   cout << "my_data->lowest_distance = " << my_data->lowest_distance << endl;
-   cout << "my_data->best_match = " << my_data->best_match << endl;
-   cout << "my_data->descriptor_n2_id = " << my_data->descriptor_n2_id << endl;
-   cout << "my_data->descriptors_n2 = " << my_data->descriptors_n2 << endl;
-	*/
+   if ( d2 != std::numeric_limits<double>::infinity() ) {
+	   double distance_ratio = d1/d2;
+	   if ( distance_ratio < 0.8 ) {
+		   my_data->is_inlier = 1;
+		   my_data->lowest_distance = d1;
+		   my_data->best_match = best_match_d1;
+	   }
+   }
    
    pthread_exit(NULL);
 }
 
 
-
-
-// Match SIFT Descriptors
-/* Objective: Function that matches keypoints in frame 2 to keypoints in frame 1 using the descriptors
- * for the keypoints in frame 2 and the descriptors for the keypoints in frame 1
- * Inputs:
- * descriptor1 - Matrix (Bjarnes matrix) of size n1x128
- * descriptor2 - Matrix (Bjarnes matrix) of size n2x128
- * Output:
- * Matrix of size 2 x min(n1,n2) depending on how many keypoints there are
- */
-Mat SIFT::matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2) {
-
-	cout << "Inside matchDescriptorsAdvanced " << endl;
-	int k1 = descriptor1.rows;
-	int k2 = descriptor2.rows;
-	
-	cout << "k1 and k2 = " << k1 << ", " << k2 << endl;
-	
-	int n1 = descriptor1.at<double>(k1-1, 129-1);	// Number of keypoints in image 0
-	int n2 = descriptor2.at<double>(k2-1, 129-1);	// Number of keypoints in image 1 
-	
-	cout << "n1, n2 = " << n1 << ", " << n2 << endl;
-	
-	waitKey(0);
-	
-	Mat matches = Mat::ones(2, n1, CV_64FC1);
-	matches = (-1.0)*matches;
-	
-	//cout << "matches = " << matches << endl;
-		
-	int NUM_THREADS = k2;
-	//int NUM_THREADS = 1;
-	pthread_t threads[NUM_THREADS];
-	struct thread_match td[NUM_THREADS];
-	int i, rc;
-
-	
-	for (i = 0; i < NUM_THREADS; i++) {
-		td[i].descriptor_n2_id = descriptor2.at<double>(i,128);
-		td[i].descriptors_n1 = descriptor1;
-		td[i].descriptors_n2 = descriptor2.row(i);
-		td[i].is_inlier = 0;
-		
-		
-		rc = pthread_create(&threads[i], NULL, functionMatch, (void *)&td[i]);
-		if (rc) {
-			cout << "unable to create thread " << rc << " and i = " << i << endl;
-		}
-	}
-	
-	/*
-	for (i = 0; i < NUM_THREADS; i++) {
-		cout << "thread is now being created " << endl;
-		td[i].descriptor_n2_id = descriptor2.at<double>(343,128);
-		td[i].descriptors_n1 = descriptor1;
-		td[i].descriptors_n2 = descriptor2.row(343);
-		td[i].is_inlier = 0;
-		
-		
-		rc = pthread_create(&threads[i], NULL, functionMatch, (void *)&td[i]);
-	}
-	*/
-	void* ret = NULL;
-	for (int k = 0; k < NUM_THREADS; k++) {
-
-		/*
-		if (k == 344) {
-			cout << "td[344].descriptor_n2_id = " << td[344].descriptor_n2_id << endl;
-			cout << "td[344].descriptors_n2 = " << td[344].descriptors_n2 << endl;
-			cout << "td[344].is_inlier = " << td[344].is_inlier << endl;
-			cout << "td[344].lowest_distance = " << td[344].lowest_distance << endl;
-			cout << "td[344].best_match = " << td[344].best_match << endl;
-		}
-		*/
-		//cout << "this thread " << k << " did not join" << endl;
-		//cout << "NUM_THREADS = " << NUM_THREADS << endl;
-		pthread_join(threads[k], &ret);
-		//cout << "hej, hej" << endl;
-
-		if ( td[k].is_inlier == 1 ) {
-			//cout << "next point" << endl;
-			//cout << "k = " << k << endl;
-			double d1 = td[k].lowest_distance;
-			double match_n1 = td[k].best_match;
-			double n2_index = td[k].descriptor_n2_id;
-			//cout << "d1 = " << d1 << endl;
-			//cout << "match_n1 = " << match_n1 << endl;
-			//cout << "n2_index = " << n2_index << endl;
-			//cout << "matches.at<double>(0, match_n1) = " << matches.at<double>(0, match_n1) << endl;
-			//cout << "matches.at<double>(0, 141) = " << matches.at<double>(0, 141) << endl;
-			
-			if ( matches.at<double>(0, match_n1) == -1 ) {
-				matches.at<double>(0, match_n1) = d1;
-				matches.at<double>(1, match_n1) = n2_index;
-				//cout << "Got to this point" << endl;
-			}
-			else if ( d1 < matches.at<double>(0, match_n1) ) {
-				matches.at<double>(0, match_n1) = d1;
-				matches.at<double>(1, match_n1) = n2_index;
-			}
-			
-		}
-		cout << "Done with this - next thread k up " << k << endl;
-	}
-	cout << "Mistake here?" << endl;
-	Mat valid_matches = matches.row(1);
-	
-	return valid_matches;
-}
-
 // New attempt to write code 
 /*
- * 
+ * struct thread_match2 {
+		//int thread_id;
+		int descriptor_n2_id;
+		Mat descriptors_n1;
+		Mat descriptor_n2;
+		int is_inlier;
+		double lowest_distance;
+		int best_match;
+};
  * 
  * 
  */
-Mat SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
+Mat SIFT::matchDescriptors2(Mat descriptor1, Mat descriptor2) {
 
 	int descriptor_length = descriptor2.cols;
 	
@@ -249,136 +119,60 @@ Mat SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 	int n2 = descriptor2.rows;	// Matrix containing descriptors for keypoints in image 1
 	
 	// To determine 
-	Mat match_n2 = Mat::zeros(n2, 5, CV_64FC1);
-	// 0 - Index of best match in n1 
-	// 1 - SSD for best match in n1
-	// 2 - Index of second best match in n1
-	// 3 - SSD for second best match in n1 
-	// 4 - Bool used to control whether the keypoint should be counted as an inlier
+	Mat matches = Mat::ones(2, n1, CV_64FC1);
+	matches = (-1)*matches;
 	
-	Mat multiple_matches_n1 = Mat::zeros(n1, 2, CV_64FC1);
-	
-	int iter_n2, iter_n1, i;
-	for (iter_n2 = 0; iter_n2 < n2; iter_n2++) {
+	int NUM_THREADS = n2;
+	pthread_t threads[NUM_THREADS];
+	struct thread_match2 td[NUM_THREADS];
+	int i, rc;
+	for (i = 0; i < NUM_THREADS; i++) {
+		td[i].descriptor_n2_id = i;
+		td[i].descriptors_n1 = descriptor1;
+		td[i].descriptor_n2 = descriptor2.row(i);
+		td[i].is_inlier = 0;
+		td[i].lowest_distance = std::numeric_limits<double>::infinity();
+		td[i].best_match = 0;
 		
-		// Closest match
-		int best_index_n1 = 0;
-		double d1 = std::numeric_limits<double>::infinity();
-		
-		// Second closest match
-		int second_best_index_n1 = 0;
-		double d2 = std::numeric_limits<double>::infinity();
-		
-		match_n2.at<double>(iter_n2, 0) = best_index_n1;
-		match_n2.at<double>(iter_n2, 1) = d1;
-		match_n2.at<double>(iter_n2, 2) = second_best_index_n1;
-		match_n2.at<double>(iter_n2, 3) = d2;
-		
-		
-		for (iter_n1 = 0; iter_n1 < n1; iter_n1++) {
-			double SSD = 0;
-			
-			// Find the SSD between descriptor in n2 and current descriptor in n1
-			for (i = 0; i < descriptor_length; i++) {
-				SSD = SSD + pow( descriptor2.at<double>(iter_n2,i) - descriptor1.at<double>(iter_n1,i) ,2.0);
-			} 
-			
-			// If this SSD is less than the best match
-			if ( SSD < match_n2.at<double>(iter_n2, 1) ) {
-				
-				// It should be also be one that is the closest to that specific desciptor in n1
-				if ( multiple_matches_n1.at<double>(iter_n1,1) == 0 ) {
-					
-					// Update second best 
-					match_n2.at<double>(iter_n2, 2) = match_n2.at<double>(iter_n2, 0);
-					match_n2.at<double>(iter_n2, 3) = match_n2.at<double>(iter_n2, 1);
-					
-					// Update best
-					match_n2.at<double>(iter_n2, 0) = iter_n1;
-					match_n2.at<double>(iter_n2, 1) = SSD;
-					
-					// Update in multiple match
-					multiple_matches_n1.at<double>(iter_n1,0) = iter_n2;
-					multiple_matches_n1.at<double>(iter_n1,1) = SSD;
-					
-					match_n2.at<double>(iter_n2, 4) = 0;
-					
-				}
-				else if ( SSD < multiple_matches_n1.at<double>(iter_n1,1) ) {
-					// Save index of previous best 
-					int temp_index = multiple_matches_n1.at<double>(iter_n1,0);
-					
-					// Update second best 
-					match_n2.at<double>(iter_n2, 2) = match_n2.at<double>(iter_n2, 0);
-					match_n2.at<double>(iter_n2, 3) = match_n2.at<double>(iter_n2, 1);
-					
-					// Update best
-					match_n2.at<double>(iter_n2, 0) = iter_n1;
-					match_n2.at<double>(iter_n2, 1) = SSD;
-					
-					// Update in multiple match
-					multiple_matches_n1.at<double>(iter_n1,0) = iter_n2;
-					multiple_matches_n1.at<double>(iter_n1,1) = SSD;
-					
-					match_n2.at<double>(iter_n2, 4) = 0;
-					
-					// Reset the previous best value
-					if ( match_n2.at<double>(temp_index, 0) == iter_n1) {
-						
-						match_n2.at<double>(temp_index, 4) = 0;
-					}
-					
-					
-				}
-				else {
-					match_n2.at<double>(iter_n2, 4) = 2;
-				}
-				
-			}
-			else if ( SSD < match_n2.at<double>(iter_n2, 3) ) {
-				
-				// Update Second best
-				match_n2.at<double>(iter_n2, 2) = iter_n1;
-				match_n2.at<double>(iter_n2, 3) = SSD;
-			}
-				
-		}
-		
-			
-	}
-	
-	
-	// Calculate distance ratio
-	int nr_valid_matches = 0;
-	int k;
-	for (k = 0; k < n2; k++) {
-		if (match_n2.at<double>(k, 4) != 2) {
-			double distance1 = match_n2.at<double>(k, 1);
-			double distance2 = match_n2.at<double>(k, 3);
-			double ratio = distance1/distance2;
-			if (ratio < 0.8) {
-				match_n2.at<double>(k, 4) = 1;
-				
-				nr_valid_matches++;
-			}
-		}
-		
-	}
-	
-	// Make matrix with valid matches
-	Mat valid_matches = Mat::zeros(2, nr_valid_matches, CV_64FC1);
-	int temp_value = 0;
-	for (int j = 0; j < n2; j++) {
-		if (match_n2.at<double>(j, 4) == 1) {
-			
-			valid_matches.at<double>(0, temp_value) = match_n2.at<double>(j, 0);
-			valid_matches.at<double>(1, temp_value) = j;
-			
-			temp_value++;
+		rc = pthread_create(&threads[i], NULL, functionMatch2, (void *)&td[i]);
+		if (rc) {
+			cout << "unable to create thread " << rc << " and i = " << i << endl;
 		}
 	}
+	void* ret = NULL;
+	for (int k = 0; k < NUM_THREADS; k++) {
+		pthread_join(threads[k], &ret);
+		cout << "thread joined " << endl;
+		cout << "td[k].is_inlier = " << td[k].is_inlier << endl; 
+		if ( td[k].is_inlier == 1 ) {
+			
+			int n2_id = td[k].descriptor_n2_id;
+			double d1 = td[k].lowest_distance;
+			double the_best_match = td[k].best_match;
+			
+			cout << "n2_id = " << n2_id << endl;
+			cout << "d1 = " << d1 << endl;
+			cout << "the_best_match = " << the_best_match << endl;
+			
+			if ( matches.at<double>(0, the_best_match) == -1 ) {
+				matches.at<double>(0, the_best_match) = d1; // Update minimum distance
+				matches.at<double>(1, the_best_match) = n2_id; // Update minimum distance
+				
+			}
+			else if ( d1 <  matches.at<double>(0, the_best_match) ) {
+				matches.at<double>(0, the_best_match) = d1;
+				matches.at<double>(1, the_best_match) = n2_id;
+			}
+			
+			cout << "matches = " << matches << endl;
+			//waitKey(0);
+		
+		}
+	}
+
 	
-	return valid_matches;
+	
+	return matches;
 	
 }
 
@@ -387,7 +181,7 @@ Mat SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 /* This funciton works as of 27.7-2020
 
  */
-/*
+
 Mat SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 
 	int descriptor_length = descriptor2.cols;
@@ -528,7 +322,7 @@ Mat SIFT::matchDescriptors(Mat descriptor1, Mat descriptor2) {
 	return valid_matches;
 	
 }
-*/
+
 
 
 void MatType( Mat inputMat ) {
@@ -2821,6 +2615,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	*/
 	
 	
+	
 	// Time consuming 
 	Mat matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
 	
@@ -2846,6 +2641,35 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		}
 	}
 	matches = valid_matches.colRange(0,temp_index);	// original
+	
+	/*
+	// Not time consuming 
+	Mat matches = SIFT::matchDescriptors2(descriptors_I_i0, descriptors_I_i1);
+	
+	cout << "matches = " << matches << endl;
+	
+	// Not Time consuming 
+	Mat matches2 = SIFT::matchDescriptors2(descriptors_I_i1, descriptors_I_i0);
+	
+	cout << "matches2 = " << matches2 << endl;
+	
+	// Not time consuming 
+	int temp_index;
+	int temp_index_advanced = 0; 
+	Mat valid_matches_advanced = Mat::zeros(2, matches.cols, CV_64FC1);
+	// Fix Problem here 
+	for (int i = 0; i < matches.cols; i++) {
+		
+		if ( matches2.at<double>(1, matches.at<double>(1,i)) = i ) {
+			valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
+			valid_matches_advanced.at<double>(0, temp_index_advanced) = matches.at<double>(1,i);
+			temp_index_advanced++;
+		} 
+	}
+	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	// original
+	*/
+	
+	
 	//matches = valid_matches_advanced.colRange(0, temp_index_advanced);	
 	
 	

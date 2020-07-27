@@ -98,6 +98,7 @@ struct thread_descriptorAdvanced {
 		Mat thread_multiple_descriptors;
 };
 
+/*
 struct thread_match {
 		//int thread_id;
 		int descriptor_n1_id;
@@ -107,6 +108,17 @@ struct thread_match {
 		int is_inlier;
 		double lowest_distance;
 		int best_match;
+};
+*/
+
+struct thread_match2 {
+		//int thread_id;
+		int descriptor_n2_id;
+		Mat descriptors_n1;
+		Mat descriptor_n2;
+		int is_inlier;
+		double lowest_distance;
+		double best_match;
 };
 
 // SIT = SIFT Descriptor thread struct
@@ -132,6 +144,8 @@ namespace SIFT {
 	
 	Mat FindDescriptorsAdvanced(Mat src_gray, Mat keypoints);
 	Mat matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2);
+	
+	Mat matchDescriptors2(Mat descriptor1, Mat descriptor2);
 	
 }	// SIFT
 
