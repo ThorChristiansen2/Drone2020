@@ -117,6 +117,7 @@ int main ( int argc,char **argv ) {
 	waitKey(1000);
 	
 	
+	/*
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
@@ -130,7 +131,7 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
-	
+	*/
 	
 	
 	
@@ -148,7 +149,7 @@ int main ( int argc,char **argv ) {
 	waitKey(0);
 	*/
 	
-	/*
+	
 	cout << "Test af ransacLocalizaiton" << endl;
 	Mat corresponding_landmarks = Mat::zeros(3, 271, CV_64FC1);
 	ifstream MyRead2File("CorrespondingLandmarks.txt");	
@@ -156,35 +157,44 @@ int main ( int argc,char **argv ) {
 	if (MyRead2File.is_open()) {
 		for (int i = 0; i < 271; i++) {
 			MyRead2File >> corresponding_landmarks.at<double>(0,i);
-			MyRead2File >> corresponding_landmarks.at<double>(1,i);	
-			MyRead2File >> corresponding_landmarks.at<double>(2,i);	
 		}
+		for (int i = 0; i < 271; i++) {
+			MyRead2File >> corresponding_landmarks.at<double>(1,i);
+		}
+		for (int i = 0; i < 271; i++) {
+			MyRead2File >> corresponding_landmarks.at<double>(2,i);
+		}
+		
+		 
 	}
 	MyRead2File.close();
 	
-	cout << "corresponding_landmarks = " << corresponding_landmarks << endl;
-	waitKey(0);
+	//cout << "corresponding_landmarks = " << corresponding_landmarks << endl;
+	cout << "" << endl;
+	//waitKey(0);
 	
 	Mat matched_query_keypoints = Mat::zeros(2, 271, CV_64FC1);
-	ifstream MyRead3File("matched_query_keypoints.txt");	
-	// Fejl i hvordan det loades ind 
-	if (MyRead3File.is_open()) {
-		for (int i = 0; i < 271; i++) {
-			MyRead2File >> matched_query_keypoints.at<double>(0,i);
-			MyRead2File >> matched_query_keypoints.at<double>(1,i);	
-		}
-	}
-	MyRead3File.close();
 	
-	cout << "matched_query_keypoints = " << matched_query_keypoints << endl;
-	waitKey(0);
+	ifstream infile("matched_query_keypoints.txt");
+	int a, b;
+	int iteration = 0;
+	while (infile >> a >> b) {
+		matched_query_keypoints.at<double>(0,iteration) = a;
+		matched_query_keypoints.at<double>(1,iteration) = b;
+		iteration++;
+		
+	}	
+	//cout << "matched_query_keypoints = " << matched_query_keypoints << endl;
+	//waitKey(0);
 	
 	Mat K2 = (Mat_<double>(3,3) << 718.8560, 0, 607.1928, 0, 718.8560, 185.2157, 0, 0, 1);
+	
+	cout << "K2 = " << K2 << endl;
 	
 	Mat transformation_matrix1, best_inlier_mask;
 	tie(transformation_matrix1, best_inlier_mask) = Localize::ransacLocalization(matched_query_keypoints, corresponding_landmarks, K2);
 	cout << "transformation_matrix1 = " << transformation_matrix1 << endl;
-	*/
+	
 
 	// ############### VO initializaiton ###############
 	// VO-pipeline: Initialization. Bootstraps the initial position.	
@@ -193,14 +203,14 @@ int main ( int argc,char **argv ) {
 	bool initialization_okay;
 	Mat Ii_1;
 	I_i1.copyTo(Ii_1);
-	//tie(Si_1, transformation_matrix, init_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
-	tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
+	//tie(Si_1, transformation_matrix, init_okay) = initialization(I_i0, I_i1, K, Si_1);
+	//tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
 	cout << "Transformation matrix " << endl;
 	cout << transformation_matrix << endl; (float) transformation_matrix.at<double>(1,3);
 
 	
 	// ############### VO Continuous ###############
-	bool continueVOoperation = true;
+	bool continueVOoperation = false;
 	bool pipelineBroke = false;
 	bool output_T_ready = true;
 	bool processFrame_okay;

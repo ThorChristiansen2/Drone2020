@@ -39,7 +39,7 @@ using Vector = Numeric_lib::Matrix<double,1>;
 #define num_candidate_keypoints 30
 
 // Ransac localization
-#define ransac_pixel_tolerance 15 
+#define ransac_pixel_tolerance 10 
 #define ransac_min_inlier_count 10 
 
 // triangulateNewLandmarks
