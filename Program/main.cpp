@@ -67,8 +67,10 @@ float getParamVal ( string param,int argc,char **argv,float defvalue=-1 ) {
 
 // Purpose: To set the camera properties - resolution etc.
 void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
-    Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv,1280 ) );
-    Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,960 ) );
+    //Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv,1280 ) );
+    Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv, 640 ) );
+    //Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,960 ) );
+    Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,480 ) );
     Camera.set ( cv::CAP_PROP_BRIGHTNESS,getParamVal ( "-br",argc,argv,50 ) );
     Camera.set ( cv::CAP_PROP_CONTRAST ,getParamVal ( "-co",argc,argv,50 ) );
     Camera.set ( cv::CAP_PROP_SATURATION, getParamVal ( "-sa",argc,argv,50 ) );
@@ -98,7 +100,7 @@ int main ( int argc,char **argv ) {
 		cerr<<"Error opening camera"<<endl;
 		return -1;
 	}
-	cout<<"Connected to camera ="<<Camera.getId() <<endl;
+	cout<<"Connected to camera = " << Camera.getId() <<endl;
 	
 	// Calibrate camera to get intrinsic parameters K 
 	Mat K = (Mat_<double>(3,3) << 769.893, 0, 2.5, 0,1613.3, 4, 0, 0, 1);
@@ -114,7 +116,7 @@ int main ( int argc,char **argv ) {
 	//cout << "Image captured" <<endl;
 	waitKey(1000);
 	
-	/*
+	
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
@@ -128,12 +130,12 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
-	*/
+	
 	
 	
 	
 	 
-	
+	/*
 	// Test billeder
 	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
@@ -144,6 +146,7 @@ int main ( int argc,char **argv ) {
 	//I_i1.convertTo(I_i1, CV_64FC1);
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
+	*/
 	
 	/*
 	cout << "Test af ransacLocalizaiton" << endl;
@@ -213,23 +216,24 @@ int main ( int argc,char **argv ) {
 	int iter = 0;
 	
 	cout << "Begin Continuous VO operation " << endl;
-	while (continueVOoperation == true && pipelineBroke == false && stop < 1) {
+	while (continueVOoperation == true && pipelineBroke == false && stop < 10) {
 		cout << "Continuous Operation " << endl;
 
 		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	
-		/*
+		
 		Camera.grab();
 		Camera.retrieve ( Ii );
 		imshow("Continuous Operation", Ii);
 		waitKey(0);
-		*/
-	
 		
+	
+		/*
 		Ii = imread("cam1.png", IMREAD_UNCHANGED);
 		imshow("Continous operation frame", Ii);
 		waitKey(0);
+		*/
 		
 		
 		// Estimate pose 
@@ -255,7 +259,7 @@ int main ( int argc,char **argv ) {
 		else {
 			cout << "Inside other continuous operation " << endl;
 			
-			Si = continuousCandidateKeypoints(Ii_1, Ii, Si, transformation_matrix);
+			Si = continuousCandidateKeypoints( Ii_1, Ii, Si, transformation_matrix );
 			cout << "ContinuousCandidateKeypoints" << endl;
 			cout << "Number of keypoints = " << Si.Ci.cols << endl;
 			

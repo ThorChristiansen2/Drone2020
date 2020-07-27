@@ -98,7 +98,7 @@ struct thread_descriptorAdvanced {
 		Mat thread_multiple_descriptors;
 };
 
-/*
+
 struct thread_match {
 		//int thread_id;
 		int descriptor_n1_id;
@@ -109,7 +109,7 @@ struct thread_match {
 		double lowest_distance;
 		int best_match;
 };
-*/
+
 
 struct thread_match2 {
 		//int thread_id;

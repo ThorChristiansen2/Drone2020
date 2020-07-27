@@ -142,17 +142,17 @@ Mat SIFT::matchDescriptors2(Mat descriptor1, Mat descriptor2) {
 	void* ret = NULL;
 	for (int k = 0; k < NUM_THREADS; k++) {
 		pthread_join(threads[k], &ret);
-		cout << "thread joined " << endl;
-		cout << "td[k].is_inlier = " << td[k].is_inlier << endl; 
+		//cout << "thread joined " << endl;
+		//cout << "td[k].is_inlier = " << td[k].is_inlier << endl; 
 		if ( td[k].is_inlier == 1 ) {
 			
 			int n2_id = td[k].descriptor_n2_id;
 			double d1 = td[k].lowest_distance;
 			double the_best_match = td[k].best_match;
 			
-			cout << "n2_id = " << n2_id << endl;
-			cout << "d1 = " << d1 << endl;
-			cout << "the_best_match = " << the_best_match << endl;
+			//cout << "n2_id = " << n2_id << endl;
+			//cout << "d1 = " << d1 << endl;
+			//cout << "the_best_match = " << the_best_match << endl;
 			
 			if ( matches.at<double>(0, the_best_match) == -1 ) {
 				matches.at<double>(0, the_best_match) = d1; // Update minimum distance
@@ -164,7 +164,7 @@ Mat SIFT::matchDescriptors2(Mat descriptor1, Mat descriptor2) {
 				matches.at<double>(1, the_best_match) = n2_id;
 			}
 			
-			cout << "matches = " << matches << endl;
+			//cout << "matches = " << matches << endl;
 			//waitKey(0);
 		
 		}
@@ -175,6 +175,172 @@ Mat SIFT::matchDescriptors2(Mat descriptor1, Mat descriptor2) {
 	return matches;
 	
 }
+
+
+
+
+void *functionMatchAdvanced(void *threadarg) {
+   struct thread_match *my_data;
+   my_data = (struct thread_match *) threadarg;
+   
+   //cout << "start of thread " << endl;
+   
+   double min_d1 = std::numeric_limits<double>::infinity();
+   double match_d1 = std::numeric_limits<double>::infinity();
+   double min_d2 = std::numeric_limits<double>::infinity();
+   double match_d2 = std::numeric_limits<double>::infinity();
+   int nr_descriptors = my_data->descriptors_n1.rows;
+   
+   //cout << "Mistake here " << endl;
+   
+   int dimension = my_data->descriptors_n1.cols - 1; // Since there are only 128 columns
+   for (int i = 0; i < nr_descriptors; i++) {
+	   double SSD = 0;
+	   for (int k = 0; k < dimension; k++) {
+		   SSD = SSD + pow(my_data->descriptors_n1.at<double>(i,k) - my_data->descriptors_n2.at<double>(0,k) ,2.0);
+	   }
+	   if (SSD < min_d1) {
+		   
+		   double temp_min_d1 = min_d1;
+		   double temp_match_d1 = match_d1;
+		   
+		   
+		   if (my_data->descriptors_n1.at<double>(i,128) != temp_match_d1) {
+			   // Update second best
+			   match_d2 = match_d1;
+			   min_d2 = min_d1;
+			   
+			   // Update first best
+			   match_d1 = my_data->descriptors_n1.at<double>(i,128);
+			   min_d1 = SSD;
+			   
+		   }
+		   else if (my_data->descriptors_n1.at<double>(i,128) == temp_match_d1) {
+			   match_d1 = my_data->descriptors_n1.at<double>(i,128);
+			   min_d1 = SSD;
+			   
+		   }
+		
+	   }
+	   else if (SSD < min_d2) {
+		   if ( my_data->descriptors_n1.at<double>(i,128) != match_d1) {
+			   match_d2 = my_data->descriptors_n1.at<double>(i,128);
+			   min_d2 = SSD;
+		   }
+	   }
+   }
+
+  //cout << "Mistake here 2 " << endl;
+   // Make 0.8 a variable that can be tuned 
+   if (min_d1/min_d2 < 0.8) {
+	   my_data->is_inlier = 1;
+	   my_data->lowest_distance = min_d1;
+	   my_data->best_match = match_d1;
+   }
+   else {
+	   my_data->is_inlier = 0;
+	   my_data->lowest_distance = std::numeric_limits<double>::infinity();
+	   my_data->best_match = 0;
+   }
+   
+   /*
+   cout << "my_data->is_inlier = " << my_data->is_inlier << endl;
+   cout << "my_data->lowest_distance = " << my_data->lowest_distance << endl;
+   cout << "my_data->best_match = " << my_data->best_match << endl;
+   cout << "my_data->descriptor_n2_id = " << my_data->descriptor_n2_id << endl;
+   cout << "my_data->descriptors_n2 = " << my_data->descriptors_n2 << endl;
+	*/
+   
+   pthread_exit(NULL);
+}
+
+
+
+
+// Match SIFT Descriptors
+/* Objective: Function that matches keypoints in frame 2 to keypoints in frame 1 using the descriptors
+ * for the keypoints in frame 2 and the descriptors for the keypoints in frame 1
+ * Inputs:
+ * descriptor1 - Matrix (Bjarnes matrix) of size n1x128
+ * descriptor2 - Matrix (Bjarnes matrix) of size n2x128
+ * Output:
+ * Matrix of size 2 x min(n1,n2) depending on how many keypoints there are
+ */
+Mat SIFT::matchDescriptorsAdvanced(Mat descriptor1, Mat descriptor2) {
+
+	cout << "Inside matchDescriptorsAdvanced " << endl;
+	int k1 = descriptor1.rows;
+	int k2 = descriptor2.rows;
+	
+	cout << "k1 and k2 = " << k1 << ", " << k2 << endl;
+	
+	int n1 = descriptor1.at<double>(k1-1, 129-1);	// Number of keypoints in image 0
+	int n2 = descriptor2.at<double>(k2-1, 129-1);	// Number of keypoints in image 1 
+	
+	cout << "n1, n2 = " << n1 << ", " << n2 << endl;
+	
+	waitKey(0);
+	
+	Mat matches = Mat::ones(2, n1, CV_64FC1);
+	matches = (-1.0)*matches;
+	
+	//cout << "matches = " << matches << endl;
+		
+	int NUM_THREADS = k2;
+	//int NUM_THREADS = 1;
+	pthread_t threads[NUM_THREADS];
+	struct thread_match td[NUM_THREADS];
+	int i, rc;
+
+	
+	for (i = 0; i < NUM_THREADS; i++) {
+		td[i].descriptor_n2_id = descriptor2.at<double>(i,128);
+		td[i].descriptors_n1 = descriptor1;
+		td[i].descriptors_n2 = descriptor2.row(i);
+		td[i].is_inlier = 0;
+		
+		
+		rc = pthread_create(&threads[i], NULL, functionMatchAdvanced, (void *)&td[i]);
+		if (rc) {
+			cout << "unable to create thread " << rc << " and i = " << i << endl;
+		}
+	}
+	
+
+	void* ret = NULL;
+	for (int k = 0; k < NUM_THREADS; k++) {
+		pthread_join(threads[k], &ret);
+		//cout << "hej, hej" << endl;
+
+		if ( td[k].is_inlier == 1 ) {
+			//cout << "next point" << endl;
+			//cout << "k = " << k << endl;
+			double d1 = td[k].lowest_distance;
+			double match_n1 = td[k].best_match;
+			double n2_index = td[k].descriptor_n2_id;
+		
+			
+			if ( matches.at<double>(0, match_n1) == -1 ) {
+				matches.at<double>(0, match_n1) = d1;
+				matches.at<double>(1, match_n1) = n2_index;
+				//cout << "Got to this point" << endl;
+			}
+			else if ( d1 < matches.at<double>(0, match_n1) ) {
+				matches.at<double>(0, match_n1) = d1;
+				matches.at<double>(1, match_n1) = n2_index;
+			}
+			
+		}
+		
+	}
+	
+	Mat valid_matches = matches.row(1);
+	
+	return valid_matches;
+}
+
+
+
 
 
 // New attempt to write code 
@@ -1390,26 +1556,36 @@ Mat solveQuartic(Mat factors) {
 	double P = -alpha_pw2/12 - gamma;
 	double Q = -alpha_pw3/108 + alpha*gamma/3 - pow(beta,2.0)/8;
 	
-	
+	/*
 	std::complex<double> i_value;
 	i_value = 1i;
+	*/
+	std::complex<double> i_value(0.0, 1.0);
+	//_value = 1i;
 
 	
-	std::complex<double> R, U, y, w, null_v;
+	//std::complex<double> R, U, y, w, null_v;
+	std::complex<double> U, y, w;
+	//std::complex<double> R, U, y, w;
 	double real_value, imaginary_value;
 	if (pow(Q,2.0)/4 + pow(P,3.0)/27 < 0) {
 		imaginary_value = sqrt(-(pow(Q,2.0)/4 + pow(P,3.0)/27));
 		real_value = (-Q/2.0);
-		R = real_value + imaginary_value*i_value;
+		//R = real_value + imaginary_value*i_value;
+		std::complex<double> R(real_value, imaginary_value);
+		U = pow(R, 1.0/3.0);
 	}
 	else {
 		real_value = -Q/2.0 + sqrt(pow(Q,2.0)/4 + pow(P,3.0)/27);
-		R = real_value + 0i; 
+		//R = real_value + 0i; 
+		std::complex<double> R(real_value,0.0);
+		U = pow(R, 1.0/3.0);
 	}
-	U = pow(R, 1.0/3.0);
+	//U = pow(R, 1.0/3.0);
 	
 	
-	null_v = 0. + 0i;
+	//null_v = 0. + 0i;
+	std::complex<double> null_v(0.0,0.0);
 	real_value = -5.0*alpha/6.0;
 	if (U == null_v) {
 		y = real_value - pow(Q, 1.0/3.0);
@@ -1691,7 +1867,8 @@ Mat p3p(Mat worldPoints, Mat imageVectors) {
 		//double sin_alpha = sqrt( 1/(pow(cot_alpha,2.0) +1) ); 
 		//double cos_alpha = sqrt( 1 - pow(sin_alpha,2.0) );	
 		
-		std::complex<double> cos_theta = x.at<double>(0,i) + 0i;
+		//std::complex<double> cos_theta = x.at<double>(0,i) + 0i;
+		std::complex<double> cos_theta(x.at<double>(0,i),0.0);
 		//cout << "cos_theta = " << cos_theta << endl;
 		real_value = pow(x.at<double>(0,i), 2.0);
 		std::complex<double> sin_theta = pow(1. - real_value, 1.0/2.0);
@@ -2126,7 +2303,7 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	
 	Mat Ii_resized = Ii_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 	Mat temp1;
-	goodFeaturesToTrack(Ii_resized, temp1, keypoint_max, 0.01, 10, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(Ii_resized, temp1, keypoint_max, 0.01, 5, noArray(), 3, true, 0.04);
 	Mat keypoints_Ii = Mat::zeros(2, temp1.rows, CV_64FC1);
 	
 	int a, b, temp_index;
@@ -2225,7 +2402,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	// Find keypoints in new image
 	Mat Ii_resized = Ii_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 	Mat temp1;
-	goodFeaturesToTrack(Ii_resized, temp1, 300, 0.01, 10, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(Ii_resized, temp1, 300, 0.01, 5, noArray(), 3, true, 0.04);
 	Mat keypoints_Ii = Mat::zeros(2, temp1.rows, CV_64FC1);
 	int a, b, temp_index;
 	temp_index = 0;
@@ -2309,7 +2486,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 		
 		int k = Si.k + Si.num_candidates + n;
 		Mat temp2;
-		goodFeaturesToTrack(Ii_resized, temp2, k, 0.01, 10, noArray(), 3, true, 0.04);
+		goodFeaturesToTrack(Ii_resized, temp2, k, 0.01, 5, noArray(), 3, true, 0.04);
 		Mat Potential_new_CI = Mat::zeros(2, temp2.rows, CV_64FC1);
 		temp_index = 0;
 		for (int i = 0; i < Potential_new_CI.cols; i++) {
@@ -2493,6 +2670,8 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cout << "Begin initialization" << endl;
 	
+	high_resolution_clock::time_point t11 = high_resolution_clock::now();
+	
 	Mat transformation_matrix;
 	bool initialization_okay;
 	
@@ -2502,8 +2681,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cvtColor(I_i1, I_i1_gray, COLOR_BGR2GRAY );
 	
 	Mat temp0, temp1, emptyMatrix;
-	
-	high_resolution_clock::time_point t11 = high_resolution_clock::now();
+
 
 	
 	//Mat keypoints_I_i0 = Harris::corner(I_i0, I_i0_gray, 210, emptyMatrix); // Number of maximum keypoints
@@ -2511,7 +2689,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	int dim2 = I_i0_gray.cols;
 	Mat I_i0_resized = I_i0_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 		
-	goodFeaturesToTrack(I_i0_resized, temp0, 100, 0.01, 10, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i0_resized, temp0, 150, 0.01, 4, noArray(), 3, true, 0.04);
 	Mat keypoints_I_i0 = Mat::zeros(2, temp0.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i0.cols; i++) {
 		keypoints_I_i0.at<double>(0,i) = temp0.at<float>(i,1) + 10;
@@ -2537,8 +2715,8 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	dim1 = I_i1_gray.rows;
 	dim2 = I_i1_gray.cols;
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
-	goodFeaturesToTrack(I_i1_resized, temp1, 100, 0.01, 10, noArray(), 3, true, 0.04);
-	cout << "dimensions of temp1 = (" << temp1.rows << "," << temp1.cols << ")" << endl;
+	goodFeaturesToTrack(I_i1_resized, temp1, 150, 0.01, 4, noArray(), 3, true, 0.04);
+	
 	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i1.cols; i++) {
 		keypoints_I_i1.at<double>(0,i) = temp1.at<float>(i,1) + 10;
@@ -2615,7 +2793,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	*/
 	
 	
-	
+	/*
 	// Time consuming 
 	Mat matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
 	
@@ -2641,17 +2819,20 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		}
 	}
 	matches = valid_matches.colRange(0,temp_index);	// original
+	*/
 	
-	/*
+	
+	
 	// Not time consuming 
 	Mat matches = SIFT::matchDescriptors2(descriptors_I_i0, descriptors_I_i1);
 	
-	cout << "matches = " << matches << endl;
+	matches = matches.row(1);
 	
 	// Not Time consuming 
 	Mat matches2 = SIFT::matchDescriptors2(descriptors_I_i1, descriptors_I_i0);
 	
-	cout << "matches2 = " << matches2 << endl;
+	matches2 = matches2.row(1);
+	
 	
 	// Not time consuming 
 	int temp_index;
@@ -2659,15 +2840,17 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat valid_matches_advanced = Mat::zeros(2, matches.cols, CV_64FC1);
 	// Fix Problem here 
 	for (int i = 0; i < matches.cols; i++) {
-		
-		if ( matches2.at<double>(1, matches.at<double>(1,i)) = i ) {
-			valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
-			valid_matches_advanced.at<double>(0, temp_index_advanced) = matches.at<double>(1,i);
-			temp_index_advanced++;
-		} 
+		if ( matches.at<double>(0,i) != -1) {
+			if ( matches2.at<double>(0, matches.at<double>(0,i)) == i ) {
+				valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
+				valid_matches_advanced.at<double>(1, temp_index_advanced) = matches.at<double>(0,i);
+				temp_index_advanced++;
+			} 
+		}
 	}
 	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	// original
-	*/
+	
+	
 	
 	
 	//matches = valid_matches_advanced.colRange(0, temp_index_advanced);	
@@ -2704,6 +2887,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 	
+	
 	for (int i = 0; i < N; i++) {
 		// Be aware of differences in x and y
 		
@@ -2721,21 +2905,28 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		double y2 = keypoints_I_i0.at<double>(0, matches.at<double>(0,i));
 		double x2 = keypoints_I_i0.at<double>(1, matches.at<double>(0,i));
 		line(I_i1_draw,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
-		circle (I_i1_draw, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
-		circle (I_i0_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);	
+		//line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
+		circle (I_i1_draw, Point(x,y), 5,  Scalar(0,0,255), 2,5,0);
+		//circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+		circle (I_i0_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,5,0);	
+		
 		
 		
 		
 	}
+	
 	imshow("Match I_i0_draw",I_i0_draw);
 	waitKey(0);
 	imshow("Match I_i1_draw",I_i1_draw);
 	waitKey(0);
 	
 	
+	
+	
 	// Find fudamental matrix 
 	vector<uchar> pArray(N);
-	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.90, 5000, pArray); // 3 can be changed to 1
+	//Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.90, 5000, pArray); // 3 can be changed to 1
+	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.90, pArray); // 3 can be changed to 1
 	
 	int N_inlier = countNonZero(pArray);
 	
@@ -2761,13 +2952,14 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 				points2Mat.at<double>(1,temp_index) = temp_points2Mat.at<double>(1,i); // x-coordinate in image
 				
 				/*
-				circle (a, Point(points1Mat.at<double>(1,temp_index),points1Mat.at<double>(0,temp_index)), 5, Scalar(0,0,255), 2,8,0);
+				circle (I_i0_draw, Point(points1Mat.at<double>(1,temp_index),points1Mat.at<double>(0,temp_index)), 5, Scalar(255,0,0), 2,8,0);
 				imshow("a", I_i0_draw);
 				waitKey(0);
-				circle (b, Point(points2Mat.at<double>(1,temp_index),points2Mat.at<double>(0,temp_index)), 5,  Scalar(0,0,255), 2,8,0);
+				circle (I_i1_draw, Point(points2Mat.at<double>(1,temp_index),points2Mat.at<double>(0,temp_index)), 5,  Scalar(255,0,0), 2,8,0);
 				imshow("b", I_i1_draw);
 				waitKey(0);
 				*/
+				
 		
 				
 				temp_index++;
@@ -2812,7 +3004,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		
 		high_resolution_clock::time_point t12 = high_resolution_clock::now();
 		duration<double> time_span5 = duration_cast<duration<double>>(t12-t11);
-		cout << "rest of initialization matches took = " << time_span5.count() << " seconds" << endl;
+		cout << "Initialization took = " << time_span5.count() << " seconds" << endl;
 		
 		// return state of drone as well as transformation_matrix;
 		return make_tuple(Si_1, transformation_matrix, initialization_okay);
@@ -2830,10 +3022,6 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	cout << "Images in processFrame" << endl;
-	imshow("processFrame Ii", Ii);
-	waitKey(0);
-	imshow("processFrame Ii_1", Ii_1);
-	waitKey(0);
 	
 	bool processFrame_okay;
 	Mat transformation_matrix, best_inlier_mask;
@@ -2892,6 +3080,7 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	int N = matches.cols;
 	
 	if (N == 0) {
+		cout << "processFrame failed" << endl;
 		processFrame_okay = false;
 		
 		return make_tuple(Si_1, transformation_matrix, processFrame_okay); 
@@ -2937,6 +3126,7 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	
 	
+	
 	cout << "Process Frame" << endl;
 	cout << "Number of keypoints = " << keypoints_i.cols << endl;
 	cout << "Number of landmarks = " << corresponding_landmarks.cols << endl;
@@ -2949,6 +3139,7 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cout << best_inlier_mask << endl;
 	
 	if (countNonZero(best_inlier_mask) == 0) {
+		cout << "processFrame failed" << endl;
 		processFrame_okay = false;
 		
 		return make_tuple(Si_1, transformation_matrix, processFrame_okay); 
