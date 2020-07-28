@@ -274,21 +274,53 @@ int main ( int argc,char **argv ) {
 	
 	cout << "landmarks = " << landmarks << endl;
 	*/
+	
+
+	cout << "Test of triangulateNewLandmarks" << endl;
+	state Si_1; 
+	Si_1.num_candidates = 1;
+	Mat point1 = Mat::zeros(2,1,CV_64FC1);
+	point1.at<double>(0,0) = 28;
+	point1.at<double>(1,0) = 234;
+	Si_1.Fi = point1;
+	Mat point2 = Mat::zeros(2,1,CV_64FC1);
+	point2.at<double>(0,0) = 28;
+	point2.at<double>(1,0) = 228;
+	Si_1.Ci = point2;
+	
+	Mat tau = (Mat_<double>(3,4) << 1,0,0,0, 0,1,0,0, 0,0,1,0);
+	Si_1.Ti = tau.reshape(0, tau.rows*tau.cols);
+	
+	cout << "Si_1.num_candidates = " << Si_1.num_candidates << endl;
+	cout << "Si_1.Ci = " << Si_1.Ci << endl;
+	cout << "Si_1.Fi = " << Si_1.Fi << endl;
+	cout << "Si_1.Ti = " << Si_1.Ti << endl;
+	
+	Mat K2 = (Mat_<double>(3,3) << 359.428, 0, 303.5964, 0, 359.428, 92.60785, 0, 0, 1);
+	cout << "K2 = " << K2 << endl;
+	Mat T_WC = (Mat_<double>(3,4) << 1,0,0,0.54, 0,1,0,0, 0,0,1,0);
+	cout << " T_WC = " << T_WC << endl;
+	double threshold_vinkel = 0.5;
+	Si_1 = triangulateNewLandmarks( Si_1,  K2, T_WC, threshold_vinkel);
+	
+	cout << "Si_1.num_candidates = " << Si_1.num_candidates << endl;
+	cout << "Si_1.Ci = " << Si_1.Ci << endl;
+	cout << "Si_1.Fi = " << Si_1.Ci << endl;
 
 	// ############### VO initializaiton ###############
 	// VO-pipeline: Initialization. Bootstraps the initial position.	
-	state Si_1;
+	//state Si_1;
 	Mat transformation_matrix;
 	bool initialization_okay;
 	Mat Ii_1;
 	I_i1.copyTo(Ii_1);
-	tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
+	//tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
 	cout << "Transformation matrix " << endl;
 	cout << transformation_matrix << endl; (float) transformation_matrix.at<double>(1,3);
 
 	
 	// ############### VO Continuous ###############
-	bool continueVOoperation = true;
+	bool continueVOoperation = false;
 	bool processFrame_okay;
 	
 	// Needed variables

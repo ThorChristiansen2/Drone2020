@@ -2545,17 +2545,24 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
  * Needs to be scaled correctly (like mulitplied with a constant factor) in order to work.
  */
 Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat imagepoint0, Mat imagepoint1) {
+	
+	cout << "inside findLandmark" << endl;
+	
 	Mat P;
 	Mat Q;
 	
 	Mat M0 = K*tau;
 	Mat M1 = K*T_WC;
-	Mat v1 = M0.row(0) - imagepoint0.at<double>(0) * M0.row(2);
-	Mat v2 = M0.row(1) - imagepoint0.at<double>(1) * M0.row(2);
+	Mat v1 = M0.row(0) - imagepoint0.at<double>(0,0) * M0.row(2);
+	cout << "v1 = " << v1 << endl;
+	
+	Mat v2 = M0.row(1) - imagepoint0.at<double>(1,0) * M0.row(2);
+	cout << "v2 = " << v2 << endl;
+	
 	vconcat(v1, v2, Q);
-	v1 = M1.row(0) - imagepoint1.at<double>(0) * M1.row(2);
+	v1 = M1.row(0) - imagepoint1.at<double>(0,0) * M1.row(2);
 	vconcat(v1, Q, Q);
-	v2 = M1.row(1) - imagepoint1.at<double>(1) * M1.row(2);
+	v2 = M1.row(1) - imagepoint1.at<double>(1,0) * M1.row(2);
 	vconcat(v2, Q, Q);
 	
 	Mat S, U, VT;
@@ -2578,13 +2585,15 @@ Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat imagepoint0, Mat imagepoint1) {
 //tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle) {
 state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle) {
 	
+	cout << "triangulateNewLandmarks " << endl;
+	
 	// Check if points are ready to be traingulated 
 	Mat extracted_keypoints = Mat::zeros(1, Si.num_candidates, CV_64FC1);
 	
 	// Matrices to store valid extracted keypoints
 	Mat newKeypoints = Mat::zeros(2, Si.num_candidates, CV_64FC1);
-	Mat traingulated_landmark;
-	Mat newLandmarks = Mat::zeros(Si.Xi.rows, Si.num_candidates, CV_64FC1);
+	Mat triangulated_landmark;
+	Mat newLandmarks = Mat::zeros(3, Si.num_candidates, CV_64FC1);
 	int i;
 	int temp = 0;
 	
@@ -2597,18 +2606,24 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 	// Paralleliser det her måske
 	// Beregn vinklen mellem vektorerne current viewpoint og den første observation af keypointet
 	double fraction, alpha;
+	cout << "Si.num_candidates = " << Si.num_candidates << endl;
+	
 	for (i = 0; i < Si.num_candidates; i++) {
 		// First occurrence of keypoint
-		keypoint_last_occur.at<double>(0,0) = Si.Fi.at<double>(0,i); // y-coordinate
-		keypoint_last_occur.at<double>(1,0) = Si.Fi.at<double>(1,i); // x-coordinate
+		keypoint_last_occur.at<double>(0,0) = Si.Fi.at<double>(1,i); // x-coordinate --> Make it u
+		keypoint_last_occur.at<double>(1,0) = Si.Fi.at<double>(0,i); // y-coordinate --> Make it v 
+		
 
 		// Newest occurrence of keypoint
-		keypoint_newest_occcur.at<double>(0,0) = Si.Ci.at<double>(0,i); // y-coordinate
-		keypoint_newest_occcur.at<double>(1,0) = Si.Ci.at<double>(1,i); // x--coordinate
+		keypoint_newest_occcur.at<double>(0,0) = Si.Ci.at<double>(1,i); // x-coordinate --> Make it u 
+		keypoint_newest_occcur.at<double>(1,0) = Si.Ci.at<double>(0,i); // y--coordinate --> Make it v
 
 		// Finding the angle using bearing vectors 
 		Mat bearing1 = K.inv() * keypoint_last_occur;
 		Mat bearing2 = K.inv() * keypoint_newest_occcur;
+		
+		cout << "bearing1 = " << bearing1 << endl;
+		cout << "bearing2 = " << bearing2 << endl;
 		
 		// Finding length of vectors 
 		length_first_vector = sqrt(pow(bearing1.at<double>(0,0),2.0) + pow(bearing1.at<double>(1,0),2.0) + pow(bearing1.at<double>(2,0),2.0));
@@ -2629,32 +2644,70 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 			alpha = acos((v/(length_first_vector * length_current_vector))) * 360/(2*M_PI);
 		}
 		
+		cout << "alpha = " << alpha << endl;
 		if (alpha > threshold_angle) {
 			extracted_keypoints.at<double>(0,i) = 1;
+			cout << "extracted_keypoints.at<double>(0,i) = " << extracted_keypoints.at<double>(0,i) << endl;
 			
-			// Update new keypoints 
+			// Extract tau_vector and reshape it to a matrix
+			tau = Si.Ti.col(i);
+			tau = tau.reshape(0, 3);
+			
+			// Update keypoints 
 			newKeypoints.at<double>(0,temp) = Si.Ci.at<double>(0,i);
 			newKeypoints.at<double>(1,temp) = Si.Ci.at<double>(1,i);
 			
-			traingulated_landmark = findLandmark(K, tau, T_WC, keypoint_last_occur, keypoint_newest_occcur); // Check if tau should be changed to matrix
+			cout << "tau = " << tau << endl;
 			
+			triangulated_landmark = findLandmark(K, tau, T_WC, keypoint_last_occur, keypoint_newest_occcur); // Check if tau should be changed to matrix
+			
+			cout << "traingulated_landmark = " << triangulated_landmark << endl;
+			
+			/*
+			triangulated_landmark = triangulated_landmark.rowRange(0,3);
+			cout << "traingulated_landmark = " << traingulated_landmark << endl;
 			traingulated_landmark.copyTo(newLandmarks.col(temp));
+			*/
+			
+			newLandmarks.at<double>(0,temp) = triangulated_landmark.at<double>(0,0);
+			newLandmarks.at<double>(1,temp) = triangulated_landmark.at<double>(1,0);
+			newLandmarks.at<double>(2,temp) = triangulated_landmark.at<double>(2,0);
+			
+			cout << "newLandmarks = " << newLandmarks << endl;
 			
 			temp++;
 		}
 	}
 	
+	cout << "temp = " << temp << endl;
+	cout << "newLandmarks = " << newLandmarks << endl;
+	cout << "newKeypoints = " << newKeypoints << endl;
+	
 	// Append new keypoints and new landmarks 
 	if (temp > 0) {
+		cout << "concatenate " << endl;
 		newKeypoints = newKeypoints.colRange(0,temp);
 		newLandmarks = newLandmarks.colRange(0,temp);
-		
+	
 		// Append new keypoints
-		hconcat(Si.Pi, newKeypoints, Si.Pi);
+		if (Si.Pi.cols == 0) {
+			newKeypoints.copyTo( Si.Pi );
+		}
+		else {
+			hconcat(Si.Pi, newKeypoints, Si.Pi);
+		}
 		
 		// Append new 3D landmarks 
-		hconcat(Si.Xi, newLandmarks, Si.Xi);
+		if (Si.Xi.cols == 0) {
+			newLandmarks.copyTo(Si.Xi);
+		}
+		else {
+			hconcat(Si.Xi, newLandmarks, Si.Xi);
+		 }
 	}
+	
+	cout << "Si.Pi = " << Si.Pi << endl;
+	cout << "Si.Xi = " << Si.Xi << endl;
 	
 	
 	// Remove the candidate keypoints that have been triangulated.
