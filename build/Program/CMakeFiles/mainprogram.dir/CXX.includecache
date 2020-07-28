@@ -47,6 +47,18 @@ ratio
 -
 chrono
 -
+algorithm
+-
+iterator
+-
+random
+-
+vector
+-
+cstdlib
+-
+unordered_set
+-
 
 ../libfiles/src/say-hello/hello.hpp
 

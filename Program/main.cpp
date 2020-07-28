@@ -85,10 +85,6 @@ void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
 }
 
 
-
-
-
-
 // ####################### Main function #######################
 int main ( int argc,char **argv ) {
 	
@@ -117,7 +113,7 @@ int main ( int argc,char **argv ) {
 	waitKey(1000);
 	
 	
-	/*
+	
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
@@ -131,13 +127,13 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
-	*/
+	
 	
 	
 	
 	 
-	/*
 	// Test billeder
+	/* 
 	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
 	imshow("Frame I_i0 displayed", I_i0);
@@ -149,8 +145,8 @@ int main ( int argc,char **argv ) {
 	waitKey(0);
 	*/
 	
-	
-	cout << "Test af ransacLocalizaiton" << endl;
+	// cout << "Test af ransacLocalizaiton" << endl;
+	/*
 	Mat corresponding_landmarks = Mat::zeros(3, 271, CV_64FC1);
 	ifstream MyRead2File("CorrespondingLandmarks.txt");	
 	// Fejl i hvordan det loades ind 
@@ -194,7 +190,90 @@ int main ( int argc,char **argv ) {
 	Mat transformation_matrix1, best_inlier_mask;
 	tie(transformation_matrix1, best_inlier_mask) = Localize::ransacLocalization(matched_query_keypoints, corresponding_landmarks, K2);
 	cout << "transformation_matrix1 = " << transformation_matrix1 << endl;
+	cout << "best_inlier_mask = " << best_inlier_mask << endl;
+	cout << "countNonZero(best_inlier_mask) = " << countNonZero(best_inlier_mask) << endl;
+	*/
+
+
+	// cout << "Test of LinearTriangulation " << endl;
+	/*
+	Mat M1 = Mat::zeros(3, 4, CV_64FC1);
+	ifstream MyRead2File("M1.txt");	
+	// Fejl i hvordan det loades ind 
+	if (MyRead2File.is_open()) {
+		for (int i = 0; i < 4; i++) {
+			MyRead2File >> M1.at<double>(0,i);
+		}
+		for (int i = 0; i < 4; i++) {
+			MyRead2File >> M1.at<double>(1,i);
+		}
+		for (int i = 0; i < 4; i++) {
+			MyRead2File >> M1.at<double>(2,i);
+		}
+		
+		 
+	}
+	MyRead2File.close();
+	cout << "M1 = " << M1 << endl;
 	
+	Mat M2 = Mat::zeros(3, 4, CV_64FC1);
+	ifstream MyRead3File("M2.txt");	
+	// Fejl i hvordan det loades ind 
+	if (MyRead3File.is_open()) {
+		for (int i = 0; i < 4; i++) {
+			MyRead3File >> M2.at<double>(0,i);
+		}
+		for (int i = 0; i < 4; i++) {
+			MyRead3File >> M2.at<double>(1,i);
+		}
+		for (int i = 0; i < 4; i++) {
+			MyRead3File >> M2.at<double>(2,i);
+		}
+		
+		 
+	}
+	MyRead3File.close();
+	cout << "M2 = " << M2 << endl;
+	
+	Mat p1 = Mat::zeros(2, 84, CV_64FC1);
+	ifstream MyRead4File("new_p1.txt");	
+	// Fejl i hvordan det loades ind 
+	if (MyRead4File.is_open()) {
+		for (int i = 0; i < 84; i++) {
+			MyRead4File >> p1.at<double>(0,i);
+		}
+		for (int i = 0; i < 84; i++) {
+			MyRead4File >> p1.at<double>(1,i);
+		}
+		 
+	}
+	MyRead4File.close();
+	cout << "p1 = " << p1 << endl;
+	
+	Mat p2 = Mat::zeros(2, 84, CV_64FC1);
+	ifstream MyRead5File("new_p2.txt");	
+	// Fejl i hvordan det loades ind 
+	if (MyRead5File.is_open()) {
+		for (int i = 0; i < 84; i++) {
+			MyRead5File >> p2.at<double>(0,i);
+		}
+		for (int i = 0; i < 84; i++) {
+			MyRead5File >> p2.at<double>(1,i);
+		}
+		 
+	}
+	MyRead5File.close();
+	cout << "p2 = " << p2 << endl;
+	
+	
+	//Mat K2 = (Mat_<double>(3,3) << 1379.74, 0, 760.35, 0, 1382.08, 503.41, 0, 0, 1);
+	//Mat transformation_matrix2 = (Mat_<double>(3,4) << 0.98059541738, -0.0028653899, 760.35,   0, 1382.08, 503.41,0,  0, 1,0,0);
+	//Mat M1 = K2 * (Mat_<double>(3,4) << 1,0,0,0, 0,1,0,0, 0,0,1,0);
+	//Mat M2 = K2 * transformation_matrix;
+	Mat landmarks = linearTriangulation(p1, p2, M1, M2);
+	
+	cout << "landmarks = " << landmarks << endl;
+	*/
 
 	// ############### VO initializaiton ###############
 	// VO-pipeline: Initialization. Bootstraps the initial position.	
@@ -203,16 +282,13 @@ int main ( int argc,char **argv ) {
 	bool initialization_okay;
 	Mat Ii_1;
 	I_i1.copyTo(Ii_1);
-	//tie(Si_1, transformation_matrix, init_okay) = initialization(I_i0, I_i1, K, Si_1);
-	//tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
+	tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
 	cout << "Transformation matrix " << endl;
 	cout << transformation_matrix << endl; (float) transformation_matrix.at<double>(1,3);
 
 	
 	// ############### VO Continuous ###############
-	bool continueVOoperation = false;
-	bool pipelineBroke = false;
-	bool output_T_ready = true;
+	bool continueVOoperation = true;
 	bool processFrame_okay;
 	
 	// Needed variables
@@ -224,9 +300,10 @@ int main ( int argc,char **argv ) {
 	// Debug variable
 	int stop = 0;
 	int iter = 0;
+	int failed_attempts = 0;
 	
 	cout << "Begin Continuous VO operation " << endl;
-	while (continueVOoperation == true && pipelineBroke == false && stop < 10) {
+	while (continueVOoperation == true && stop < 10) {
 		cout << "Continuous Operation " << endl;
 
 		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
@@ -252,21 +329,24 @@ int main ( int argc,char **argv ) {
 		cout << "Print of Transformation Matrix" << endl;
 		cout << transformation_matrix << endl;
 		
-		output_T_ready = true;
-		
-		// Submit the transformation matrix. Then set the flag low. 
-		output_T_ready = false;
-		
+		if ( processFrame_okay == false ) {
+			failed_attempts++;
+		}
 		
 		// Find new candidate keypoints for the first itme 
-		if (iter == 0) {
+		if (iter == 0 && processFrame_okay == true) {
 			cout << "Find new candidate keypoints for the first time" << endl;
 			
 			Si = newCandidateKeypoints(Ii, Si, transformation_matrix);
 			iter++;
+			failed_attempts = 0;
+			
+			// Set current values to old values 
+			Ii.copyTo(Ii_1);
+			Si_1 = Si;
 		}
 		// Keep finding new candidate keypoints and see if candidate keypoints can become real keypoints
-		else {
+		else if ( (iter > 0) && processFrame_okay == true) {
 			cout << "Inside other continuous operation " << endl;
 			
 			Si = continuousCandidateKeypoints( Ii_1, Ii, Si, transformation_matrix );
@@ -274,19 +354,30 @@ int main ( int argc,char **argv ) {
 			cout << "Number of keypoints = " << Si.Ci.cols << endl;
 			
 			Si = triangulateNewLandmarks( Si, K, transformation_matrix, threshold_angle);
+			
+			// Set current values to old values  
+			Ii.copyTo(Ii_1);
+			Si_1 = Si;
+			
+			// Reset failed attempts 
+			failed_attempts++;
 		}
 		
+		if ( processFrame_okay == true ) {
+			cout << "Update of Si.num_candidates = " << Si.num_candidates << endl;
+		}
 		
-		// Resert old values 
-		Ii.copyTo(Ii_1);
-		Si_1 = Si;
-		cout << "Update of Si.num_candidates = " << Si.num_candidates << endl;
 		cout << "End of ContinVO. Numb. keypoints = " << Si_1.Pi.cols << endl;
 		cout << "End of ContinVO. Numb. landmarks = " << Si_1.Xi.cols << endl;
 		
 		// Debug variable
 		stop++;
 		if (stop > 10) {
+			break;
+		}
+		
+		if ( failed_attempts > failed_attempts_limit ) {
+			cout << "VO-pipeline has failed and is terminated " << endl;
 			break;
 		}
 		

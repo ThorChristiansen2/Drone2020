@@ -5,7 +5,7 @@
 //#include <complex.h>
 #include <complex>
 #include <iomanip>
-#include <algorithm>
+
 #include <unistd.h>
 #include <fstream>
 #include <sstream>
@@ -46,6 +46,41 @@ void drawCorners(Mat img, Mat keypoints, const char* frame_name) {
 	waitKey(0);
 }
 
+// ####################### randomSampling #######################
+// This part of the code comes from: https://stackoverflow.com/questions/28287138/c-randomly-sample-k-numbers-from-range-0n-1-n-k-without-replacement 
+unordered_set<int> pickSet(int N, int k, std::mt19937& gen)
+{
+    unordered_set<int> elems;
+    for (int r = N - k; r < N; ++r) {
+        int v = uniform_int_distribution<>(1, r)(gen);
+
+        // there are two cases.
+        // v is not in candidates ==> add it
+        // v is in candidates ==> well, r is definitely not, because
+        // this is the first iteration in the loop that we could've
+        // picked something that big.
+
+        if (!elems.insert(v).second) {
+            elems.insert(r);
+        }   
+    }
+    return elems;
+}
+
+vector<int> pick(int N, int k) {
+    random_device rd;
+    mt19937 gen(rd());
+
+    unordered_set<int> elems = pickSet(N, k, gen);
+
+    // ok, now we have a set of k elements. but now
+    // it's in a [unknown] deterministic order.
+    // so we have to shuffle it:
+
+    vector<int> result(elems.begin(), elems.end());
+    shuffle(result.begin(), result.end(), gen);
+    return result;
+}
 
 void *functionMatch2(void *threadarg) {
    struct thread_match2 *my_data;
@@ -1906,7 +1941,6 @@ Mat p3p(Mat worldPoints, Mat imageVectors) {
 }
 
 
-
 tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_landmarks, Mat K) {
 	// Transformation matrix 
 	Mat transformation_matrix = Mat::zeros(3, 4, CV_64FC1);
@@ -1918,7 +1952,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	double num_iterations;
 	int pixel_tolerance = 10; 
 	double k = 3;
-	int min_inlier_count = 30; // This parameter should be tuned for the implementation
+	int min_inlier_count = ransac_min_inlier_count; // This parameter should be tuned for the implementation
 	double record_inlier = 0;
 
 		
@@ -1937,6 +1971,8 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		matched_query_keypoints.at<double>(0,i) = keypoints_i.at<double>(1,i); // x-coordinate in iamge (u)
 		matched_query_keypoints.at<double>(1,i) = keypoints_i.at<double>(0,i); // y-coordinate in image (v)
 	}
+	
+	
 	Mat max_num_inliers_history = Mat::zeros(50, 1, CV_64FC1); // Should probably be changed
 	Mat num_iteration_history = Mat::zeros(50, 1, CV_64FC1); // Should probably be changed to 
 	int max_num_inliers = 0;
@@ -1956,7 +1992,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	Mat R_W_C = Mat::zeros(3, 3, CV_64FC1);
 	Mat t_W_C = Mat::zeros(3, 1, CV_64FC1);
 	
-	
+	/*
 	Mat random_test = Mat::zeros(3,3,CV_64FC1);
 	random_test.at<double>(0,0) = 187-1; 
 	random_test.at<double>(0,1) = 203-1;
@@ -1970,13 +2006,34 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	
 	
 	Mat choosen_idx = Mat::zeros(1, 3, CV_64FC1);
-	choosen_idx.at<double>(0,0) = 250-1;
-	choosen_idx.at<double>(0,1) = 209-1;
-	choosen_idx.at<double>(0,2) = 12-1;
+	choosen_idx.at<double>(0,0) = 182-1;
+	choosen_idx.at<double>(0,1) = 52-1;
+	choosen_idx.at<double>(0,2) = 100-1;
+	*/
 	
-	//while ( num_iterations-1 > i ) {
-	while (1 > i) {
+	/*
+	 * 
+	 * 
+	 *Make a new method for extracting random numbers 
+	 * 
+	 * 
+	 * 
+	 */
+
+	
+	while ( num_iterations-1 > i ) {
+	//while (1 > i) {
 		
+		std::vector<int> random_idx = pick( corresponding_landmarks.cols +1 , 3);
+		//cout << "random_idx = " << random_idx[0] << ", " << random_idx[1] << ", " << random_idx[2] << endl;
+		Mat random_selected_idx = Mat::zeros(1, 3, CV_64FC1);
+		random_selected_idx.at<double>(0,0) = random_idx[0]-1;
+		random_selected_idx.at<double>(0,1) = random_idx[1]-1;
+		random_selected_idx.at<double>(0,2) = random_idx[2]-1;
+		//cout << "random_selected_idx = " << random_selected_idx << endl;
+		
+		/*
+		 * // Previous random data sample
 		int random_nums[corresponding_landmarks.cols];
 		for (int mm = 0; mm < corresponding_landmarks.cols; mm++) {
 			random_nums[mm] = mm;
@@ -1985,21 +2042,27 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		cout << "random_nums[1] = " << random_nums[1] << endl;
 		cout << "random_nums[2] = " << random_nums[2] << endl;
 		cout << "random_nums[3] = " << random_nums[3] << endl;
+		*/
 		
-		/* The real code
+		
+		 // The real code
 		for (int mm = 0; mm < k;  mm++) {
 			//cout << "Random number = " << random_nums[mm] << endl;
 			// Landmark sample 
-			landmark_sample.at<double>(0,mm) = corresponding_landmarks.at<double>(0, random_nums[mm]);
-			landmark_sample.at<double>(1,mm) = corresponding_landmarks.at<double>(1, random_nums[mm]);
-			landmark_sample.at<double>(2,mm) = corresponding_landmarks.at<double>(2, random_nums[mm]);
+			landmark_sample.at<double>(0,mm) = corresponding_landmarks.at<double>(0, random_selected_idx.at<double>(0,mm));
+			landmark_sample.at<double>(1,mm) = corresponding_landmarks.at<double>(1, random_selected_idx.at<double>(0,mm));
+			landmark_sample.at<double>(2,mm) = corresponding_landmarks.at<double>(2, random_selected_idx.at<double>(0,mm));
 			
 			// Keypoint sample 
-			keypoint_sample.at<double>(0,mm) = matched_query_keypoints.at<double>(0, random_nums[mm]);
-			keypoint_sample.at<double>(1,mm) = matched_query_keypoints.at<double>(1, random_nums[mm]);
+			keypoint_sample.at<double>(0,mm) = matched_query_keypoints.at<double>(0, random_selected_idx.at<double>(0,mm));
+			keypoint_sample.at<double>(1,mm) = matched_query_keypoints.at<double>(1, random_selected_idx.at<double>(0,mm));
 		}
-		*/
 		
+		//cout << "landmark_sample = " << landmark_sample << endl;
+		//cout << "keypoint_sample = " << keypoint_sample << endl;
+		
+		/*
+		// Not random
 		for (int mm = 0; mm < 3;  mm++) {
 			//cout << "Random number = " << random_nums[mm] << endl;
 			// Landmark sample 
@@ -2011,6 +2074,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			keypoint_sample.at<double>(0,mm) = matched_query_keypoints.at<double>(0, choosen_idx.at<double>(0,mm));
 			keypoint_sample.at<double>(1,mm) = matched_query_keypoints.at<double>(1, choosen_idx.at<double>(0,mm));
 		}
+		*/
 		
 		//cout << "landmark_sample = " << landmark_sample << endl;
 		//cout << "keypoint_sample = " << keypoint_sample << endl;
@@ -2045,8 +2109,8 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		R_C_W_guess = R_W_C.t(); // Be aware of tranpose 
 		t_C_W_guess = -R_W_C.t()*t_W_C;
 		
-		cout << "R_C_W_guess = " << R_C_W_guess << endl;
-		cout << "t_C_W_guess = " << t_C_W_guess << endl;
+		//cout << "R_C_W_guess = " << R_C_W_guess << endl;
+		//cout << "t_C_W_guess = " << t_C_W_guess << endl;
 				
 		
 		points = R_C_W_guess * corresponding_landmarks + repeat(t_C_W_guess, 1, corresponding_landmarks.cols);
@@ -2059,26 +2123,34 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 		
 		difference = matched_query_keypoints - projected_points;
 		
-		cout << "difference = " << difference << endl;
+		//cout << "difference = " << difference << endl;
 
 		errors = difference.mul(difference);
 		
 		errors = errors.row(0) + errors.row(1);
 		
-		cout << "errors = " << errors << endl;
+		//cout << "errors = " << errors << endl;
 
 		is_inlier = errors < pow(pixel_tolerance,2.0); // Remember this matrix is of type uchar 
 		
-		cout << "is_inlier = " << is_inlier << endl;
+		//cout << "is_inlier = " << is_inlier << endl;
 		
+		//cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier)  << endl;
 
 		//cout << "First iter" << endl;
 		//cout << "countNonZero(is_inlier) = " << countNonZero(is_inlier) << endl;
 		//waitKey(5000);
 		if (countNonZero(is_inlier) > record_inlier && countNonZero(is_inlier) >= min_inlier_count) {
-			record_inlier = countNonZero(is_inlier);
+			//cout << "inside first record_inlier update " << endl;
+			int record_int = countNonZero(is_inlier);
+			record_inlier = record_int;
 			R_C_W_guess.copyTo(best_R_C_W);
 			t_C_W_guess.copyTo(best_t_C_W);
+			is_inlier.copyTo(best_inlier_mask);
+			
+			//cout << "best_R_C_W = " << best_R_C_W << endl;
+			//cout << "best_t_C_W = " << best_t_C_W << endl;
+			//waitKey(0);
 		}
 		
 		for (int alt_idx = 1; alt_idx <= 3; alt_idx++) {
@@ -2090,17 +2162,37 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			}
 			
 			R_C_W_guess = R_W_C.t();
+			
+			//cout << "alt_idx = " << alt_idx << endl;
+			
+			//cout << "R_C_W_guess = " << R_C_W_guess << endl;
 
 			t_C_W_guess = -R_W_C.t()*t_W_C;
 			
+			//cout << "t_C_W_guess = " << t_C_W_guess << endl;
+			
 			points = R_C_W_guess * corresponding_landmarks + repeat(t_C_W_guess, 1, corresponding_landmarks.cols);
+			
+			//cout << "points = " << points << endl;
+			
 			projected_points = projectPoints(points, K);
 			
+			//cout << "projected_points = " << projected_points << endl;
+			
 			difference = matched_query_keypoints - projected_points;
+			
+			//cout << "difference = " << difference << endl;
+			
 			errors = difference.mul(difference);
 			errors = errors.row(0) + errors.row(1);
+			
+			//cout << "errors = " << errors << endl;
+			
 			alternative_is_inlier = errors < pow(pixel_tolerance,2.0);
 			
+			//cout << "alternative_is_inlier = " << alternative_is_inlier << endl;
+			
+			//cout << "countNonZero(alternative_is_inlier) = " << countNonZero(alternative_is_inlier) << endl;
 
 			if (countNonZero(alternative_is_inlier) > countNonZero(is_inlier) ) {
 				//is_inlier = alternative_is_inlier;
@@ -2110,6 +2202,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 
 			if (countNonZero(is_inlier) > record_inlier && countNonZero(is_inlier) >= min_inlier_count) {
 				record_inlier = countNonZero(is_inlier);
+				is_inlier.copyTo(best_inlier_mask);
 				R_C_W_guess.copyTo(best_R_C_W);
 				t_C_W_guess.copyTo(best_t_C_W);
 
@@ -2117,25 +2210,38 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 			
 		}
 		
+		//cout << "record_inlier = " << record_inlier << endl;
+		
+		/*
 		if (countNonZero(is_inlier) > max_num_inliers && countNonZero(is_inlier) >= min_inlier_count) {
 			max_num_inliers = countNonZero(is_inlier);
-			best_inlier_mask = is_inlier;
+			//best_inlier_mask = is_inlier;
+			is_inlier.copyTo(best_inlier_mask);
 		}
+		*/
 		
 		if (adaptive_ransac) {
-			float division = (float) max_num_inliers/ (float) is_inlier.cols;
+			float division = (float) record_inlier/ (float) is_inlier.cols;
 			//cout << "division = " << division << endl;
 			float outlier_ratio = 1. - division;
+			
+			//cout << "outlier_ratio = " << outlier_ratio << endl;
 			
 			float confidence = 0.95; 
 			float upper_bound_on_outlier_ratio = 0.90;
 			outlier_ratio = min(upper_bound_on_outlier_ratio, outlier_ratio);
 			num_iterations = log( 1 - confidence)/log(1-pow((1-outlier_ratio),k)); 
+			
+			//cout << "num_iterations = " << num_iterations << endl;
+			
 			//cout << "num_iterations = " << num_iterations << endl;
 			
 			double v = 15000;
 			num_iterations = min(v, num_iterations);
+			
+			//cout << "num_iterations = " << num_iterations << endl;
 			//cout << "num iterations after min-operation = " << num_iterations << endl;
+			//waitKey(0);
 		}
 		
 		i++;
@@ -2147,7 +2253,7 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
 	ćout << best_t_C_W << endl;
 	*/
 	
-	if (max_num_inliers != 0) {
+	if (record_inlier > min_inlier_count) {
 		hconcat(best_R_C_W, best_t_C_W, transformation_matrix);
 	}
 	
@@ -2166,6 +2272,8 @@ tuple<Mat, Mat> Localize::ransacLocalization(Mat keypoints_i, Mat corresponding_
  */
 state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	cout << "Finding new Candidate Keypoints for the first time" << endl;
+	
+	int run_code_on_drone = show_results;
 	
 	// Convert the image to gray scale 
 	Mat Ii_gray;
@@ -2212,22 +2320,30 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	// Update keypoints
 	keypoints_Ii.copyTo(Si.Ci); 
 	
-	
-	// Draw keypoints Si.Pi
-	Mat Ii_draw;
-	Ii.copyTo(Ii_draw);
-	for (int i = 0; i < Si.Pi.cols; i++) {
-		circle (Ii_draw, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
+	if ( run_code_on_drone == 0) {
+		// Draw keypoints Si.Pi
+		Mat Ii_draw;
+		Ii.copyTo(Ii_draw);
+		for (int i = 0; i < Si.Pi.cols; i++) {
+			circle (Ii_draw, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
+		}
+		imshow("newCandidateKeypoints Ii Si.Pi", Ii_draw);
+		waitKey(0);
+		// Draw Candidate keypoints Si.Ci
+		for (int i = 0; i < Si.Ci.cols; i++) {
+			circle (Ii_draw, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
+		}
+		imshow("newCandidateKeypoints Ii Si.Ci", Ii_draw);
+		waitKey(0);
 	}
-	//imshow("newCandidateKeypoints Ii Si.Pi", Ii_draw);
-	//waitKey(0);
-	// Draw Candidate keypoints Si.Ci
-	for (int i = 0; i < Si.Ci.cols; i++) {
-		circle (Ii_draw, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
+	else {
+		for (int i = 0; i < Si.Pi.cols; i++) {
+			circle (Ii, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
+		}
+		for (int i = 0; i < Si.Ci.cols; i++) {
+			circle (Ii, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
+		}
 	}
-	//imshow("newCandidateKeypoints Ii Si.Ci", Ii_draw);
-	//waitKey(0);
-	
 	
 	// Update first observation of keypoints
 	keypoints_Ii.copyTo(Si.Fi);
@@ -2260,6 +2376,8 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
  */
 state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	cout << "continuousCandidateKeypoints " << endl;
+	
+	int run_code_on_drone = show_results;
 	
 	// Variables used for for loops
 	int i, q;
@@ -2341,22 +2459,33 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	hconcat(Ti_container, Si.Ti);
 	Si.num_candidates = Si.Ci.cols;
 	
-	
-	// Draw keypoints Si.Pi
-	Mat Ii_draw;
-	Ii.copyTo(Ii_draw);
-	for (int i = 0; i < Si.Pi.cols; i++) {
-		circle (Ii_draw, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
+	// Drawing depends on whether the code is tested on the quadcopter or not 
+	if ( run_code_on_drone == 0 ) {
+		// Draw keypoints Si.Pi
+		Mat Ii_draw;
+		Ii.copyTo(Ii_draw);
+		for (int i = 0; i < Si.Pi.cols; i++) {
+			circle (Ii_draw, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
+		}
+		imshow("continuousCandidateKeypoints Ii Si.Pi", Ii_draw);
+		waitKey(0);
+		// Draw Candidate keypoints Si.Ci
+		for (int i = 0; i < Si.Ci.cols; i++) {
+			circle (Ii_draw, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
+		}
+		imshow("continuousCandidateKeypoints Ii Si.Ci", Ii_draw);
+		waitKey(0);
 	}
-	//imshow("continuousCandidateKeypoints Ii Si.Pi", Ii_draw);
-	//waitKey(0);
-	// Draw Candidate keypoints Si.Ci
-	for (int i = 0; i < Si.Ci.cols; i++) {
-		circle (Ii_draw, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
+	else {
+		for (int i = 0; i < Si.Pi.cols; i++) {
+			circle (Ii, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
+		}
+		// Draw Candidate keypoints Si.Ci
+		for (int i = 0; i < Si.Ci.cols; i++) {
+			circle (Ii, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
+		}
 	}
-	//imshow("continuousCandidateKeypoints Ii Si.Ci", Ii_draw);
-	//waitKey(0);
-	
+
 	if (Si.num_candidates < num_candidate_keypoints) {
 		
 		// Number of new candidate keypoints that should be found 
@@ -2553,10 +2682,11 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cout << "Begin initialization" << endl;
 	
-	
+	int run_code_on_drone = show_results; // 0 : Run code on Thor's Raspberry Pi  /  1 : Run code on quadcopter
 	
 	high_resolution_clock::time_point t11 = high_resolution_clock::now();
 	
+	double corner_strengh = Harris_Corner_strengh;
 	Mat transformation_matrix;
 	bool initialization_okay;
 	
@@ -2575,7 +2705,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	int dim2 = I_i0_gray.cols;
 	Mat I_i0_resized = I_i0_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 		
-	goodFeaturesToTrack(I_i0_resized, temp0, nr_interest_points, 0.01, 4, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i0_resized, temp0, nr_interest_points, 0.01, 4, noArray(), 3, true, corner_strengh);
 	Mat keypoints_I_i0 = Mat::zeros(2, temp0.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i0.cols; i++) {
 		keypoints_I_i0.at<double>(0,i) = temp0.at<float>(i,1) + 10;
@@ -2589,19 +2719,14 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	drawCorners(draw_I_i0, keypoints_I_i0, text0);
 	waitKey(0);
 	*/
-	
 
 	
-	
-	//high_resolution_clock::time_point t3 = high_resolution_clock::now();
-	
-	//Mat keypoints_I_i1 = Harris::corner(I_i1, I_i1_gray, 210, emptyMatrix); // Number of keypoints that is looked 
-	
+	//high_resolution_clock::time_point t3 = high_resolution_clock::now();	
 	
 	dim1 = I_i1_gray.rows;
 	dim2 = I_i1_gray.cols;
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
-	goodFeaturesToTrack(I_i1_resized, temp1, nr_interest_points, 0.01, 4, noArray(), 3, true, 0.04);
+	goodFeaturesToTrack(I_i1_resized, temp1, nr_interest_points, 0.01, 4, noArray(), 3, true, corner_strengh);
 	
 	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i1.cols; i++) {
@@ -2620,18 +2745,14 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 
-	
-	
+
 	// ######################### SIFT ######################### 
 	//Finding SIFT::descriptors without parallelization 
+	
 	//high_resolution_clock::time_point t5 = high_resolution_clock::now();
-
-	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
-
-
 	
+	/*
 	// cout << "Advanced descriptors " << endl;
-	
 	Mat descriptors_I_i0_Advanced = SIFT::FindDescriptorsAdvanced( I_i0_gray,  keypoints_I_i0);
 
 	Mat descriptors_I_i1_Advanced = SIFT::FindDescriptorsAdvanced( I_i1_gray,  keypoints_I_i1);
@@ -2657,7 +2778,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat matches = valid_matches_advanced.colRange(0, temp_index_advanced);
 	
 	cout << "number of matches = " << matches.cols << endl;
-	
+	*/
 
 
 	/*
@@ -2665,22 +2786,13 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
 	cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
 	*/
+		
 	
-	
-	//high_resolution_clock::time_point t7 = high_resolution_clock::now();
-	
-	Mat descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
-	
-	/*
-	high_resolution_clock::time_point t8 = high_resolution_clock::now();
-	duration<double> time_span3 = duration_cast<duration<double>>(t8-t7);
-	cout << "Finding descriptors_I_i0 took = " << time_span3.count() << " seconds" << endl;
-	*/
-	
-	
-	/*
 	// cout << "Time consuming match descriptors " << endl;
+	/*
 	// Time consuming 
+	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
+	Mat descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
 	Mat matches = SIFT::matchDescriptors(descriptors_I_i0, descriptors_I_i1);
 	
 	// Time consuming 
@@ -2708,8 +2820,10 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	*/
 	
 	
-	/*
-	// Not time consuming 
+	// Not time consuming find descriptors and match descriptors
+	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
+	Mat descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
+	
 	Mat matches = SIFT::matchDescriptors2(descriptors_I_i0, descriptors_I_i1);
 	
 	matches = matches.row(1);
@@ -2735,22 +2849,17 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		}
 	}
 	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	// original
-	*/
 	
 	
-	
-		
-	
-	
+
 	// Find Point correspondences
 	// Points from image 0 in row 1 and row 2 
 	// Points from image 1 in row 3 and row 	
 
-	//int N = matches.dim2();
 	int N = matches.cols;
 	cout << "Number of matches = " << N << endl;
 	
-	if (N == 0) {
+	if (N < 15) {
 		initialization_okay = false;
 		
 		return make_tuple(Si_1, transformation_matrix, initialization_okay);
@@ -2790,22 +2899,24 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		double x = keypoints_I_i1.at<double>(1, matches.at<double>(1,i));
 		double y2 = keypoints_I_i0.at<double>(0, matches.at<double>(0,i));
 		double x2 = keypoints_I_i0.at<double>(1, matches.at<double>(0,i));
-		line(I_i1_draw,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
-		//line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
-		circle (I_i1_draw, Point(x,y), 5,  Scalar(0,0,255), 2,5,0);
-		//circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
-		circle (I_i0_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,5,0);	
 		
-		
-		
+		if (run_code_on_drone == 0) {
+			line(I_i1_draw,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
+			circle (I_i1_draw, Point(x,y), 5,  Scalar(0,0,255), 2,5,0);
+			circle (I_i0_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,5,0);
+		}
+		else {
+			line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
+			circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+		}	
 		
 	}
-	/*
-	imshow("Match I_i0_draw",I_i0_draw);
-	waitKey(0);
-	imshow("Match I_i1_draw",I_i1_draw);
-	waitKey(0);
-	*/
+	if ( run_code_on_drone == 0 ) {
+		imshow("Match I_i0_draw",I_i0_draw);
+		waitKey(0);
+		imshow("Match I_i1_draw",I_i1_draw);
+		waitKey(0);
+	}
 	
 	
 	
@@ -2815,9 +2926,10 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	Mat fundamental_matrix = findFundamentalMat(points1, points2, FM_RANSAC, 3, 0.90, pArray); // 3 can be changed to 1
 	
 	int N_inlier = countNonZero(pArray);
+	cout << "Number of inlier keypoints in initializaiton = " << N_inlier << endl;
 	
 	// If initialization fails
-	if (N_inlier == 0) {
+	if (N_inlier < 15) {
 		initialization_okay = false;
 		
 		return make_tuple(Si_1, transformation_matrix, initialization_okay);
@@ -2909,6 +3021,8 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	cout << "Images in processFrame" << endl;
 	
+	int run_code_on_drone = show_results; // 0 : Run code on Thor's Raspberry Pi  /  1 : Run code on quadcopter
+	
 	bool processFrame_okay;
 	Mat transformation_matrix, best_inlier_mask;
 
@@ -2917,8 +3031,18 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );	
 	
+	/*
+	Mat draw_Ii_1;
+	Ii_1.copyTo(draw_Ii_1);
+	const char* text1 = "Detected corners in frame Ii_1";
+	drawCorners(draw_Ii_1, Si_1.Pi, text1);
+	waitKey(0);
+	*/
+	
 	// Find descriptors for previous frame I^i-1
 	Mat descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
+	//imshow("Ii_1_gray", Ii_1_gray);
+	//waitKey(0);
 	
 	// Find keypoints for current frame I^i
 	int dim1, dim2;
@@ -2933,39 +3057,48 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		keypoints_Ii.at<double>(1,i) = temp1.at<float>(i,0) + 10;
 	}
 	
+	/*
+	Mat draw_Ii;
+	Ii.copyTo(draw_Ii);
+	const char* text2 = "Detected corners in frame Ii";
+	drawCorners(draw_Ii, keypoints_Ii, text2);
+	waitKey(0);
+	*/
+	
 	// Find descriptors for current frame I^i
+	//imshow("Ii_gray", Ii_gray);
+	//waitKey(0);
 	Mat descriptors_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
 	
 	// Find matches for previous frame I^i-1 to current frame I^i
-	Mat matches = SIFT::matchDescriptors(descriptors_Ii_1, descriptors_Ii);
+	Mat matches = SIFT::matchDescriptors2(descriptors_Ii_1, descriptors_Ii);
+	matches = matches.row(1);
+	
 	// Find matches for current frame I^i to previous frame I^i-1
-	Mat matches2 = SIFT::matchDescriptors(descriptors_Ii, descriptors_Ii_1);
+	Mat matches2 = SIFT::matchDescriptors2(descriptors_Ii, descriptors_Ii_1);
+	matches2 = matches2.row(1);
 	
 	// Determine the valid matches 
-	Mat valid_matches = Mat::zeros(2, matches.cols, CV_64FC1);
-	int temp_index = 0;
+	int temp_index;
+	int temp_index_advanced = 0; 
+	Mat valid_matches_advanced = Mat::zeros(2, matches.cols, CV_64FC1);
+	// Fix Problem here 
 	for (int i = 0; i < matches.cols; i++) {
-		int index_frame0 = matches.at<double>(0,i);
-		int index_frame1 = matches.at<double>(1,i);
-		
-		for (int q = 0; q < matches2.cols; q++) {
-			if (matches2.at<double>(1,q) == index_frame0) {
-				if (matches2.at<double>(0,q) == index_frame1) {
-					// Mutual match
-					valid_matches.at<double>(0,temp_index) = index_frame0;
-					valid_matches.at<double>(1,temp_index) = index_frame1;
-					temp_index++;
-				}
-			}
+		if ( matches.at<double>(0,i) != -1 ) {
+			if ( matches2.at<double>(0, matches.at<double>(0,i)) == i ) {
+				valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
+				valid_matches_advanced.at<double>(1, temp_index_advanced) = matches.at<double>(0,i);
+				temp_index_advanced++;
+			} 
 		}
 	}
-	matches = valid_matches.colRange(0,temp_index);
+	matches = valid_matches_advanced.colRange(0, temp_index_advanced);
 	cout << "Number of mutual valid mathces = " << matches.cols << endl;
 
 	
 	int N = matches.cols;
 	
-	if (N == 0) {
+	if (N < 10) {
 		cout << "processFrame failed" << endl;
 		processFrame_okay = false;
 		
@@ -2999,32 +3132,42 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		double x = keypoints_Ii.at<double>(1, matches.at<double>(1,i));
 		double y2 = Si_1.Pi.at<double>(0, matches.at<double>(0,i));
 		double x2 = Si_1.Pi.at<double>(1, matches.at<double>(0,i));
-		line(Ii_draw,Point(x2,y2),Point(x,y),Scalar(0,255,0),3);
-		circle (Ii_draw, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
-		circle (Ii_1_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
+		
+		if ( run_code_on_drone == 0 ) {
+			line(Ii_draw,Point(x2,y2),Point(x,y),Scalar(0,255,0),3);
+			circle (Ii_draw, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+			circle (Ii_1_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
+		}
+		else {
+			line(Ii ,Point(x2,y2),Point(x,y),Scalar(0,255,0),3);
+			circle (Ii, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
+			circle (Ii_1, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
+		}
 		
 	}
-	/*
-	imshow("matches in processFrame Ii_1_draw", Ii_1_draw);
-	waitKey(0);
-	imshow("matches in processFrame Ii_draw", Ii_draw);
-	waitKey(0);
-	*/
-	
-	
+	if ( run_code_on_drone == 0 ) {
+		imshow("matches in processFrame Ii_1_draw", Ii_1_draw);
+		waitKey(0);
+		imshow("matches in processFrame Ii_draw", Ii_draw);
+		waitKey(0);
+	}
 	
 	cout << "Process Frame" << endl;
 	cout << "Number of keypoints = " << keypoints_i.cols << endl;
 	cout << "Number of landmarks = " << corresponding_landmarks.cols << endl;
 	
-	
 	// Estimate the new pose using RANSAC and P3P algorithm 
 	tie(transformation_matrix, best_inlier_mask) = Localize::ransacLocalization(keypoints_i, corresponding_landmarks, K);
 	
-	cout << "best_inlier_mask " << endl;
-	cout << best_inlier_mask << endl;
+
+	if ( run_code_on_drone == 0 ) {
+		cout << "best_inlier_mask " << endl;
+		cout << best_inlier_mask << endl;
+		cout << "Number of inliers = " << countNonZero(best_inlier_mask) << endl;
+	}
 	
-	if (countNonZero(best_inlier_mask) == 0) {
+	
+	if (countNonZero(best_inlier_mask) < 10) {
 		cout << "processFrame failed" << endl;
 		processFrame_okay = false;
 		

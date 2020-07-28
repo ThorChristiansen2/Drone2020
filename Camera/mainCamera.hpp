@@ -23,6 +23,14 @@
 #include <ctime>
 #include <ratio>
 #include <chrono>
+
+#include <algorithm>
+#include <iterator>
+#include <random>
+#include <vector>
+#include <cstdlib>
+#include <unordered_set>
+
 //#include "gperftools/profiler.h"
 
 using namespace cv;
@@ -33,7 +41,8 @@ using Vector = Numeric_lib::Matrix<double,1>;
 
 // Variables to define
 // Harris corner
-#define Harris_keypoints 110
+#define Harris_keypoints 160
+#define Harris_Corner_strengh 0.08
 
 // Num candidate keypoints
 #define num_candidate_keypoints 30
@@ -44,6 +53,12 @@ using Vector = Numeric_lib::Matrix<double,1>;
 
 // triangulateNewLandmarks
 #define new_landmarks_threshold_angle 20
+
+// Variable to change, if code is run on quadcopter and output shown is needed
+#define show_results 0
+
+// Variable is set so that VO-pipeline breaks if it fails
+#define failed_attempts_limit 1000
 
 // For the continous operation at struct is made. 
 struct state {
