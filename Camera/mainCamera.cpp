@@ -2512,15 +2512,22 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 			}
 		}
 		
+		Mat temp_Si_Ci, temp_Si_Fi, temp_Si_Ti;
+		Si.Ci.copyTo(temp_Si_Ci);
+		Si.Fi.copyTo(temp_Si_Fi);
+		
 		// Concatenate the newly founded keypoints
-		hconcat(Potential_new_CI.colRange(0,temp_index), Si.Ci);
-		hconcat(Potential_new_CI.colRange(0,temp_index), Si.Fi);
+		hconcat(temp_Si_Ci, Potential_new_CI.colRange(0,temp_index), Si.Ci);
+		hconcat(temp_Si_Fi, Potential_new_CI.colRange(0,temp_index), Si.Fi);
+		
 		
 		Mat t_C_W_vector = T_wc.reshape(0,T_wc.rows * T_wc.cols);
 		Mat poses = repeat(t_C_W_vector, 1, temp_index);
 		
+		Si.Ti.copyTo(temp_Si_Ti);
+		
 		// Concatenate the current poses
-		hconcat(poses, Si.Ti);
+		hconcat(temp_Si_Ti, poses, Si.Ti);
 		
 		
 	}
@@ -2554,10 +2561,8 @@ Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat imagepoint0, Mat imagepoint1) {
 	Mat M0 = K*tau;
 	Mat M1 = K*T_WC;
 	Mat v1 = M0.row(0) - imagepoint0.at<double>(0,0) * M0.row(2);
-	cout << "v1 = " << v1 << endl;
 	
 	Mat v2 = M0.row(1) - imagepoint0.at<double>(1,0) * M0.row(2);
-	cout << "v2 = " << v2 << endl;
 	
 	vconcat(v1, v2, Q);
 	v1 = M1.row(0) - imagepoint1.at<double>(0,0) * M1.row(2);
@@ -2622,9 +2627,6 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 		Mat bearing1 = K.inv() * keypoint_last_occur;
 		Mat bearing2 = K.inv() * keypoint_newest_occcur;
 		
-		cout << "bearing1 = " << bearing1 << endl;
-		cout << "bearing2 = " << bearing2 << endl;
-		
 		// Finding length of vectors 
 		length_first_vector = sqrt(pow(bearing1.at<double>(0,0),2.0) + pow(bearing1.at<double>(1,0),2.0) + pow(bearing1.at<double>(2,0),2.0));
 		length_current_vector = sqrt(pow(bearing2.at<double>(0,0),2.0) + pow(bearing2.at<double>(1,0),2.0) + pow(bearing2.at<double>(2,0),2.0));
@@ -2647,10 +2649,14 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 		cout << "alpha = " << alpha << endl;
 		if (alpha > threshold_angle) {
 			extracted_keypoints.at<double>(0,i) = 1;
+			cout << "Extract landmark " << endl;
 			cout << "extracted_keypoints.at<double>(0,i) = " << extracted_keypoints.at<double>(0,i) << endl;
 			
 			// Extract tau_vector and reshape it to a matrix
-			tau = Si.Ti.col(i);
+			cout << "Si.Ti = " << Si.Ti << endl;
+			cout << "i = " << i << endl;
+			Si.Ti.col(i).copyTo(tau);
+			cout << "tau = " << tau << endl;
 			tau = tau.reshape(0, 3);
 			
 			// Update keypoints 

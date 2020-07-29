@@ -276,7 +276,8 @@ int main ( int argc,char **argv ) {
 	*/
 	
 
-	cout << "Test of triangulateNewLandmarks" << endl;
+	//cout << "Test of triangulateNewLandmarks" << endl;
+	/*
 	state Si_1; 
 	Si_1.num_candidates = 1;
 	Mat point1 = Mat::zeros(2,1,CV_64FC1);
@@ -306,21 +307,26 @@ int main ( int argc,char **argv ) {
 	cout << "Si_1.num_candidates = " << Si_1.num_candidates << endl;
 	cout << "Si_1.Ci = " << Si_1.Ci << endl;
 	cout << "Si_1.Fi = " << Si_1.Ci << endl;
+	
+	cout << "Si_1.num_candidates = " << Si_1.num_candidates << endl;
+	cout << "Si_1.Pi = " << Si_1.Pi << endl;
+	cout << "Si_1.Xi = " << Si_1.Xi << endl;
+	*/
 
 	// ############### VO initializaiton ###############
 	// VO-pipeline: Initialization. Bootstraps the initial position.	
-	//state Si_1;
+	state Si_1;
 	Mat transformation_matrix;
 	bool initialization_okay;
 	Mat Ii_1;
 	I_i1.copyTo(Ii_1);
-	//tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
+	tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
 	cout << "Transformation matrix " << endl;
 	cout << transformation_matrix << endl; (float) transformation_matrix.at<double>(1,3);
 
 	
 	// ############### VO Continuous ###############
-	bool continueVOoperation = false;
+	bool continueVOoperation = true;
 	bool processFrame_okay;
 	
 	// Needed variables
@@ -357,6 +363,7 @@ int main ( int argc,char **argv ) {
 		
 		// Estimate pose 
 		tie(Si, transformation_matrix, processFrame_okay) = processFrame(Ii, Ii_1, Si_1, K);
+		
 		cout << "processFrame done" << endl;
 		cout << "Print of Transformation Matrix" << endl;
 		cout << transformation_matrix << endl;
@@ -379,7 +386,7 @@ int main ( int argc,char **argv ) {
 		}
 		// Keep finding new candidate keypoints and see if candidate keypoints can become real keypoints
 		else if ( (iter > 0) && processFrame_okay == true) {
-			cout << "Inside other continuous operation " << endl;
+			cout << "Inside continuous operation " << endl;
 			
 			Si = continuousCandidateKeypoints( Ii_1, Ii, Si, transformation_matrix );
 			cout << "ContinuousCandidateKeypoints" << endl;
