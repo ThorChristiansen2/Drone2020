@@ -2315,7 +2315,7 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 	// Update state 
 	Si.num_candidates = keypoints_Ii.cols;
 	
-	cout << "Number of New candidate Keypoints" << endl;
+	//cout << "Number of New candidate Keypoints" << endl;
 	
 	// Update keypoints
 	keypoints_Ii.copyTo(Si.Ci); 
@@ -2327,16 +2327,17 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 		for (int i = 0; i < Si.Pi.cols; i++) {
 			circle (Ii_draw, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
 		}
-		imshow("newCandidateKeypoints Ii Si.Pi", Ii_draw);
-		waitKey(0);
+		//imshow("newCandidateKeypoints Ii Si.Pi", Ii_draw);
+		//waitKey(0);
 		// Draw Candidate keypoints Si.Ci
 		for (int i = 0; i < Si.Ci.cols; i++) {
 			circle (Ii_draw, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
 		}
-		imshow("newCandidateKeypoints Ii Si.Ci", Ii_draw);
-		waitKey(0);
+		//imshow("newCandidateKeypoints Ii Si.Ci", Ii_draw);
+		//waitKey(0);
 	}
 	else {
+		//usleep(2000000);
 		for (int i = 0; i < Si.Pi.cols; i++) {
 			circle (Ii, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
 		}
@@ -2467,16 +2468,17 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 		for (int i = 0; i < Si.Pi.cols; i++) {
 			circle (Ii_draw, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
 		}
-		imshow("continuousCandidateKeypoints Ii Si.Pi", Ii_draw);
-		waitKey(0);
+		//imshow("continuousCandidateKeypoints Ii Si.Pi", Ii_draw);
+		//waitKey(0);
 		// Draw Candidate keypoints Si.Ci
 		for (int i = 0; i < Si.Ci.cols; i++) {
 			circle (Ii_draw, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
 		}
-		imshow("continuousCandidateKeypoints Ii Si.Ci", Ii_draw);
-		waitKey(0);
+		//imshow("continuousCandidateKeypoints Ii Si.Ci", Ii_draw);
+		//waitKey(0);
 	}
 	else {
+		//usleep(2000000);
 		for (int i = 0; i < Si.Pi.cols; i++) {
 			circle (Ii, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
 		}
@@ -2611,7 +2613,7 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 	// Paralleliser det her måske
 	// Beregn vinklen mellem vektorerne current viewpoint og den første observation af keypointet
 	double fraction, alpha;
-	cout << "Si.num_candidates = " << Si.num_candidates << endl;
+	//cout << "Si.num_candidates = " << Si.num_candidates << endl;
 	
 	for (i = 0; i < Si.num_candidates; i++) {
 		// First occurrence of keypoint
@@ -2646,28 +2648,28 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 			alpha = acos((v/(length_first_vector * length_current_vector))) * 360/(2*M_PI);
 		}
 		
-		cout << "alpha = " << alpha << endl;
+		//cout << "alpha = " << alpha << endl;
 		if (alpha > threshold_angle) {
 			extracted_keypoints.at<double>(0,i) = 1;
-			cout << "Extract landmark " << endl;
-			cout << "extracted_keypoints.at<double>(0,i) = " << extracted_keypoints.at<double>(0,i) << endl;
+			//cout << "Extract landmark " << endl;
+			//cout << "extracted_keypoints.at<double>(0,i) = " << extracted_keypoints.at<double>(0,i) << endl;
 			
 			// Extract tau_vector and reshape it to a matrix
-			cout << "Si.Ti = " << Si.Ti << endl;
-			cout << "i = " << i << endl;
+			//cout << "Si.Ti = " << Si.Ti << endl;
+			//cout << "i = " << i << endl;
 			Si.Ti.col(i).copyTo(tau);
-			cout << "tau = " << tau << endl;
+			//cout << "tau = " << tau << endl;
 			tau = tau.reshape(0, 3);
 			
 			// Update keypoints 
 			newKeypoints.at<double>(0,temp) = Si.Ci.at<double>(0,i);
 			newKeypoints.at<double>(1,temp) = Si.Ci.at<double>(1,i);
 			
-			cout << "tau = " << tau << endl;
+			//cout << "tau = " << tau << endl;
 			
 			triangulated_landmark = findLandmark(K, tau, T_WC, keypoint_last_occur, keypoint_newest_occcur); // Check if tau should be changed to matrix
 			
-			cout << "traingulated_landmark = " << triangulated_landmark << endl;
+			//cout << "traingulated_landmark = " << triangulated_landmark << endl;
 			
 			/*
 			triangulated_landmark = triangulated_landmark.rowRange(0,3);
@@ -2679,19 +2681,19 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 			newLandmarks.at<double>(1,temp) = triangulated_landmark.at<double>(1,0);
 			newLandmarks.at<double>(2,temp) = triangulated_landmark.at<double>(2,0);
 			
-			cout << "newLandmarks = " << newLandmarks << endl;
+			//cout << "newLandmarks = " << newLandmarks << endl;
 			
 			temp++;
 		}
 	}
 	
-	cout << "temp = " << temp << endl;
-	cout << "newLandmarks = " << newLandmarks << endl;
-	cout << "newKeypoints = " << newKeypoints << endl;
+	//cout << "temp = " << temp << endl;
+	//cout << "newLandmarks = " << newLandmarks << endl;
+	//cout << "newKeypoints = " << newKeypoints << endl;
 	
 	// Append new keypoints and new landmarks 
 	if (temp > 0) {
-		cout << "concatenate " << endl;
+		//cout << "concatenate " << endl;
 		newKeypoints = newKeypoints.colRange(0,temp);
 		newLandmarks = newLandmarks.colRange(0,temp);
 	
@@ -2712,8 +2714,8 @@ state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle)
 		 }
 	}
 	
-	cout << "Si.Pi = " << Si.Pi << endl;
-	cout << "Si.Xi = " << Si.Xi << endl;
+	//cout << "Si.Pi = " << Si.Pi << endl;
+	//cout << "Si.Xi = " << Si.Xi << endl;
 	
 	
 	// Remove the candidate keypoints that have been triangulated.
@@ -2743,7 +2745,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	int run_code_on_drone = show_results; // 0 : Run code on Thor's Raspberry Pi  /  1 : Run code on quadcopter
 	
-	high_resolution_clock::time_point t11 = high_resolution_clock::now();
+	//high_resolution_clock::time_point t11 = high_resolution_clock::now();
 	
 	double corner_strengh = Harris_Corner_strengh;
 	Mat transformation_matrix;
@@ -2971,10 +2973,12 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		
 	}
 	if ( run_code_on_drone == 0 ) {
+		/*
 		imshow("Match I_i0_draw",I_i0_draw);
 		waitKey(0);
 		imshow("Match I_i1_draw",I_i1_draw);
 		waitKey(0);
+		*/
 	}
 	
 	
@@ -3035,12 +3039,15 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		
 		// Find the rotation and translation assuming the first frame is taken with the drone on the ground - At the origin
 		transformation_matrix = findRotationAndTranslation(essential_matrix, K, points1Mat, points2Mat);
+		cout << "Transformation matrix = " << transformation_matrix << endl;
+		/*
 		for (int i = 0; i < transformation_matrix.rows; i++) {
 			for (int j = 0; j < transformation_matrix.cols; j++) {
 				cout << transformation_matrix.at<double>(i,j) << ", ";
 			}
 			cout << "" << endl;
 		}
+		*/
 		
 		// Update State with regards to 3D (triangulated points)
 		// Triangulate initial point cloud
@@ -3059,9 +3066,9 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 		
 		
-		high_resolution_clock::time_point t12 = high_resolution_clock::now();
-		duration<double> time_span5 = duration_cast<duration<double>>(t12-t11);
-		cout << "Initialization took = " << time_span5.count() << " seconds" << endl;
+		//high_resolution_clock::time_point t12 = high_resolution_clock::now();
+		//duration<double> time_span5 = duration_cast<duration<double>>(t12-t11);
+		//cout << "Initialization took = " << time_span5.count() << " seconds" << endl;
 		
 		// return state of drone as well as transformation_matrix;
 		return make_tuple(Si_1, transformation_matrix, initialization_okay);
@@ -3129,13 +3136,16 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	//waitKey(0);
 	Mat descriptors_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
 	
+	
 	// Find matches for previous frame I^i-1 to current frame I^i
 	Mat matches = SIFT::matchDescriptors2(descriptors_Ii_1, descriptors_Ii);
 	matches = matches.row(1);
+
 	
 	// Find matches for current frame I^i to previous frame I^i-1
 	Mat matches2 = SIFT::matchDescriptors2(descriptors_Ii, descriptors_Ii_1);
 	matches2 = matches2.row(1);
+
 	
 	// Determine the valid matches 
 	int temp_index;
@@ -3205,11 +3215,14 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		
 	}
 	if ( run_code_on_drone == 0 ) {
+		/*
 		imshow("matches in processFrame Ii_1_draw", Ii_1_draw);
 		waitKey(0);
 		imshow("matches in processFrame Ii_draw", Ii_draw);
 		waitKey(0);
+		*/
 	}
+	
 	
 	cout << "Process Frame" << endl;
 	cout << "Number of keypoints = " << keypoints_i.cols << endl;
@@ -3220,9 +3233,9 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 
 	if ( run_code_on_drone == 0 ) {
-		cout << "best_inlier_mask " << endl;
-		cout << best_inlier_mask << endl;
-		cout << "Number of inliers = " << countNonZero(best_inlier_mask) << endl;
+		//cout << "best_inlier_mask " << endl;
+		//cout << best_inlier_mask << endl;
+		//cout << "Number of inliers = " << countNonZero(best_inlier_mask) << endl;
 	}
 	
 	
@@ -3268,6 +3281,8 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	//return make_tuple(Si, transformation_matrix); 
 	processFrame_okay = true;
+	cout << "processFrame done" << endl;
+	cout << "Transformation matrix = " << transformation_matrix << endl;
 	return make_tuple(Si_1, transformation_matrix, processFrame_okay); 
 }
 

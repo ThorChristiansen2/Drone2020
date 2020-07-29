@@ -322,7 +322,7 @@ int main ( int argc,char **argv ) {
 	I_i1.copyTo(Ii_1);
 	tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
 	cout << "Transformation matrix " << endl;
-	cout << transformation_matrix << endl; (float) transformation_matrix.at<double>(1,3);
+	//cout << transformation_matrix << endl; (float) transformation_matrix.at<double>(1,3);
 
 	
 	// ############### VO Continuous ###############
@@ -341,17 +341,18 @@ int main ( int argc,char **argv ) {
 	int failed_attempts = 0;
 	
 	cout << "Begin Continuous VO operation " << endl;
-	while (continueVOoperation == true && stop < 10) {
+	while (continueVOoperation == true) {
 		cout << "Continuous Operation " << endl;
 
 		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	
 		
+		//usleep(2000000);
 		Camera.grab();
 		Camera.retrieve ( Ii );
-		imshow("Continuous Operation", Ii);
-		waitKey(0);
+		//imshow("Continuous Operation", Ii);
+		//waitKey(0);
 		
 	
 		/*
@@ -364,7 +365,6 @@ int main ( int argc,char **argv ) {
 		// Estimate pose 
 		tie(Si, transformation_matrix, processFrame_okay) = processFrame(Ii, Ii_1, Si_1, K);
 		
-		cout << "processFrame done" << endl;
 		cout << "Print of Transformation Matrix" << endl;
 		cout << transformation_matrix << endl;
 		
@@ -399,7 +399,7 @@ int main ( int argc,char **argv ) {
 			Si_1 = Si;
 			
 			// Reset failed attempts 
-			failed_attempts++;
+			failed_attempts = 0;
 		}
 		
 		if ( processFrame_okay == true ) {
@@ -410,15 +410,19 @@ int main ( int argc,char **argv ) {
 		cout << "End of ContinVO. Numb. landmarks = " << Si_1.Xi.cols << endl;
 		
 		// Debug variable
+		/*
 		stop++;
 		if (stop > 10) {
 			break;
 		}
+		*/
 		
 		if ( failed_attempts > failed_attempts_limit ) {
 			cout << "VO-pipeline has failed and is terminated " << endl;
 			break;
 		}
+		
+		//sleep(2000);
 		
 	}
 	

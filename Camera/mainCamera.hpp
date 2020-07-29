@@ -42,17 +42,17 @@ using Vector = Numeric_lib::Matrix<double,1>;
 // Variables to define
 // Harris corner
 #define Harris_keypoints 160
-#define Harris_Corner_strengh 0.08
+#define Harris_Corner_strengh 0.04
 
 // Num candidate keypoints
 #define num_candidate_keypoints 30
 
 // Ransac localization
 #define ransac_pixel_tolerance 10 
-#define ransac_min_inlier_count 10 
+#define ransac_min_inlier_count 5 
 
 // triangulateNewLandmarks
-#define new_landmarks_threshold_angle 20
+#define new_landmarks_threshold_angle 5
 
 // Variable to change, if code is run on quadcopter and output shown is needed
 #define show_results 0
