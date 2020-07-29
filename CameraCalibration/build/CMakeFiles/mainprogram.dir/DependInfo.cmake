@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/home/pi/CameraCalibration/main.cpp" "/home/pi/CameraCalibration/build/CMakeFiles/mainprogram.dir/main.cpp.o"
+  "/home/pi/GitHub/Drone2020/CameraCalibration/main.cpp" "/home/pi/GitHub/Drone2020/CameraCalibration/build/CMakeFiles/mainprogram.dir/main.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

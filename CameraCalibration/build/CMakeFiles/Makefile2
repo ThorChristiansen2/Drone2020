@@ -59,10 +59,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/pi/CameraCalibration
+CMAKE_SOURCE_DIR = /home/pi/GitHub/Drone2020/CameraCalibration
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/pi/CameraCalibration/build
+CMAKE_BINARY_DIR = /home/pi/GitHub/Drone2020/CameraCalibration/build
 
 #=============================================================================
 # Target rules for target CMakeFiles/mainprogram.dir
@@ -71,7 +71,7 @@ CMAKE_BINARY_DIR = /home/pi/CameraCalibration/build
 CMakeFiles/mainprogram.dir/all:
 	$(MAKE) -f CMakeFiles/mainprogram.dir/build.make CMakeFiles/mainprogram.dir/depend
 	$(MAKE) -f CMakeFiles/mainprogram.dir/build.make CMakeFiles/mainprogram.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/pi/CameraCalibration/build/CMakeFiles --progress-num=1,2 "Built target mainprogram"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/pi/GitHub/Drone2020/CameraCalibration/build/CMakeFiles --progress-num=1,2 "Built target mainprogram"
 .PHONY : CMakeFiles/mainprogram.dir/all
 
 # Include target in all.
@@ -81,9 +81,9 @@ all: CMakeFiles/mainprogram.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/mainprogram.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/CameraCalibration/build/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/GitHub/Drone2020/CameraCalibration/build/CMakeFiles 2
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/mainprogram.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/CameraCalibration/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/pi/GitHub/Drone2020/CameraCalibration/build/CMakeFiles 0
 .PHONY : CMakeFiles/mainprogram.dir/rule
 
 # Convenience name for target.

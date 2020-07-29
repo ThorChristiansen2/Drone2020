@@ -36,7 +36,8 @@ using namespace cv;
  */
 
 
-const float calibrationSquareDimension = 0.02402f; // meters 
+//const float calibrationSquareDimension = 0.02402f; // meters 
+const float calibrationSquareDimension = 0.0221f; // meters 
 const float arucoSquareDimension = 0.1016f; // meters
 const Size chessboardDimensions = Size(6, 9);
 

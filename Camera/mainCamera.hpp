@@ -41,24 +41,30 @@ using Vector = Numeric_lib::Matrix<double,1>;
 
 // Variables to define
 // Harris corner
-#define Harris_keypoints 160
-#define Harris_Corner_strengh 0.04
+#define Harris_keypoints 200
+#define Harris_Corner_strengh 0.08
 
 // Num candidate keypoints
-#define num_candidate_keypoints 30
+#define num_candidate_keypoints 50
 
 // Ransac localization
 #define ransac_pixel_tolerance 10 
 #define ransac_min_inlier_count 5 
 
 // triangulateNewLandmarks
-#define new_landmarks_threshold_angle 5
+#define new_landmarks_threshold_angle 1
 
 // Variable to change, if code is run on quadcopter and output shown is needed
 #define show_results 0
 
 // Variable is set so that VO-pipeline breaks if it fails
-#define failed_attempts_limit 1000
+#define failed_attempts_limit 100
+
+// Initializaiton
+#define min_nr_inliers_initialization 20
+
+// processFrame 
+#define min_nr_inliers_processFrame 10
 
 // For the continous operation at struct is made. 
 struct state {
@@ -111,13 +117,13 @@ struct thread_descriptorAdvanced {
 
 struct thread_match {
 		//int thread_id;
-		int descriptor_n1_id;
-		int descriptor_n2_id;
-		Mat descriptors_n1;
-		Mat descriptors_n2;
-		int is_inlier;
-		double lowest_distance;
-		int best_match;
+		int Advan_descriptor_n1_id;
+		int Advan_descriptor_n2_id;
+		Mat Advan_descriptors_n1;
+		Mat Advan_descriptors_n2;
+		int Advan_is_inlier;
+		double Advan_lowest_distance;
+		double Advan_best_match;
 };
 
 
@@ -178,8 +184,8 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc);
 state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc);
 
 // Triangulate new candidate Keypoints
-//std::tuple<state, Mat>  triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle);
-state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle);
+//state triangulateNewLandmarks(state Si, Mat K, Mat T_WC, double threshold_angle);
+state triangulateNewLandmarks(Mat I, state Si, Mat K, Mat T_WC, double threshold_angle);
 
 
 // For KLT

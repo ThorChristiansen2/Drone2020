@@ -1,0 +1,11 @@
+Calibration Matrix K (Intrinsic Parameters)
+Rows: 3
+Columns: 3
+667.082, 0, 2.5, 
+0, 1879.18, 4, 
+0, 0, 1, 
+-0.00925488
+2.05315e-05
+0.000503257
+0.00250483
+-1.17407e-08

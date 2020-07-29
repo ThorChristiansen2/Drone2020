@@ -113,7 +113,7 @@ int main ( int argc,char **argv ) {
 	waitKey(1000);
 	
 	
-	
+	/*
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
@@ -127,23 +127,103 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
+	*/
 	
 	
+	// New testimages
+	/*
+	Mat testImg0, testImg1, testImg2, testImg3, testImg4, testImg5, testImg6, testImg7, testImg8, testImg9, testImg10;
+	
+	cout << "Prepare to take image 1" << endl; 
+	Camera.grab();
+	Camera.retrieve ( testImg0 ); // Frame 1 
+	imshow("Frame testImg0 displayed", testImg0);
+	imwrite("testImg0.png",testImg0);
+	waitKey(0);
+	
+	cout << "Prepare to take image 1" << endl; 
+	Camera.grab();
+	Camera.retrieve ( testImg1 ); // Frame 1 
+	imshow("Frame testImg1 displayed", testImg1);
+	imwrite("testImg1.png",testImg1);
+	waitKey(0);
 	
 	
+	cout << "Prepare to take image 1" << endl; 
+	Camera.grab();
+	Camera.retrieve ( testImg2 ); // Frame 1 
+	imshow("Frame testImg2 displayed", testImg2);
+	imwrite("testImg2.png",testImg2);
+	waitKey(0);
+	
+	cout << "Prepare to take image 1" << endl; 
+	Camera.grab();
+	Camera.retrieve ( testImg3 ); // Frame 1 
+	imshow("Frame testImg3 displayed", testImg3);
+	imwrite("testImg3.png",testImg3);
+	waitKey(0);
+	
+	cout << "Prepare to take image 1" << endl; 
+	Camera.grab();
+	Camera.retrieve ( testImg4 ); // Frame 1 
+	imshow("Frame testImg4 displayed", testImg4);
+	imwrite("testImg4.png",testImg4);
+	waitKey(0);cout << "Prepare to take image 1" << endl; 
+	
+	Camera.grab();
+	Camera.retrieve ( testImg5 ); // Frame 1 
+	imshow("Frame testImg5 displayed", testImg5);
+	imwrite("testImg5.png",testImg5);
+	waitKey(0);
+	
+	Camera.grab();
+	Camera.retrieve ( testImg6 ); // Frame 1 
+	imshow("Frame testImg6 displayed", testImg6);
+	imwrite("testImg6.png",testImg6);
+	waitKey(0);
+	
+	
+	Camera.grab();
+	Camera.retrieve ( testImg7 ); // Frame 1 
+	imshow("Frame testImg7 displayed", testImg7);
+	imwrite("testImg7.png",testImg7);
+	waitKey(0);
+	
+	
+	Camera.grab();
+	Camera.retrieve ( testImg8 ); // Frame 1 
+	imshow("Frame testImg8 displayed", testImg8);
+	imwrite("testImg8.png",testImg8);
+	waitKey(0);
+	
+	
+	Camera.grab();
+	Camera.retrieve ( testImg9 ); // Frame 1 
+	imshow("Frame testImg9 displayed", testImg9);
+	imwrite("testImg9.png",testImg9);
+	waitKey(0);
+	
+	
+	Camera.grab();
+	Camera.retrieve ( testImg10 ); // Frame 1 
+	imshow("Frame testImg10 displayed", testImg10);
+	imwrite("testImg10.png",testImg10);
+	waitKey(0);
+	*/
 	 
 	// Test billeder
-	/* 
-	I_i0 = imread("cam0.png", IMREAD_UNCHANGED);
+	
+	I_i0 = imread("testImg0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
 	imshow("Frame I_i0 displayed", I_i0);
 	waitKey(0);
 	
-	I_i1 = imread("cam1.png", IMREAD_UNCHANGED);
+	I_i1 = imread("testImg1.png", IMREAD_UNCHANGED);
 	//I_i1.convertTo(I_i1, CV_64FC1);
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
-	*/
+	
+
 	
 	// cout << "Test af ransacLocalizaiton" << endl;
 	/*
@@ -341,30 +421,37 @@ int main ( int argc,char **argv ) {
 	int failed_attempts = 0;
 	
 	cout << "Begin Continuous VO operation " << endl;
-	while (continueVOoperation == true) {
+	while (continueVOoperation == true && stop < 3) {
 		cout << "Continuous Operation " << endl;
 
 		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	
-		
-		//usleep(2000000);
+		/*
 		Camera.grab();
 		Camera.retrieve ( Ii );
-		//imshow("Continuous Operation", Ii);
-		//waitKey(0);
-		
-	
-		/*
-		Ii = imread("cam1.png", IMREAD_UNCHANGED);
-		imshow("Continous operation frame", Ii);
+		imshow("Continuous Operation", Ii);
 		waitKey(0);
 		*/
-		
+	
+		if (stop == 0) {
+			Ii = imread("testImg2.png", IMREAD_UNCHANGED);
+			imshow("Continous operation frame", Ii);
+			waitKey(0);
+		}
+		else if (stop == 1) {
+			Ii = imread("testImg3.png", IMREAD_UNCHANGED);
+			imshow("Continous operation frame", Ii);
+			waitKey(0);
+		}
+		else if (stop == 2) {
+			Ii = imread("testImg4.png", IMREAD_UNCHANGED);
+			imshow("Continous operation frame", Ii);
+			waitKey(0);
+		}
 		
 		// Estimate pose 
 		tie(Si, transformation_matrix, processFrame_okay) = processFrame(Ii, Ii_1, Si_1, K);
-		
 		cout << "Print of Transformation Matrix" << endl;
 		cout << transformation_matrix << endl;
 		
@@ -392,7 +479,7 @@ int main ( int argc,char **argv ) {
 			cout << "ContinuousCandidateKeypoints" << endl;
 			cout << "Number of keypoints = " << Si.Ci.cols << endl;
 			
-			Si = triangulateNewLandmarks( Si, K, transformation_matrix, threshold_angle);
+			Si = triangulateNewLandmarks( Ii, Si, K, transformation_matrix, threshold_angle);
 			
 			// Set current values to old values  
 			Ii.copyTo(Ii_1);
@@ -410,12 +497,12 @@ int main ( int argc,char **argv ) {
 		cout << "End of ContinVO. Numb. landmarks = " << Si_1.Xi.cols << endl;
 		
 		// Debug variable
-		/*
+		
 		stop++;
 		if (stop > 10) {
 			break;
 		}
-		*/
+		
 		
 		if ( failed_attempts > failed_attempts_limit ) {
 			cout << "VO-pipeline has failed and is terminated " << endl;
