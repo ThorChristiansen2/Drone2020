@@ -2526,6 +2526,8 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	// Find descriptors for the new keypoints
 	Mat descriptors_candidates_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
 	
+	// Old part of the code that works 
+	/*
 	// Find matches
 	Mat matches = SIFT::matchDescriptors(descriptors_candidates_Ii_1, descriptors_candidates_Ii);
 	Mat matches2 = SIFT::matchDescriptors(descriptors_candidates_Ii, descriptors_candidates_Ii_1);
@@ -2563,6 +2565,45 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 	hconcat(Fi_container, Si.Fi);
 	hconcat(Ti_container, Si.Ti);
 	Si.num_candidates = Si.Ci.cols;
+	*/
+	
+	// Find matches
+	Mat matches = SIFT::matchDescriptors2(descriptors_candidates_Ii_1, descriptors_candidates_Ii);
+	Mat matches2 = SIFT::matchDescriptors2(descriptors_candidates_Ii, descriptors_candidates_Ii_1);
+	
+	matches = matches.row(1);
+	matches2 = matches2.row(1);
+	
+	int temp_index_advanced = 0; 
+	Mat valid_matches_advanced = Mat::zeros(2, matches.cols, CV_64FC1);
+	// Fix Problem here 
+	for (int i = 0; i < matches.cols; i++) {
+		if ( matches.at<double>(0,i) != -1) {
+			if ( matches2.at<double>(0, matches.at<double>(0,i)) == i ) {
+				valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
+				valid_matches_advanced.at<double>(1, temp_index_advanced) = matches.at<double>(0,i);
+				temp_index_advanced++;
+			} 
+		}
+	}
+	matches = valid_matches_advanced.colRange(0, temp_index_advanced);
+	cout << "Number of matches = " << matches.cols << endl;
+	
+	vector<Mat> Ci_container;
+	vector<Mat> Fi_container;
+	vector<Mat> Ti_container;
+	
+	for (int i = 0; i < matches.cols; i++) {
+		Ci_container.push_back(keypoints_Ii.col(matches.at<double>(1,i)));
+		Fi_container.push_back(Si.Fi.col(matches.at<double>(0,i)));
+		Ti_container.push_back(Si.Ti.col(matches.at<double>(0,i)));
+	}
+	if ( matches.cols > 0) {
+		hconcat(Ci_container, Si.Ci);
+		hconcat(Fi_container, Si.Fi);
+		hconcat(Ti_container, Si.Ti);
+		Si.num_candidates = Si.Ci.cols;
+	}
 	
 	// Drawing depends on whether the code is tested on the quadcopter or not 
 	if ( run_code_on_drone == 0 ) {
@@ -3002,18 +3043,16 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	matches = valid_matches.colRange(0,temp_index);	// original
 	*/	
 	
-
+	// cout << "Not Time consuming method for findking keypoints " << endl;
 	// Not time consuming find descriptors and match descriptors
 	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
 	Mat descriptors_I_i1 = SIFT::FindDescriptors(I_i1_gray, keypoints_I_i1);
 	
 	Mat matches = SIFT::matchDescriptors2(descriptors_I_i0, descriptors_I_i1);
-	
 	matches = matches.row(1);
 	
 	// Not Time consuming 
 	Mat matches2 = SIFT::matchDescriptors2(descriptors_I_i1, descriptors_I_i0);
-	
 	matches2 = matches2.row(1);
 	
 	
@@ -3033,7 +3072,8 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	}
 	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	// original
 	
-	/*
+	// Timer to time function
+	/* 
 	high_resolution_clock::time_point t5 = high_resolution_clock::now();
 
 	high_resolution_clock::time_point t6 = high_resolution_clock::now();
