@@ -41,15 +41,15 @@ using Vector = Numeric_lib::Matrix<double,1>;
 
 // Variables to define
 // Harris corner
-#define Harris_keypoints 300
+#define Harris_keypoints 250
 #define Harris_Corner_strengh 0.08
 
 // Num candidate keypoints
-#define num_candidate_keypoints 50
+#define num_candidate_keypoints 100
 
 // Ransac localization
-#define ransac_pixel_tolerance 15 
-#define ransac_min_inlier_count 5 
+#define ransac_pixel_tolerance 20 
+#define ransac_min_inlier_count 10 
 
 // triangulateNewLandmarks
 #define new_landmarks_threshold_angle 1

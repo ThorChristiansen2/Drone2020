@@ -67,10 +67,10 @@ float getParamVal ( string param,int argc,char **argv,float defvalue=-1 ) {
 
 // Purpose: To set the camera properties - resolution etc.
 void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
-    Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv,1280 ) );
-    //Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv, 640 ) );
-    Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,960 ) );
-    //Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,480 ) );
+    //Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv,1280 ) );
+    Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv, 640 ) );
+    //Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,960 ) );
+    Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,480 ) );
     Camera.set ( cv::CAP_PROP_BRIGHTNESS,getParamVal ( "-br",argc,argv,50 ) );
     Camera.set ( cv::CAP_PROP_CONTRAST ,getParamVal ( "-co",argc,argv,50 ) );
     Camera.set ( cv::CAP_PROP_SATURATION, getParamVal ( "-sa",argc,argv,50 ) );
@@ -402,8 +402,6 @@ int main ( int argc,char **argv ) {
 	Mat Ii_1;
 	I_i1.copyTo(Ii_1);
 	tie(Si_1, transformation_matrix, initialization_okay) = initialization(I_i0, I_i1, K, Si_1); // One variable extra 
-	cout << "Transformation matrix " << endl;
-	//cout << transformation_matrix << endl; (float) transformation_matrix.at<double>(1,3);
 
 	
 	// ############### VO Continuous ###############
@@ -422,19 +420,21 @@ int main ( int argc,char **argv ) {
 	int failed_attempts = 0;
 	
 	cout << "Begin Continuous VO operation " << endl;
-	while (continueVOoperation == true && stop < 6) {
+	//while (continueVOoperation == true && stop < 100) {
+	while ( continueVOoperation == true ) {
 		cout << "Continuous Operation " << endl;
 
 		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	
-		/*
+		
 		Camera.grab();
 		Camera.retrieve ( Ii );
-		imshow("Continuous Operation", Ii);
-		waitKey(0);
-		*/
+		//imshow("Continuous Operation", Ii);
+		//waitKey(0);
 	
+	
+		/*
 		if (stop == 0) {
 			Ii = imread("testImg2.png", IMREAD_UNCHANGED);
 			imshow("Continous operation frame", Ii);
@@ -465,11 +465,10 @@ int main ( int argc,char **argv ) {
 			imshow("Continous operation frame", Ii);
 			waitKey(0);
 		}
+		*/
 		
 		// Estimate pose 
 		tie(Si, transformation_matrix, processFrame_okay) = processFrame(Ii, Ii_1, Si_1, K);
-		cout << "Print of Transformation Matrix" << endl;
-		cout << transformation_matrix << endl;
 		
 		if ( processFrame_okay == false ) {
 			failed_attempts++;
@@ -513,20 +512,12 @@ int main ( int argc,char **argv ) {
 		cout << "End of ContinVO. Numb. landmarks = " << Si_1.Xi.cols << endl;
 		
 		// Debug variable
-		
 		stop++;
-		if (stop > 10) {
-			break;
-		}
-		
 		
 		if ( failed_attempts > failed_attempts_limit ) {
 			cout << "VO-pipeline has failed and is terminated " << endl;
 			break;
-		}
-		
-		//sleep(2000);
-		
+		}		
 	}
 	
 	

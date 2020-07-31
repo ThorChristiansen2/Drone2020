@@ -2439,8 +2439,8 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 		imshow("newCandidateKeypoints Ii Si.Ci", Ii_draw);
 		waitKey(0);
 	}
+	/*
 	else {
-		//usleep(2000000);
 		for (int i = 0; i < Si.Pi.cols; i++) {
 			circle (Ii, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
 		}
@@ -2448,6 +2448,7 @@ state newCandidateKeypoints(Mat Ii, state Si, Mat T_wc) {
 			circle (Ii, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
 		}
 	}
+	*/
 	
 	// Update first observation of keypoints
 	keypoints_Ii.copyTo(Si.Fi);
@@ -2624,6 +2625,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 		imshow("continuousCandidateKeypoints Ii Si.Ci", Ii_draw);
 		waitKey(0);
 	}
+	/*
 	else {
 		for (int i = 0; i < Si.Pi.cols; i++) {
 			circle (Ii, Point(Si.Pi.at<double>(1,i),Si.Pi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,8,0);
@@ -2633,6 +2635,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
 			circle (Ii, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(255,0,0), 2,8,0);
 		}
 	}
+	*/
 
 	if (Si.num_candidates < num_candidate_keypoints) {
 		
@@ -2701,7 +2704,7 @@ state continuousCandidateKeypoints(Mat Ii_1, Mat Ii, state Si, Mat T_wc) {
  */
 Mat findLandmark(Mat K, Mat tau, Mat T_WC, Mat imagepoint0, Mat imagepoint1) {
 	
-	cout << "inside findLandmark" << endl;
+	//cout << "inside findLandmark" << endl;
 	
 	Mat P;
 	Mat Q;
@@ -2812,8 +2815,10 @@ state triangulateNewLandmarks(Mat I, state Si, Mat K, Mat T_WC, double threshold
 		else {
 			alpha = acos((v/(length_first_vector * length_current_vector))) * 360/(2*M_PI);
 		}
+		if ( show_results == 0 ) {
+			cout << "alpha = " << alpha << endl;
+		}
 		
-		cout << "alpha = " << alpha << endl;
 		if (alpha > threshold_angle) {
 			extracted_keypoints.at<double>(0,i) = 1;
 			//cout << "Extract landmark " << endl;
@@ -2899,10 +2904,11 @@ state triangulateNewLandmarks(Mat I, state Si, Mat K, Mat T_WC, double threshold
 	hconcat(Ti_container, Si.Ti);
 	Si.num_candidates = Si.Ci.cols;
 	
-	
-	cout << "After Si.Pi = " << Si.Pi << endl;
-	cout << "AFter Si.Ci = " << Si.Ci << endl;
-	cout << "AFter Si.Fi = " << Si.Fi << endl;
+	if ( show_results == 0 ) {
+		cout << "After Si.Pi = " << Si.Pi << endl;
+		cout << "AFter Si.Ci = " << Si.Ci << endl;
+		cout << "AFter Si.Fi = " << Si.Fi << endl;
+	}
 	
 	//return make_tuple(Si, extracted_keypoints);
 	return Si;
@@ -2914,11 +2920,10 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	cout << "Begin initialization" << endl;
 	
-	
 	int run_code_on_drone = show_results; // 0 : Run code on Thor's Raspberry Pi  /  1 : Run code on quadcopter
-	
 	double corner_strength = Harris_Corner_strengh;
 	int min_inlier = min_nr_inliers_initialization;
+	int nr_interest_points = Harris_keypoints;
 	Mat transformation_matrix;
 	bool initialization_okay;
 	
@@ -2928,7 +2933,6 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	cvtColor(I_i1, I_i1_gray, COLOR_BGR2GRAY );
 	
 	Mat temp0, temp1;
-	int nr_interest_points = Harris_keypoints;
 
 
 	
@@ -2951,24 +2955,18 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		drawCorners(draw_I_i0, keypoints_I_i0, text0);
 		waitKey(0);
 	}
-	
 	cout << "Number of keypoints in I_i0 = " << keypoints_I_i0.cols << endl;
-	
-
-	
-	//high_resolution_clock::time_point t3 = high_resolution_clock::now();	
+		
 	
 	dim1 = I_i1_gray.rows;
 	dim2 = I_i1_gray.cols;
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 	goodFeaturesToTrack(I_i1_resized, temp1, nr_interest_points, 0.001, 5, noArray(), 3, true, corner_strength);
-	
 	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i1.cols; i++) {
 		keypoints_I_i1.at<double>(0,i) = temp1.at<float>(i,1) + 10;
 		keypoints_I_i1.at<double>(1,i) = temp1.at<float>(i,0) + 10;
 	}
-	
 	cout << "Number of keypoints in I_i1 = " << keypoints_I_i1.cols << endl;
 	
 	if ( run_code_on_drone == 0 ) {
@@ -2986,9 +2984,8 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// ######################### SIFT ######################### 
 	//Finding SIFT::descriptors without parallelization 
 	
-	
 	// cout << "Advanced method for finding keypoints " << endl;
-	
+	/*
 	Mat descriptors_I_i0_Advanced = SIFT::FindDescriptorsAdvanced( I_i0_gray,  keypoints_I_i0);
 	Mat descriptors_I_i1_Advanced = SIFT::FindDescriptorsAdvanced( I_i1_gray,  keypoints_I_i1);
 	
@@ -3012,6 +3009,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		}
 	}
 	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	// original
+	*/
 	
 	
 	// cout << "Time consuming method for finding keypoints" << endl;	
@@ -3045,7 +3043,6 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	matches = valid_matches.colRange(0,temp_index);	// original
 	*/	
 	
-	/*
 	// cout << "Not Time consuming method for findking keypoints " << endl;
 	// Not time consuming find descriptors and match descriptors
 	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
@@ -3057,7 +3054,6 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	// Not Time consuming 
 	Mat matches2 = SIFT::matchDescriptors2(descriptors_I_i1, descriptors_I_i0);
 	matches2 = matches2.row(1);
-	
 	
 	// Not time consuming 
 	int temp_index;
@@ -3074,11 +3070,8 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		}
 	}
 	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	// original
-	*/
 	
-	// Timer to time function
-	
-	
+
 
 	// Find Point correspondences
 	// Points from image 0 in row 1 and row 2 
@@ -3086,14 +3079,12 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 
 	int N = matches.cols;
 	cout << "Number of matches = " << N << endl;
-	
 	if (N < min_inlier) {
 		initialization_okay = false;
 		
 		return make_tuple(Si_1, transformation_matrix, initialization_okay);
 	}
 	
-	//high_resolution_clock::time_point t11 = high_resolution_clock::now();
 	
 	// For plotting
 	// For efficiency, you should maybe just use vectors instead of creating two new matrices
@@ -3133,12 +3124,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 			circle (I_i1_draw, Point(x,y), 5,  Scalar(0,0,255), 2,5,0);
 			circle (I_i0_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,5,0);
 		}
-		/*
-		else {
-			line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
-			circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
-		}
-		*/	
+		
 		
 	}
 	if ( run_code_on_drone == 0 ) {
@@ -3219,8 +3205,6 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		vconcat(landmarks.row(0), landmarks.row(1), temp);
 		vconcat(temp, landmarks.row(2), Si_1.Xi);
 		
-
-		
 		cout << "Initializaiton" << endl;
 		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
@@ -3228,7 +3212,8 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 		high_resolution_clock::time_point t6 = high_resolution_clock::now();
 		duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
-		cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
+		cout << "Initialization took = " << time_span2.count() << " seconds" << endl;
+		
 		// return state of drone as well as transformation_matrix;
 		return make_tuple(Si_1, transformation_matrix, initialization_okay);
 	}
@@ -3248,9 +3233,17 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	int run_code_on_drone = show_results; // 0 : Run code on Thor's Raspberry Pi  /  1 : Run code on quadcopter
 	
+	if ( run_code_on_drone == 0 ) {
+		imshow("processFrame Ii_1", Ii_1);
+		waitKey(0);
+		imshow("processFrame Ii", Ii);
+		waitKey(0);
+	}
+	
 	int min_inlier = min_nr_inliers_processFrame;
 	double corner_strengh = Harris_Corner_strengh;
 	bool processFrame_okay;
+	int nr_interest_points = Harris_keypoints;
 	Mat transformation_matrix, best_inlier_mask;
 
 	// Turn the images into grayscale 
@@ -3258,7 +3251,7 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	cvtColor(Ii, Ii_gray, COLOR_BGR2GRAY );
 	cvtColor(Ii_1, Ii_1_gray, COLOR_BGR2GRAY );	
 	
-	if ( show_results == 0 ) {
+	if ( run_code_on_drone == 0 ) {
 		Mat draw_Ii_1;
 		Ii_1.copyTo(draw_Ii_1);
 		const char* text1 = "Detected corners in frame Ii_1";
@@ -3267,7 +3260,6 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	}
 	
 	// Find descriptors for previous frame I^i-1
-	Mat descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
 	//imshow("Ii_1_gray", Ii_1_gray);
 	//waitKey(0);
 	
@@ -3277,24 +3269,55 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	dim2 = Ii_gray.cols;
 	Mat Ii_resized = Ii_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 	Mat temp1;
-	goodFeaturesToTrack(Ii_resized, temp1, 300, 0.01, 10, noArray(), 3, true, corner_strengh);
+	goodFeaturesToTrack(Ii_resized, temp1, nr_interest_points, 0.001, 5, noArray(), 3, true, corner_strengh);
 	Mat keypoints_Ii = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_Ii.cols; i++) {
 		keypoints_Ii.at<double>(0,i) = temp1.at<float>(i,1) + 10;
 		keypoints_Ii.at<double>(1,i) = temp1.at<float>(i,0) + 10;
 	}
 	
-	/*
-	Mat draw_Ii;
-	Ii.copyTo(draw_Ii);
-	const char* text2 = "Detected corners in frame Ii";
-	drawCorners(draw_Ii, keypoints_Ii, text2);
-	waitKey(0);
-	*/
+	if ( run_code_on_drone == 0 ) {
+		Mat draw_Ii;
+		Ii.copyTo(draw_Ii);
+		const char* text2 = "Detected corners in frame Ii";
+		drawCorners(draw_Ii, keypoints_Ii, text2);
+		waitKey(0);
+	}
+	
 	
 	// Find descriptors for current frame I^i
-	//imshow("Ii_gray", Ii_gray);
-	//waitKey(0);
+	
+	
+	// Advanced method 
+	/*
+	Mat descriptors_Ii_1_Advanced = SIFT::FindDescriptorsAdvanced( Ii_1_gray, Si_1.Pi);
+	Mat descriptors_Ii_Advanced = SIFT::FindDescriptorsAdvanced( Ii_gray,  keypoints_Ii);
+	
+	Mat matches_1_advanced = SIFT::matchDescriptorsAdvanced( descriptors_Ii_1_Advanced,  descriptors_Ii_Advanced);
+	Mat matches_2_advanced = SIFT::matchDescriptorsAdvanced( descriptors_Ii_Advanced,  descriptors_Ii_1_Advanced);
+	
+	Mat matches = matches_1_advanced.row(1);
+	Mat matches2 = matches_2_advanced.row(1);
+
+	int temp_index;
+	int temp_index_advanced = 0; 
+	Mat valid_matches_advanced = Mat::zeros(2, matches.cols, CV_64FC1);
+	// Fix Problem here 
+	for (int i = 0; i < matches.cols; i++) {
+		if ( matches.at<double>(0,i) != -1) {
+			if ( matches2.at<double>(0, matches.at<double>(0,i)) == i ) {
+				valid_matches_advanced.at<double>(0, temp_index_advanced) = i;
+				valid_matches_advanced.at<double>(1, temp_index_advanced) = matches.at<double>(0,i);
+				temp_index_advanced++;
+			} 
+		}
+	}
+	matches = valid_matches_advanced.colRange(0, temp_index_advanced);
+	*/
+	
+	
+	// Not Time consuming method 
+	Mat descriptors_Ii_1 = SIFT::FindDescriptors(Ii_1_gray, Si_1.Pi);
 	Mat descriptors_Ii = SIFT::FindDescriptors(Ii_gray, keypoints_Ii);
 	
 	
@@ -3320,11 +3343,11 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 			} 
 		}
 	}
-	matches = valid_matches_advanced.colRange(0, temp_index_advanced);
+	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	
+	
 	cout << "Number of mutual valid mathces = " << matches.cols << endl;
 	
 	int N = matches.cols;
-	
 	if (N < min_inlier) {
 		cout << "processFrame failed" << endl;
 		processFrame_okay = false;
@@ -3338,8 +3361,10 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 	
 	Mat Ii_draw, Ii_1_draw; 
-	Ii.copyTo(Ii_draw);
-	Ii_1.copyTo(Ii_1_draw);
+	if ( run_code_on_drone == 0 ) {
+		Ii.copyTo(Ii_draw);
+		Ii_1.copyTo(Ii_1_draw);
+	}
 	
 	
 	
@@ -3354,24 +3379,23 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 		corresponding_landmarks.at<double>(1,i) = Si_1.Xi.at<double>(1, matches.at<double>(0,i));
 		corresponding_landmarks.at<double>(2,i) = Si_1.Xi.at<double>(2, matches.at<double>(0,i));
 		
-		/*
-		double y = keypoints_Ii.at<double>(0, matches.at<double>(1,i));
-		double x = keypoints_Ii.at<double>(1, matches.at<double>(1,i));
-		double y2 = Si_1.Pi.at<double>(0, matches.at<double>(0,i));
-		double x2 = Si_1.Pi.at<double>(1, matches.at<double>(0,i));
+		
 		
 		if ( run_code_on_drone == 0 ) {
+			double y = keypoints_Ii.at<double>(0, matches.at<double>(1,i));
+			double x = keypoints_Ii.at<double>(1, matches.at<double>(1,i));
+			double y2 = Si_1.Pi.at<double>(0, matches.at<double>(0,i));
+			double x2 = Si_1.Pi.at<double>(1, matches.at<double>(0,i));
 			line(Ii_draw,Point(x2,y2),Point(x,y),Scalar(0,255,0),3);
 			circle (Ii_draw, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
 			circle (Ii_1_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
 		}
-		else {
-			line(Ii ,Point(x2,y2),Point(x,y),Scalar(0,255,0),3);
-			circle (Ii, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
-			circle (Ii_1, Point(x2,y2), 5, Scalar(0,0,255), 2,8,0);
-		}
-		*/
 		
+		
+	}
+	if ( run_code_on_drone == 0 ) {
+		imshow("processFrame Ii_draw", Ii_draw);
+		waitKey(0);
 	}
 	
 	
@@ -3384,9 +3408,9 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	
 
 	if ( run_code_on_drone == 0 ) {
-		//cout << "best_inlier_mask " << endl;
-		//cout << best_inlier_mask << endl;
-		//cout << "Number of inliers = " << countNonZero(best_inlier_mask) << endl;
+		cout << "best_inlier_mask " << endl;
+		cout << best_inlier_mask << endl;
+		cout << "Number of inliers = " << countNonZero(best_inlier_mask) << endl;
 	}
 	
 	
@@ -3398,8 +3422,6 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	}
 	
 	// Remove points that are determined as outliers from best_inlier_mask by using best_inlier_mask
-	//cout << "best_inlier_mask" << endl;
-	//cout << best_inlier_mask << endl;
 	vector<Mat> keypoint_inlier;
 	vector<Mat> landmark_inlier;
 	for (int i = 0; i < best_inlier_mask.cols; i++) {
@@ -3416,11 +3438,12 @@ tuple<state, Mat, bool> processFrame(Mat Ii, Mat Ii_1, state Si_1, Mat K) {
 	Si_1.k = keypoints_i.cols;
 	vconcat(keypoints_i.row(1), keypoints_i.row(0), Si_1.Pi); // Apparently you have to switch rows
 	
+	
 	if ( run_code_on_drone == 0 ) {
-		//imshow("matches in processFrame Ii_1_draw", Ii_1_draw);
-		//waitKey(0);
+		Mat reliabe_corners_Ii;
+		Ii.copyTo(reliabe_corners_Ii);
 		const char* text2 = "Reliable Si.Pi frame Ii";
-		drawCorners(Ii_draw, Si_1.Pi, text2);
+		drawCorners(reliabe_corners_Ii, Si_1.Pi, text2);
 		waitKey(0);
 	}
 	
