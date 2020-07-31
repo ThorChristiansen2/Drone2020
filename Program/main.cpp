@@ -67,10 +67,10 @@ float getParamVal ( string param,int argc,char **argv,float defvalue=-1 ) {
 
 // Purpose: To set the camera properties - resolution etc.
 void processCommandLine ( int argc,char **argv,raspicam::RaspiCam_Cv &Camera ) {
-    //Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv,1280 ) );
-    Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv, 640 ) );
-    //Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,960 ) );
-    Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,480 ) );
+    Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv,1280 ) );
+    //Camera.set ( cv::CAP_PROP_FRAME_WIDTH,  getParamVal ( "-w",argc,argv, 640 ) );
+    Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,960 ) );
+    //Camera.set ( cv::CAP_PROP_FRAME_HEIGHT, getParamVal ( "-h",argc,argv,480 ) );
     Camera.set ( cv::CAP_PROP_BRIGHTNESS,getParamVal ( "-br",argc,argv,50 ) );
     Camera.set ( cv::CAP_PROP_CONTRAST ,getParamVal ( "-co",argc,argv,50 ) );
     Camera.set ( cv::CAP_PROP_SATURATION, getParamVal ( "-sa",argc,argv,50 ) );
@@ -113,7 +113,7 @@ int main ( int argc,char **argv ) {
 	waitKey(1000);
 	
 	
-	/*
+	
 	// Initial frame 0 
 	Camera.grab();
 	Camera.retrieve( I_i0 ); 
@@ -127,7 +127,7 @@ int main ( int argc,char **argv ) {
 	Camera.retrieve ( I_i1 ); // Frame 1 
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
-	*/
+	
 	
 	
 	// New testimages
@@ -212,7 +212,7 @@ int main ( int argc,char **argv ) {
 	*/
 	 
 	// Test billeder
-	
+	/*
 	I_i0 = imread("testImg0.png", IMREAD_UNCHANGED);
 	//I_i0.convertTo(I_i0, CV_64FC1);
 	imshow("Frame I_i0 displayed", I_i0);
@@ -222,6 +222,7 @@ int main ( int argc,char **argv ) {
 	//I_i1.convertTo(I_i1, CV_64FC1);
 	imshow("Frame I_i1 displayed", I_i1);
 	waitKey(0);
+	*/
 	
 
 	
@@ -421,7 +422,7 @@ int main ( int argc,char **argv ) {
 	int failed_attempts = 0;
 	
 	cout << "Begin Continuous VO operation " << endl;
-	while (continueVOoperation == true && stop < 3) {
+	while (continueVOoperation == true && stop < 6) {
 		cout << "Continuous Operation " << endl;
 
 		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
@@ -446,6 +447,21 @@ int main ( int argc,char **argv ) {
 		}
 		else if (stop == 2) {
 			Ii = imread("testImg4.png", IMREAD_UNCHANGED);
+			imshow("Continous operation frame", Ii);
+			waitKey(0);
+		}
+		else if (stop == 3) {
+			Ii = imread("testImg5.png", IMREAD_UNCHANGED);
+			imshow("Continous operation frame", Ii);
+			waitKey(0);
+		}
+		else if (stop == 4) {
+			Ii = imread("testImg6.png", IMREAD_UNCHANGED);
+			imshow("Continous operation frame", Ii);
+			waitKey(0);
+		}
+		else if (stop == 5) {
+			Ii = imread("testImg7.png", IMREAD_UNCHANGED);
 			imshow("Continous operation frame", Ii);
 			waitKey(0);
 		}

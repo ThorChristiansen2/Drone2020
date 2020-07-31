@@ -2779,8 +2779,6 @@ state triangulateNewLandmarks(Mat I, state Si, Mat K, Mat T_WC, double threshold
 		if ( show_results == 0 ) {
 			cout << "Si.Fi(y,x) = (" << Si.Fi.at<double>(0,i) << "," << Si.Fi.at<double>(1,i) << ")" << endl;
 			circle (I_draw_Fi, Point(Si.Fi.at<double>(1,i),Si.Fi.at<double>(0,i)), 5,  Scalar(0,0,255), 2,5,0);
-			imshow("Si.Fi", I_draw_Fi);
-			waitKey(0);
 		}
 
 		// Newest occurrence of keypoint
@@ -2790,8 +2788,6 @@ state triangulateNewLandmarks(Mat I, state Si, Mat K, Mat T_WC, double threshold
 		if ( show_results == 0 ) {
 			cout << "Si.Ci(y,x) = (" << Si.Ci.at<double>(0,i) << "," << Si.Ci.at<double>(1,i) << ")" << endl;
 			circle (I_draw_Ci, Point(Si.Ci.at<double>(1,i),Si.Ci.at<double>(0,i)), 5,  Scalar(0,0,255), 2,5,0);
-			imshow("Si.Ci", I_draw_Ci);
-			waitKey(0);
 		}
 
 		// Finding the angle using bearing vectors 
@@ -2914,7 +2910,10 @@ state triangulateNewLandmarks(Mat I, state Si, Mat K, Mat T_WC, double threshold
 
 // ############################# VO Initialization Pipeline #############################
 tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
+	high_resolution_clock::time_point t5 = high_resolution_clock::now();
+	
 	cout << "Begin initialization" << endl;
+	
 	
 	int run_code_on_drone = show_results; // 0 : Run code on Thor's Raspberry Pi  /  1 : Run code on quadcopter
 	
@@ -2938,7 +2937,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	int dim2 = I_i0_gray.cols;
 	Mat I_i0_resized = I_i0_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
 		
-	goodFeaturesToTrack(I_i0_resized, temp0, nr_interest_points, 0.01, 2, noArray(), 3, true, corner_strength);
+	goodFeaturesToTrack(I_i0_resized, temp0, nr_interest_points, 0.001, 5, noArray(), 3, true, corner_strength);
 	Mat keypoints_I_i0 = Mat::zeros(2, temp0.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i0.cols; i++) {
 		keypoints_I_i0.at<double>(0,i) = temp0.at<float>(i,1) + 10;
@@ -2953,6 +2952,8 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		waitKey(0);
 	}
 	
+	cout << "Number of keypoints in I_i0 = " << keypoints_I_i0.cols << endl;
+	
 
 	
 	//high_resolution_clock::time_point t3 = high_resolution_clock::now();	
@@ -2960,7 +2961,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	dim1 = I_i1_gray.rows;
 	dim2 = I_i1_gray.cols;
 	Mat I_i1_resized = I_i1_gray.colRange(10,dim2-10).rowRange(10,dim1-10);
-	goodFeaturesToTrack(I_i1_resized, temp1, nr_interest_points, 0.01, 4, noArray(), 3, true, corner_strength);
+	goodFeaturesToTrack(I_i1_resized, temp1, nr_interest_points, 0.001, 5, noArray(), 3, true, corner_strength);
 	
 	Mat keypoints_I_i1 = Mat::zeros(2, temp1.rows, CV_64FC1);
 	for (int i = 0; i < keypoints_I_i1.cols; i++) {
@@ -2968,6 +2969,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		keypoints_I_i1.at<double>(1,i) = temp1.at<float>(i,0) + 10;
 	}
 	
+	cout << "Number of keypoints in I_i1 = " << keypoints_I_i1.cols << endl;
 	
 	if ( run_code_on_drone == 0 ) {
 		Mat draw_I_i1;
@@ -2986,7 +2988,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	
 	
 	// cout << "Advanced method for finding keypoints " << endl;
-	/*
+	
 	Mat descriptors_I_i0_Advanced = SIFT::FindDescriptorsAdvanced( I_i0_gray,  keypoints_I_i0);
 	Mat descriptors_I_i1_Advanced = SIFT::FindDescriptorsAdvanced( I_i1_gray,  keypoints_I_i1);
 	
@@ -3010,7 +3012,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		}
 	}
 	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	// original
-	*/
+	
 	
 	// cout << "Time consuming method for finding keypoints" << endl;	
 	/*
@@ -3043,6 +3045,7 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 	matches = valid_matches.colRange(0,temp_index);	// original
 	*/	
 	
+	/*
 	// cout << "Not Time consuming method for findking keypoints " << endl;
 	// Not time consuming find descriptors and match descriptors
 	Mat descriptors_I_i0 = SIFT::FindDescriptors(I_i0_gray, keypoints_I_i0);
@@ -3071,15 +3074,10 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		}
 	}
 	matches = valid_matches_advanced.colRange(0, temp_index_advanced);	// original
+	*/
 	
 	// Timer to time function
-	/* 
-	high_resolution_clock::time_point t5 = high_resolution_clock::now();
-
-	high_resolution_clock::time_point t6 = high_resolution_clock::now();
-	duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
-	cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
-	*/
+	
 	
 
 	// Find Point correspondences
@@ -3125,20 +3123,22 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		temp_points2Mat.at<double>(1,i) = keypoints_I_i1.at<double>(1, matches.at<double>(1,i)); // x-coordinate in image
 
 		
-		double y = keypoints_I_i1.at<double>(0, matches.at<double>(1,i));
-		double x = keypoints_I_i1.at<double>(1, matches.at<double>(1,i));
-		double y2 = keypoints_I_i0.at<double>(0, matches.at<double>(0,i));
-		double x2 = keypoints_I_i0.at<double>(1, matches.at<double>(0,i));
 		
 		if (run_code_on_drone == 0) {
+			double y = keypoints_I_i1.at<double>(0, matches.at<double>(1,i));
+			double x = keypoints_I_i1.at<double>(1, matches.at<double>(1,i));
+			double y2 = keypoints_I_i0.at<double>(0, matches.at<double>(0,i));
+			double x2 = keypoints_I_i0.at<double>(1, matches.at<double>(0,i));
 			line(I_i1_draw,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
 			circle (I_i1_draw, Point(x,y), 5,  Scalar(0,0,255), 2,5,0);
 			circle (I_i0_draw, Point(x2,y2), 5, Scalar(0,0,255), 2,5,0);
 		}
+		/*
 		else {
 			line(I_i1,Point(x,y),Point(x2,y2),Scalar(0,255,0),3);
 			circle (I_i1, Point(x,y), 5,  Scalar(0,0,255), 2,8,0);
-		}	
+		}
+		*/	
 		
 	}
 	if ( run_code_on_drone == 0 ) {
@@ -3225,6 +3225,10 @@ tuple<state, Mat, bool> initialization(Mat I_i0, Mat I_i1, Mat K, state Si_1) {
 		cout << "Number of keypoints = " << Si_1.Pi.cols << endl;
 		cout << "Number of landmarks = " << Si_1.Xi.cols << endl;
 	
+	
+		high_resolution_clock::time_point t6 = high_resolution_clock::now();
+		duration<double> time_span2 = duration_cast<duration<double>>(t6-t5);
+		cout << "Finding descriptors_I_i0 took = " << time_span2.count() << " seconds" << endl;
 		// return state of drone as well as transformation_matrix;
 		return make_tuple(Si_1, transformation_matrix, initialization_okay);
 	}

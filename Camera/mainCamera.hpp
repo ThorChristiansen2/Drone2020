@@ -41,21 +41,21 @@ using Vector = Numeric_lib::Matrix<double,1>;
 
 // Variables to define
 // Harris corner
-#define Harris_keypoints 200
+#define Harris_keypoints 300
 #define Harris_Corner_strengh 0.08
 
 // Num candidate keypoints
 #define num_candidate_keypoints 50
 
 // Ransac localization
-#define ransac_pixel_tolerance 10 
+#define ransac_pixel_tolerance 15 
 #define ransac_min_inlier_count 5 
 
 // triangulateNewLandmarks
 #define new_landmarks_threshold_angle 1
 
 // Variable to change, if code is run on quadcopter and output shown is needed
-#define show_results 0
+#define show_results 1
 
 // Variable is set so that VO-pipeline breaks if it fails
 #define failed_attempts_limit 100
